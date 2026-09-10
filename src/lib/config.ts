@@ -6,11 +6,8 @@ export interface SiteConfig {
   author: {
     name: string;
     handle: string;
-    email: string;
-    github: string;
-    linkedin: string;
-    portfolio: string;
     steam: string;
+    leetify: string;
     steamId: string;
     status: string;
   };
@@ -18,18 +15,15 @@ export interface SiteConfig {
 
 export const SITE_CONFIG: SiteConfig = {
   name: 'huh4k',
-  title: 'huh4k links — Developer & Gaming Hub',
-  description: 'Verified links, live Steam gaming presence, and game library for huh4k (huh4k).',
+  title: 'huh4k links — Steam & Leetify Gaming Hub',
+  description: 'Verified Steam gaming presence, Counter-Strike 2 Premier rating, and Leetify analytics for huh4k (huh4k).',
   url: 'https://links.huh4k.dev',
   author: {
     name: 'huh4k',
     handle: 'huh4k',
-    email: 'huh4k@huh4k.dev',
-    github: 'https://github.com/huh4k',
-    linkedin: 'https://linkedin.com',
-    portfolio: 'https://huh4k.dev',
     steam: 'https://steamcommunity.com',
+    leetify: 'https://leetify.com',
     steamId: '76561198000000000',
-    status: 'Software Developer & CS Student',
+    status: 'Counter-Strike 2 & Steam Profile',
   },
 };

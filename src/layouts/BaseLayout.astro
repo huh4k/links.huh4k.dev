@@ -1,6 +1,7 @@
 ---
 import '../styles/global.css';
 import { SITE_CONFIG } from '../lib/config';
+import { getSteamId64 } from '../lib/steam';
 import SteamPresence from '../components/steam/SteamPresence';
 import SocialLinks from '../components/SocialLinks.astro';
 
@@ -16,6 +17,7 @@ const {
   currentPath = '/',
 } = Astro.props;
 
+const steamId = getSteamId64();
 const currentYear = new Date().getFullYear();
 const isHome = currentPath === '/';
 const isGames = currentPath === '/games';
@@ -54,7 +56,7 @@ const isGames = currentPath === '/games';
         <!-- Navigation Links -->
         <nav class="flex items-center gap-4 sm:gap-6 text-sm font-medium">
           <a
-            href="/"
+            href="/links"
             class={`transition-colors ${isHome ? 'text-white font-semibold' : 'text-zinc-400 hover:text-zinc-200'}`}
           >
             Links
@@ -69,13 +71,22 @@ const isGames = currentPath === '/games';
             </span>
           </a>
           <a
-            href={SITE_CONFIG.author.portfolio}
+            href="/leetify"
             target="_blank"
             rel="noopener noreferrer"
-            class="text-zinc-400 hover:text-zinc-200 transition-colors hidden sm:inline-flex items-center gap-1"
+            class="text-orange-400/90 hover:text-orange-300 transition-colors inline-flex items-center gap-1 font-mono text-xs"
           >
-            <span>Portfolio</span>
-            <span class="text-xs">↗</span>
+            <span>Leetify</span>
+            <span>↗</span>
+          </a>
+          <a
+            href={`https://steamcommunity.com/profiles/${steamId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-zinc-400 hover:text-zinc-200 transition-colors hidden sm:inline-flex items-center gap-1 font-mono text-xs"
+          >
+            <span>Steam</span>
+            <span>↗</span>
           </a>
         </nav>
 
@@ -98,14 +109,14 @@ const isGames = currentPath === '/games';
         <div class="flex flex-col sm:flex-row items-center gap-4">
           <SocialLinks />
           <span class="text-xs font-mono text-zinc-500 hidden sm:inline">•</span>
-          <span class="text-xs font-mono text-zinc-400">Steam Web API Integration</span>
+          <span class="text-xs font-mono text-zinc-400">Steam & Leetify Integration</span>
         </div>
 
         <!-- Copyright & Tech -->
         <div class="flex items-center gap-3 text-xs font-mono text-zinc-500">
           <span>© {currentYear} {SITE_CONFIG.name}</span>
           <span>•</span>
-          <span>Astro + Tailwind + Steam</span>
+          <span>Steam + Leetify + Astro</span>
         </div>
       </div>
     </footer>

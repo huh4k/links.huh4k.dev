@@ -1,0 +1,160 @@
+---
+import { getCS2Stats, type CS2RatingData } from '../../lib/leetify';
+import StatBadge from './StatBadge.astro';
+
+interface Props {
+  steamId?: string;
+  className?: string;
+  stats?: CS2RatingData;
+}
+
+const { steamId, className = '', stats: propStats } = Astro.props;
+
+const stats: CS2RatingData = propStats || (await getCS2Stats(steamId));
+
+const { bracket } = stats;
+
+// Format relative date for last match
+function formatLastMatch(isoString: string | null): string {
+  if (!isoString) return 'Recent';
+  try {
+    const date = new Date(isoString);
+    const diffMs = Date.now() - date.getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    if (diffHours < 1) return 'Just now';
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 30) return `${diffDays}d ago`;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  } catch {
+    return 'Recently';
+  }
+}
+
+const lastMatchFormatted = formatLastMatch(stats.lastMatchAt);
+const leetifyFormatted =
+  stats.leetifyRating !== null
+    ? `${stats.leetifyRating > 0 ? '+' : ''}${stats.leetifyRating}`
+    : '--';
+const leetifyVariant = stats.leetifyRating && stats.leetifyRating > 0 ? 'emerald' : 'zinc';
+---
+
+<div
+  class={`rounded-2xl border border-dark-border bg-gradient-to-br from-dark-card to-[#0d0f17] p-5 sm:p-6 relative overflow-hidden transition-all duration-300 hover:border-zinc-700 shadow-xl ${className}`}
+>
+  <div class="absolute inset-0 bg-grid-pattern opacity-30 pointer-events-none"></div>
+
+  <div class="relative z-10 flex flex-col justify-between h-full gap-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between gap-4">
+      <!-- CS2 Logo & Player Info -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-400 shrink-0 shadow-sm shadow-orange-950/30">
+          <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5v-9l6 4.5-6 4.5z"/>
+          </svg>
+        </div>
+
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-mono text-orange-400 font-semibold uppercase tracking-wider">
+              Counter-Strike 2
+            </span>
+            <span class="w-1.5 h-1.5 rounded-full bg-orange-400/80"></span>
+            <span class="text-xs font-mono text-zinc-400">{stats.statusLabel}</span>
+          </div>
+          <h3 class="text-base sm:text-lg font-bold text-white tracking-tight">
+            {stats.playerName}
+          </h3>
+        </div>
+      </div>
+
+      <!-- Direct Link to Leetify Profile -->
+      <a
+        href={stats.profileUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dark-border bg-dark-bg/80 hover:bg-zinc-800 text-xs font-mono text-zinc-300 hover:text-white transition-colors"
+        aria-label="View profile on Leetify"
+        title="View Leetify Profile"
+      >
+        <span>Leetify</span>
+        <span class="text-zinc-500">↗</span>
+      </a>
+    </div>
+
+    <!-- Primary Metric: CS2 Premier Rating -->
+    <div
+      class={`rounded-xl border p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${bracket.bgColor} ${bracket.borderColor} ${bracket.glowColor} shadow-md`}
+    >
+      <div class="space-y-1">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-mono uppercase tracking-wider text-zinc-400">
+            CS Rating // Premier
+          </span>
+          <span class={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${bracket.borderColor} ${bracket.textColor} bg-black/40 font-semibold`}>
+            {bracket.name} Tier
+          </span>
+        </div>
+
+        <div class="flex items-baseline gap-2">
+          <span class={`text-3xl sm:text-4xl font-extrabold font-mono tracking-tight ${bracket.textColor}`}>
+            {stats.formattedPremier}
+          </span>
+          {stats.premierRating !== null && stats.premierRating > 0 && (
+            <span class="text-xs font-mono text-zinc-400">
+              points
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div class="text-right sm:border-l sm:border-white/10 sm:pl-4">
+        <span class="text-[11px] font-mono text-zinc-400 block">Season Rank Status</span>
+        <span class="text-xs font-mono text-zinc-200 font-medium">
+          {stats.recentMatchesCount} recorded matches
+        </span>
+      </div>
+    </div>
+
+    <!-- Secondary Performance Metrics (3-Column Mini Grid) -->
+    <div class="grid grid-cols-3 gap-3">
+      <StatBadge
+        label="Leetify Rating"
+        value={leetifyFormatted}
+        sublabel="score"
+        variant={leetifyVariant}
+      />
+      <StatBadge
+        label="Aim Score"
+        value={stats.aimRating !== null ? stats.aimRating : '--'}
+        sublabel="/ 100"
+        variant="purple"
+      />
+      <StatBadge
+        label="Win Rate"
+        value={stats.winRate !== null ? `${stats.winRate}%` : '--'}
+        sublabel="recent"
+        variant="sky"
+      />
+    </div>
+
+    <!-- Footer Attribution -->
+    <div class="pt-3 border-t border-dark-border/60 flex items-center justify-between text-xs font-mono text-zinc-500">
+      <a
+        href="https://leetify.com"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="inline-flex items-center gap-1.5 hover:text-zinc-300 transition-colors"
+      >
+        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+        <span>Powered by Leetify Public API</span>
+      </a>
+
+      <span title={`Last match recorded at ${stats.lastMatchAt || 'recently'}`}>
+        Synced {lastMatchFormatted}
+      </span>
+    </div>
+  </div>
+</div>
