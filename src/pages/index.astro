@@ -1,0 +1,167 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SteamPresence from '../components/steam/SteamPresence';
+import SocialLinks from '../components/SocialLinks.astro';
+import GameGrid from '../components/steam/GameGrid.astro';
+import { SITE_CONFIG } from '../lib/config';
+---
+
+<BaseLayout
+  title={`${SITE_CONFIG.author.name} (${SITE_CONFIG.name}) — Links & Gaming Presence`}
+  description={SITE_CONFIG.description}
+  currentPath="/"
+>
+  <div class="space-y-12 sm:space-y-16">
+    <!-- Hero Profile Section -->
+    <section class="rounded-2xl border border-dark-border bg-gradient-to-br from-dark-card to-[#0d0f17] p-6 sm:p-10 relative overflow-hidden">
+      <div class="absolute inset-0 bg-grid-pattern opacity-40 pointer-events-none"></div>
+
+      <div class="relative z-10 space-y-6">
+        <!-- Live Steam Presence Status Pill -->
+        <div class="flex flex-wrap items-center gap-3">
+          <SteamPresence client:idle variant="badge" />
+        </div>
+
+        <div class="space-y-2">
+          <h1 class="text-3xl sm:text-4xl font-bold tracking-tight text-white">
+            {SITE_CONFIG.author.name}
+          </h1>
+          <p class="text-base sm:text-lg text-zinc-300 font-mono">
+            {SITE_CONFIG.name} <span class="text-zinc-500">•</span> {SITE_CONFIG.author.status}
+          </p>
+        </div>
+
+        <p class="text-sm sm:text-base text-zinc-400 max-w-xl leading-relaxed">
+          Hub for projects, verified social handles, real-time Steam gaming activity, and favorite games.
+        </p>
+
+        <!-- Social Icons Row -->
+        <div class="pt-2">
+          <SocialLinks showLabels={true} />
+        </div>
+      </div>
+    </section>
+
+    <!-- Essential Links Grid -->
+    <section class="space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-xs font-mono uppercase tracking-wider text-blue-400">
+          01 // Quick Links & Portals
+        </h2>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <!-- Main Portfolio Card -->
+        <a
+          href={SITE_CONFIG.author.portfolio}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="group rounded-xl border border-dark-border bg-dark-card p-5 transition-all duration-300 hover:border-blue-500/50 hover:bg-dark-card-hover flex flex-col justify-between gap-4"
+        >
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono text-blue-400">huh4k.dev</span>
+              <span class="text-zinc-500 group-hover:text-blue-400 transition-colors">↗</span>
+            </div>
+            <h3 class="text-lg font-semibold text-white group-hover:text-blue-400 transition-colors">
+              Developer Portfolio
+            </h3>
+            <p class="text-xs text-zinc-400 leading-relaxed">
+              Explore systems tooling, Win32 utilities, microcontrollers, and full project case studies.
+            </p>
+          </div>
+          <span class="text-xs font-mono text-zinc-500">Visit Main Site →</span>
+        </a>
+
+        <!-- Gaming Shelf Card -->
+        <a
+          href="/games"
+          class="group rounded-xl border border-dark-border bg-dark-card p-5 transition-all duration-300 hover:border-emerald-500/50 hover:bg-dark-card-hover flex flex-col justify-between gap-4"
+        >
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono text-emerald-400">/games</span>
+              <span class="text-zinc-500 group-hover:text-emerald-400 transition-colors">→</span>
+            </div>
+            <h3 class="text-lg font-semibold text-white group-hover:text-emerald-400 transition-colors">
+              Steam Gaming Library
+            </h3>
+            <p class="text-xs text-zinc-400 leading-relaxed">
+              Real-time in-game presence, lifetime logged hours, and top-played games powered by Valve API.
+            </p>
+          </div>
+          <span class="text-xs font-mono text-zinc-500">View Gaming Shelf →</span>
+        </a>
+
+        <!-- GitHub Profile Card -->
+        <a
+          href={SITE_CONFIG.author.github}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="group rounded-xl border border-dark-border bg-dark-card p-5 transition-all duration-300 hover:border-zinc-500 hover:bg-dark-card-hover flex flex-col justify-between gap-4"
+        >
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono text-zinc-400">github.com/huh4k</span>
+              <span class="text-zinc-500 group-hover:text-white transition-colors">↗</span>
+            </div>
+            <h3 class="text-lg font-semibold text-white group-hover:text-zinc-200 transition-colors">
+              GitHub Repositories
+            </h3>
+            <p class="text-xs text-zinc-400 leading-relaxed">
+              Open-source repositories, experiments, and contributions.
+            </p>
+          </div>
+          <span class="text-xs font-mono text-zinc-500">Open GitHub →</span>
+        </a>
+
+        <!-- Steam Community Profile Card -->
+        <a
+          href={SITE_CONFIG.author.steam}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="group rounded-xl border border-dark-border bg-dark-card p-5 transition-all duration-300 hover:border-sky-500/50 hover:bg-dark-card-hover flex flex-col justify-between gap-4"
+        >
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono text-sky-400">Steam Community</span>
+              <span class="text-zinc-500 group-hover:text-sky-400 transition-colors">↗</span>
+            </div>
+            <h3 class="text-lg font-semibold text-white group-hover:text-sky-400 transition-colors">
+              Steam Profile
+            </h3>
+            <p class="text-xs text-zinc-400 leading-relaxed">
+              Connect on Steam, view profile badges, and check shared multiplayer games.
+            </p>
+          </div>
+          <span class="text-xs font-mono text-zinc-500">Steam Profile →</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- Top Played Gaming Preview Section -->
+    <section class="space-y-6 pt-4 border-t border-dark-border/60">
+      <div class="flex items-center justify-between">
+        <div class="space-y-1">
+          <div class="flex items-center gap-2 text-xs font-mono text-emerald-400 uppercase tracking-wider">
+            <span>02 // Top Played Games</span>
+          </div>
+          <h2 class="text-xl sm:text-2xl font-bold tracking-tight text-white">
+            Gaming Shelf Highlights
+          </h2>
+        </div>
+
+        <a
+          href="/games"
+          class="text-xs font-mono text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1"
+        >
+          <span>View All Games</span>
+          <span>→</span>
+        </a>
+      </div>
+
+      <!-- Top 3 Games -->
+      <GameGrid limit={3} />
+    </section>
+  </div>
+</BaseLayout>

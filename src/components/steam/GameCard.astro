@@ -1,0 +1,71 @@
+---
+import type { SteamGame } from '../../lib/types/steam';
+
+interface Props {
+  game: SteamGame;
+}
+
+const { game } = Astro.props;
+const formattedHours = new Intl.NumberFormat('en-US').format(game.playtimeHours);
+---
+
+<article
+  class="group relative flex flex-col rounded-xl border border-dark-border bg-dark-card overflow-hidden transition-all duration-300 hover:border-zinc-700/80 hover:bg-dark-card-hover hover:shadow-xl hover:shadow-black/40"
+>
+  <!-- Game Banner / Capsule Image -->
+  <div class="relative w-full aspect-[460/215] sm:aspect-[16/9] overflow-hidden bg-black/40">
+    <img
+      src={game.capsuleUrl || game.headerUrl}
+      alt={`${game.name} banner art`}
+      loading="lazy"
+      decoding="async"
+      class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+      onerror={`this.onerror=null; this.src='${game.headerUrl}';`}
+    />
+    <div class="absolute inset-0 bg-gradient-to-t from-dark-card via-transparent to-transparent opacity-70"></div>
+
+    <!-- Playtime Badge Floating on Top Right -->
+    <div
+      class="absolute top-2.5 right-2.5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-black/75 backdrop-blur-md border border-white/10 text-xs font-mono font-medium text-emerald-400 shadow-md"
+    >
+      <svg class="w-3.5 h-3.5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+        <polyline points="12 6 12 12 16 14"></polyline>
+      </svg>
+      <span>{formattedHours} hrs</span>
+    </div>
+  </div>
+
+  <!-- Game Details & Action -->
+  <div class="p-4 flex-1 flex flex-col justify-between gap-4">
+    <div class="space-y-1">
+      <h3 class="text-base font-semibold text-white group-hover:text-blue-400 transition-colors line-clamp-1">
+        {game.name}
+      </h3>
+      <p class="text-xs font-mono text-zinc-400">
+        App ID: <span class="text-zinc-500">{game.appId}</span>
+      </p>
+    </div>
+
+    <div class="pt-2 border-t border-dark-border/60 flex items-center justify-between gap-3">
+      <span class="text-xs font-mono text-zinc-500">
+        {game.playtimeMinutes > 60 ? `${Math.round(game.playtimeMinutes / 60)}h logged` : `${game.playtimeMinutes}m logged`}
+      </span>
+
+      <a
+        href={game.storeUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dark-border bg-dark-bg hover:bg-zinc-800/80 hover:text-white text-xs font-mono text-zinc-300 transition-colors"
+        aria-label={`View ${game.name} on Steam Store`}
+      >
+        <span>Steam Store</span>
+        <svg class="w-3 h-3 text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+          <polyline points="15 3 21 3 21 9"></polyline>
+          <line x1="10" y1="14" x2="21" y2="3"></line>
+        </svg>
+      </a>
+    </div>
+  </div>
+</article>

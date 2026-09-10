@@ -1,0 +1,58 @@
+---
+import type { SteamGame } from '../../lib/types/steam';
+import { getTopPlayedGames } from '../../lib/steam';
+import GameCard from './GameCard.astro';
+
+interface Props {
+  limit?: number;
+  games?: SteamGame[];
+  showStats?: boolean;
+}
+
+const { limit = 12, games: propGames, showStats = false } = Astro.props;
+
+const games: SteamGame[] = propGames || (await getTopPlayedGames(limit));
+
+const totalHours = games.reduce((sum, g) => sum + g.playtimeHours, 0);
+const mostPlayed = games.length > 0 ? games[0] : null;
+---
+
+<div class="space-y-6">
+  {showStats && (
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="rounded-xl border border-dark-border bg-dark-card p-4 space-y-1">
+        <span class="text-xs font-mono text-zinc-500 uppercase tracking-wider">Total Recorded Hours</span>
+        <p class="text-2xl font-bold font-mono text-white">
+          {new Intl.NumberFormat('en-US').format(totalHours)} <span class="text-sm font-normal text-zinc-400">hrs</span>
+        </p>
+      </div>
+
+      <div class="rounded-xl border border-dark-border bg-dark-card p-4 space-y-1">
+        <span class="text-xs font-mono text-zinc-500 uppercase tracking-wider">Top Played Game</span>
+        <p class="text-lg font-semibold text-emerald-400 truncate">
+          {mostPlayed ? mostPlayed.name : 'Counter-Strike 2'}
+        </p>
+      </div>
+
+      <div class="rounded-xl border border-dark-border bg-dark-card p-4 space-y-1">
+        <span class="text-xs font-mono text-zinc-500 uppercase tracking-wider">Featured Games</span>
+        <p class="text-2xl font-bold font-mono text-white">
+          {games.length} <span class="text-sm font-normal text-zinc-400">titles</span>
+        </p>
+      </div>
+    </div>
+  )}
+
+  {games.length === 0 ? (
+    <div class="rounded-xl border border-dark-border bg-dark-card p-8 text-center space-y-2">
+      <p class="text-sm font-mono text-zinc-400">No Steam games available.</p>
+      <p class="text-xs text-zinc-500">Ensure your Steam profile and game library privacy is set to Public.</p>
+    </div>
+  ) : (
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      {games.map((game) => (
+        <GameCard game={game} />
+      ))}
+    </div>
+  )}
+</div>

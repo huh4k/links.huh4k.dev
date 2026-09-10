@@ -1,0 +1,113 @@
+---
+import '../styles/global.css';
+import { SITE_CONFIG } from '../lib/config';
+import SteamPresence from '../components/steam/SteamPresence';
+import SocialLinks from '../components/SocialLinks.astro';
+
+interface Props {
+  title?: string;
+  description?: string;
+  currentPath?: string;
+}
+
+const {
+  title = SITE_CONFIG.title,
+  description = SITE_CONFIG.description,
+  currentPath = '/',
+} = Astro.props;
+
+const currentYear = new Date().getFullYear();
+const isHome = currentPath === '/';
+const isGames = currentPath === '/games';
+---
+
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{title}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="bg-dark-bg text-zinc-100 flex flex-col min-h-screen selection:bg-blue-600 selection:text-white">
+    <!-- Navbar Header -->
+    <header class="sticky top-0 z-50 w-full border-b border-dark-border/80 bg-dark-bg/90 backdrop-blur-md">
+      <div class="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+        <!-- Brand -->
+        <a
+          href="/"
+          class="group flex items-center gap-2 font-mono text-sm tracking-tight text-zinc-200 hover:text-white transition-colors"
+          aria-label="huh4k links home"
+        >
+          <span class="inline-block w-2.5 h-2.5 rounded-sm bg-blue-500 group-hover:scale-110 transition-transform"></span>
+          <span class="font-semibold text-zinc-100">huh4k</span>
+          <span class="text-zinc-500">~/links</span>
+        </a>
+
+        <!-- Navigation Links -->
+        <nav class="flex items-center gap-4 sm:gap-6 text-sm font-medium">
+          <a
+            href="/"
+            class={`transition-colors ${isHome ? 'text-white font-semibold' : 'text-zinc-400 hover:text-zinc-200'}`}
+          >
+            Links
+          </a>
+          <a
+            href="/games"
+            class={`transition-colors flex items-center gap-1.5 ${isGames ? 'text-white font-semibold' : 'text-zinc-400 hover:text-zinc-200'}`}
+          >
+            <span>Games</span>
+            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">
+              Steam
+            </span>
+          </a>
+          <a
+            href={SITE_CONFIG.author.portfolio}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-zinc-400 hover:text-zinc-200 transition-colors hidden sm:inline-flex items-center gap-1"
+          >
+            <span>Portfolio</span>
+            <span class="text-xs">↗</span>
+          </a>
+        </nav>
+
+        <!-- Steam Live Presence Widget in Navbar -->
+        <div class="hidden sm:flex items-center pl-2 border-l border-dark-border/70">
+          <SteamPresence client:idle variant="badge" />
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-8 sm:py-12">
+      <slot />
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-dark-border/80 bg-[#07080c] py-12 text-sm text-zinc-500">
+      <div class="max-w-5xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-6">
+        <!-- Status & Socials -->
+        <div class="flex flex-col sm:flex-row items-center gap-4">
+          <SocialLinks />
+          <span class="text-xs font-mono text-zinc-500 hidden sm:inline">•</span>
+          <span class="text-xs font-mono text-zinc-400">Steam Web API Integration</span>
+        </div>
+
+        <!-- Copyright & Tech -->
+        <div class="flex items-center gap-3 text-xs font-mono text-zinc-500">
+          <span>© {currentYear} {SITE_CONFIG.name}</span>
+          <span>•</span>
+          <span>Astro + Tailwind + Steam</span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
