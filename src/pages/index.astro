@@ -53,11 +53,11 @@ const steamProfileUrl = `https://steamcommunity.com/profiles/${steamId}`;
         <h2 class="text-xs font-mono uppercase tracking-wider text-blue-400">
           01 // Quick Links
         </h2>
-        <span class="text-xs font-mono text-zinc-500">Steam • /links • /leetify</span>
+        <span class="text-xs font-mono text-zinc-500">Steam • /links • /leetify • /games</span>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <!-- Steam Profile & Library Card -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Steam Profile Card -->
         <a
           href={steamProfileUrl}
           target="_blank"
@@ -104,14 +104,14 @@ const steamProfileUrl = `https://steamcommunity.com/profiles/${steamId}`;
           href="/leetify"
           target="_blank"
           rel="noopener noreferrer"
-          class="group rounded-xl border border-dark-border bg-dark-card p-5 transition-all duration-300 hover:border-orange-500/50 hover:bg-dark-card-hover flex flex-col justify-between gap-4"
+          class="group rounded-xl border border-dark-border bg-dark-card p-5 transition-all duration-300 hover:border-[#BF3B68]/60 hover:bg-dark-card-hover flex flex-col justify-between gap-4"
         >
           <div class="space-y-2">
             <div class="flex items-center justify-between">
-              <span class="text-xs font-mono text-orange-400">/leetify</span>
-              <span class="text-zinc-500 group-hover:text-orange-400 transition-colors">↗</span>
+              <span class="text-xs font-mono text-[#BF3B68]">/leetify</span>
+              <span class="text-zinc-500 group-hover:text-[#BF3B68] transition-colors">↗</span>
             </div>
-            <h3 class="text-lg font-semibold text-white group-hover:text-orange-400 transition-colors">
+            <h3 class="text-lg font-semibold text-white group-hover:text-[#BF3B68] transition-colors">
               Leetify CS2 Profile
             </h3>
             <p class="text-xs text-zinc-400 leading-relaxed">
@@ -120,6 +120,26 @@ const steamProfileUrl = `https://steamcommunity.com/profiles/${steamId}`;
           </div>
           <span class="text-xs font-mono text-zinc-500 group-hover:text-zinc-300">View on Leetify →</span>
         </a>
+
+        <!-- Games Shelf Card -->
+        <a
+          href="/games"
+          class="group rounded-xl border border-dark-border bg-dark-card p-5 transition-all duration-300 hover:border-emerald-500/50 hover:bg-dark-card-hover flex flex-col justify-between gap-4"
+        >
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono text-emerald-400">/games</span>
+              <span class="text-zinc-500 group-hover:text-emerald-400 transition-colors">→</span>
+            </div>
+            <h3 class="text-lg font-semibold text-white group-hover:text-emerald-400 transition-colors">
+              Games Shelf
+            </h3>
+            <p class="text-xs text-zinc-400 leading-relaxed">
+              Steam game library, total logged playtime, and top played titles.
+            </p>
+          </div>
+          <span class="text-xs font-mono text-zinc-500 group-hover:text-zinc-300">View Games →</span>
+        </a>
       </div>
     </section>
 
@@ -127,7 +147,7 @@ const steamProfileUrl = `https://steamcommunity.com/profiles/${steamId}`;
     <section class="space-y-4 pt-4 border-t border-dark-border/60">
       <div class="flex items-center justify-between">
         <div class="space-y-1">
-          <div class="flex items-center gap-2 text-xs font-mono text-orange-400 uppercase tracking-wider">
+          <div class="flex items-center gap-2 text-xs font-mono text-[#BF3B68] uppercase tracking-wider">
             <span>02 // Competitive Performance</span>
           </div>
           <h2 class="text-xl sm:text-2xl font-bold tracking-tight text-white">
@@ -139,7 +159,7 @@ const steamProfileUrl = `https://steamcommunity.com/profiles/${steamId}`;
           href="/leetify"
           target="_blank"
           rel="noopener noreferrer"
-          class="text-xs font-mono text-orange-400 hover:text-orange-300 transition-colors flex items-center gap-1"
+          class="text-xs font-mono text-[#BF3B68] hover:text-[#d64c7b] transition-colors flex items-center gap-1 font-medium"
         >
           <span>Full Analytics</span>
           <span>↗</span>

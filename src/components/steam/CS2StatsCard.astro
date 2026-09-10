@@ -37,7 +37,7 @@ const leetifyFormatted =
   stats.leetifyRating !== null
     ? `${stats.leetifyRating > 0 ? '+' : ''}${stats.leetifyRating}`
     : '--';
-const leetifyVariant = stats.leetifyRating && stats.leetifyRating > 0 ? 'emerald' : 'zinc';
+const leetifyVariant = stats.leetifyRating && stats.leetifyRating > 0 ? 'leetify' : 'zinc';
 ---
 
 <div
@@ -50,7 +50,7 @@ const leetifyVariant = stats.leetifyRating && stats.leetifyRating > 0 ? 'emerald
     <div class="flex items-center justify-between gap-4">
       <!-- CS2 Logo & Player Info -->
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-400 shrink-0 shadow-sm shadow-orange-950/30">
+        <div class="w-10 h-10 rounded-xl bg-[#BF3B68]/15 border border-[#BF3B68]/35 flex items-center justify-center text-[#BF3B68] shrink-0 shadow-sm shadow-[#BF3B68]/20">
           <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24">
             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5v-9l6 4.5-6 4.5z"/>
           </svg>
@@ -58,10 +58,10 @@ const leetifyVariant = stats.leetifyRating && stats.leetifyRating > 0 ? 'emerald
 
         <div>
           <div class="flex items-center gap-2">
-            <span class="text-xs font-mono text-orange-400 font-semibold uppercase tracking-wider">
+            <span class="text-xs font-mono text-[#BF3B68] font-semibold uppercase tracking-wider">
               Counter-Strike 2
             </span>
-            <span class="w-1.5 h-1.5 rounded-full bg-orange-400/80"></span>
+            <span class="w-1.5 h-1.5 rounded-full bg-[#BF3B68]/80"></span>
             <span class="text-xs font-mono text-zinc-400">{stats.statusLabel}</span>
           </div>
           <h3 class="text-base sm:text-lg font-bold text-white tracking-tight">
@@ -75,12 +75,12 @@ const leetifyVariant = stats.leetifyRating && stats.leetifyRating > 0 ? 'emerald
         href={stats.profileUrl}
         target="_blank"
         rel="noopener noreferrer"
-        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dark-border bg-dark-bg/80 hover:bg-zinc-800 text-xs font-mono text-zinc-300 hover:text-white transition-colors"
+        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#BF3B68]/30 bg-[#BF3B68]/10 hover:border-[#BF3B68]/60 hover:bg-[#BF3B68]/20 text-xs font-mono text-[#BF3B68] hover:text-[#d64c7b] transition-colors"
         aria-label="View profile on Leetify"
         title="View Leetify Profile"
       >
         <span>Leetify</span>
-        <span class="text-zinc-500">↗</span>
+        <span class="text-[#BF3B68]/70">↗</span>
       </a>
     </div>
 
@@ -146,9 +146,9 @@ const leetifyVariant = stats.leetifyRating && stats.leetifyRating > 0 ? 'emerald
         href="https://leetify.com"
         target="_blank"
         rel="noopener noreferrer"
-        class="inline-flex items-center gap-1.5 hover:text-zinc-300 transition-colors"
+        class="inline-flex items-center gap-1.5 hover:text-[#BF3B68] transition-colors"
       >
-        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+        <span class="w-2 h-2 rounded-full bg-[#BF3B68]"></span>
         <span>Powered by Leetify Public API</span>
       </a>
 

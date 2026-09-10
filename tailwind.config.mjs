@@ -18,6 +18,12 @@ export default {
           cyan: '#06b6d4',
           emerald: '#10b981',
           violet: '#8b5cf6',
+          leetify: '#BF3B68',
+        },
+        leetify: {
+          DEFAULT: '#BF3B68',
+          hover: '#d64c7b',
+          muted: 'rgba(191, 59, 104, 0.15)',
         },
       },
       fontFamily: {
