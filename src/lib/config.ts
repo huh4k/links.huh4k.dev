@@ -15,8 +15,8 @@ export interface SiteConfig {
 
 export const SITE_CONFIG: SiteConfig = {
   name: 'huh4k',
-  title: 'huh4k links — Steam & Leetify Gaming Hub',
-  description: 'Verified Steam gaming presence, Counter-Strike 2 Premier rating, and Leetify analytics for huh4k.',
+  title: 'links and shit',
+  description: 'pronounced hufk',
   url: 'https://links.huh4k.dev',
   author: {
     name: 'huh4k',
