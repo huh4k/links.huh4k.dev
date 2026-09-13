@@ -56,7 +56,7 @@ const isGames = currentPath === '/games';
         <!-- Navigation Links -->
         <nav class="flex items-center gap-4 sm:gap-6 text-sm font-medium">
           <a
-            href="/links"
+            href="/"
             class={`transition-colors ${isHome ? 'text-white font-semibold' : 'text-zinc-400 hover:text-zinc-200'}`}
           >
             Links
@@ -92,7 +92,7 @@ const isGames = currentPath === '/games';
 
         <!-- Steam Live Presence Widget in Navbar -->
         <div class="hidden sm:flex items-center pl-2 border-l border-dark-border/70">
-          <SteamPresence client:idle variant="badge" />
+          <SteamPresence client:load variant="badge" />
         </div>
       </div>
     </header>

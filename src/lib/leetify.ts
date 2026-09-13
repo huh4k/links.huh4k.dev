@@ -132,14 +132,17 @@ export function getFallbackCS2Stats(steamId: string): CS2RatingData {
  * Fetches player statistics from the Leetify Public API.
  * Uses 8-hour cache and fails gracefully to fallback data.
  */
-export async function getCS2Stats(customSteamId?: string): Promise<CS2RatingData> {
+export async function getCS2Stats(
+  customSteamId?: string,
+  customApiKey?: string
+): Promise<CS2RatingData> {
   const now = Date.now();
   if (cs2StatsCache && now - cs2StatsCache.timestamp < CACHE_TTL_MS) {
     return cs2StatsCache.data;
   }
 
   const steamId = customSteamId || getSteamId64();
-  const apiKey = getLeetifyApiKey();
+  const apiKey = customApiKey || getLeetifyApiKey();
   const fallback = getFallbackCS2Stats(steamId);
 
   try {

@@ -1,14 +1,22 @@
 import type { APIRoute } from 'astro';
 import { getPlayerSummary } from '../../../lib/steam';
 
-export const GET: APIRoute = async () => {
+export const prerender = false;
+
+export const GET: APIRoute = async (context) => {
   try {
-    const status = await getPlayerSummary();
+    const runtimeEnv = (context.locals as any)?.runtime?.env;
+    const apiKey = runtimeEnv?.STEAM_API_KEY || process.env.STEAM_API_KEY;
+    const steamId = runtimeEnv?.STEAM_ID64 || process.env.STEAM_ID64;
+
+    const status = await getPlayerSummary(steamId, apiKey);
     return new Response(JSON.stringify(status), {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+        'Pragma': 'no-cache',
+        'Expires': '0',
       },
     });
   } catch (error) {
@@ -25,6 +33,7 @@ export const GET: APIRoute = async () => {
         status: 200,
         headers: {
           'Content-Type': 'application/json',
+          'Cache-Control': 'no-store, max-age=0',
         },
       }
     );

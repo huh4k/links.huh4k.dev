@@ -9,28 +9,37 @@ interface SteamPresenceProps {
    */
   variant?: 'badge' | 'card';
   className?: string;
+  initialStatus?: SteamPresenceStatus;
 }
 
-export default function SteamPresence({ variant = 'badge', className = '' }: SteamPresenceProps) {
-  const [status, setStatus] = useState<SteamPresenceStatus | null>(null);
-  const [loading, setLoading] = useState(true);
+export default function SteamPresence({
+  variant = 'badge',
+  className = '',
+  initialStatus,
+}: SteamPresenceProps) {
+  const [status, setStatus] = useState<SteamPresenceStatus | null>(initialStatus || null);
+  const [loading, setLoading] = useState(!initialStatus);
 
   const fetchStatus = async () => {
     try {
-      const res = await fetch('/api/steam/status.json');
+      const res = await fetch(`/api/steam/status.json?t=${Date.now()}`, {
+        cache: 'no-store',
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (await res.json()) as SteamPresenceStatus;
       setStatus(data);
     } catch (err) {
       // Graceful fallback to offline
-      setStatus({
-        state: 'offline',
-        label: 'Offline',
-        personaname: 'huh4k',
-        avatarUrl: '',
-        profileUrl: 'https://steamcommunity.com',
-        lastUpdated: new Date().toISOString(),
-      });
+      setStatus((prev) =>
+        prev || {
+          state: 'offline',
+          label: 'Offline',
+          personaname: 'huh4k',
+          avatarUrl: '',
+          profileUrl: 'https://steamcommunity.com',
+          lastUpdated: new Date().toISOString(),
+        }
+      );
     } finally {
       setLoading(false);
     }
@@ -38,8 +47,8 @@ export default function SteamPresence({ variant = 'badge', className = '' }: Ste
 
   useEffect(() => {
     fetchStatus();
-    // Poll every 60 seconds
-    const interval = setInterval(fetchStatus, 60000);
+    // Poll every 30 seconds for responsive presence
+    const interval = setInterval(fetchStatus, 30000);
     return () => clearInterval(interval);
   }, []);
 

@@ -113,13 +113,16 @@ export const FALLBACK_GAMES: SteamGame[] = [
  * Fetches the user's current live status / game presence.
  * Gracefully falls back to offline state on errors.
  */
-export async function getPlayerSummary(customSteamId?: string): Promise<SteamPresenceStatus> {
+export async function getPlayerSummary(
+  customSteamId?: string,
+  customApiKey?: string
+): Promise<SteamPresenceStatus> {
   const now = Date.now();
   if (playerSummaryCache && now - playerSummaryCache.timestamp < SUMMARY_CACHE_TTL_MS) {
     return playerSummaryCache.data;
   }
 
-  const apiKey = getSteamApiKey();
+  const apiKey = customApiKey || getSteamApiKey();
   const steamId = customSteamId || getSteamId64();
 
   const fallback: SteamPresenceStatus = {
@@ -157,24 +160,31 @@ export async function getPlayerSummary(customSteamId?: string): Promise<SteamPre
     let state: 'in-game' | 'online' | 'offline' = 'offline';
     let label = 'Offline';
 
-    const isInGame = Boolean(player.gameextrainfo && player.gameid);
+    const isInGame = Boolean(player.gameextrainfo || (player.gameid && player.gameid !== '0'));
     const isOnline = player.personastate > 0;
 
     let gameInfo: SteamPresenceStatus['game'] = undefined;
 
-    if (isInGame && player.gameid && player.gameextrainfo) {
+    if (isInGame) {
       state = 'in-game';
-      label = `Currently Playing: ${player.gameextrainfo}`;
+      const gameTitle = player.gameextrainfo || 'Game';
+      label = `Currently Playing: ${gameTitle}`;
+      const appId = player.gameid || '730';
       gameInfo = {
-        id: player.gameid,
-        title: player.gameextrainfo,
-        headerUrl: `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${player.gameid}/header.jpg`,
-        capsuleUrl: `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${player.gameid}/capsule_616x353.jpg`,
-        storeUrl: `https://store.steampowered.com/app/${player.gameid}/`,
+        id: appId,
+        title: gameTitle,
+        headerUrl: `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${appId}/header.jpg`,
+        capsuleUrl: `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${appId}/capsule_616x353.jpg`,
+        storeUrl: `https://store.steampowered.com/app/${appId}/`,
       };
     } else if (isOnline) {
       state = 'online';
-      label = 'Online on Steam';
+      label =
+        player.personastate === 3
+          ? 'Away on Steam'
+          : player.personastate === 4
+            ? 'Snooze on Steam'
+            : 'Online on Steam';
     }
 
     const result: SteamPresenceStatus = {
