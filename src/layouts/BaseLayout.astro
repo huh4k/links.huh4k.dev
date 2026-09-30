@@ -46,7 +46,7 @@ const ogImageUrl = new URL('/favicon.svg', SITE_CONFIG.url).href;
     <meta property="og:url" content={canonicalUrl} />
     <meta property="og:image" content={ogImageUrl} />
 
-    <!-- Twitter / X Cards -->
+    <!-- Twitter Cards -->
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
@@ -61,23 +61,23 @@ const ogImageUrl = new URL('/favicon.svg', SITE_CONFIG.url).href;
   </head>
   <body class="bg-[#08090D] text-zinc-100 flex flex-col min-h-screen selection:bg-telemetry-magenta selection:text-white relative">
     <!-- Background Blueprint Dot Matrix Grid -->
-    <div class="fixed inset-0 bg-grid-pattern opacity-30 pointer-events-none z-0"></div>
+    <div class="fixed inset-0 bg-grid-pattern opacity-25 pointer-events-none z-0"></div>
 
-    <!-- Interactive Command Deck Modal Island -->
+    <!-- Command Deck Modal Island -->
     <CommandDeck client:load steamId={steamId} />
 
-    <!-- Mission Control Navbar Header -->
+    <!-- Navbar Header -->
     <header class="sticky top-0 z-50 w-full border-b border-[#1E2333] bg-[#08090D]/90 backdrop-blur-md">
       <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3 sm:gap-4">
-        <!-- Brand & System Node Indicator -->
+        <!-- Brand -->
         <a
           href="/"
           class="group flex items-center gap-2.5 font-mono text-sm tracking-tight text-zinc-200 hover:text-white transition-colors shrink-0"
-          aria-label="huh4k mission control home"
+          aria-label="huh4k home"
         >
           <span class="inline-block w-2.5 h-2.5 rounded-sm bg-telemetry-green shadow-sm shadow-telemetry-green/60 animate-pulse"></span>
-          <span class="font-bold text-white tracking-wide">[H4K // SYS]</span>
-          <span class="text-zinc-500 hidden sm:inline font-mono text-xs">huh4k.dev</span>
+          <span class="font-bold text-white tracking-wide">huh4k</span>
+          <span class="text-zinc-500 hidden sm:inline font-mono text-xs">~/links</span>
         </a>
 
         <!-- Navigation Links & Hotkey Trigger -->
@@ -87,15 +87,15 @@ const ogImageUrl = new URL('/favicon.svg', SITE_CONFIG.url).href;
               href="/"
               class={`transition-colors py-1 ${isHome ? 'text-telemetry-blue font-bold border-b border-telemetry-blue' : 'text-zinc-400 hover:text-zinc-200'}`}
             >
-              [LINKS]
+              [Links]
             </a>
             <a
               href="/games"
               class={`transition-colors py-1 flex items-center gap-1 ${isGames ? 'text-telemetry-blue font-bold border-b border-telemetry-blue' : 'text-zinc-400 hover:text-zinc-200'}`}
             >
-              <span>[GAMES]</span>
+              <span>[Games]</span>
               <span class="hidden sm:inline text-[9px] px-1 py-0.2 rounded bg-telemetry-blue/20 text-telemetry-blue border border-telemetry-blue/30">
-                VALVE
+                Steam
               </span>
             </a>
             <a
@@ -104,7 +104,7 @@ const ogImageUrl = new URL('/favicon.svg', SITE_CONFIG.url).href;
               rel="noopener noreferrer"
               class="text-[#BF3B68] hover:text-white transition-colors inline-flex items-center gap-1 font-semibold"
             >
-              <span>[LEETIFY]</span>
+              <span>[Leetify]</span>
               <span class="text-[10px]">↗</span>
             </a>
             <a
@@ -113,12 +113,12 @@ const ogImageUrl = new URL('/favicon.svg', SITE_CONFIG.url).href;
               rel="noopener noreferrer"
               class="text-zinc-400 hover:text-white transition-colors hidden md:inline-flex items-center gap-1"
             >
-              <span>[GITHUB]</span>
+              <span>[GitHub]</span>
               <span class="text-[10px]">↗</span>
             </a>
           </nav>
 
-          <!-- Interactive Command Deck Prompt Trigger -->
+          <!-- Command Deck Prompt Trigger -->
           <button
             type="button"
             onclick="window.dispatchEvent(new CustomEvent('open-command-deck'))"
@@ -126,7 +126,7 @@ const ogImageUrl = new URL('/favicon.svg', SITE_CONFIG.url).href;
             title="Open Command Deck (Press '/')"
           >
             <span class="text-telemetry-blue font-bold">/</span>
-            <span>DECK</span>
+            <span>Deck</span>
             <kbd class="px-1 py-0.2 rounded bg-black/50 text-[9px] text-zinc-500 border border-white/5">/</kbd>
           </button>
         </div>
@@ -138,12 +138,12 @@ const ogImageUrl = new URL('/favicon.svg', SITE_CONFIG.url).href;
       </div>
     </header>
 
-    <!-- Main Mission Control Deck -->
+    <!-- Main Content -->
     <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-10 relative z-10">
       <slot />
     </main>
 
-    <!-- Industrial Mission-Control Footer -->
+    <!-- Footer -->
     <footer class="border-t border-[#1E2333] bg-[#06070A] py-10 text-xs font-mono text-zinc-500 relative z-10">
       <div class="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-6">
         <!-- Status & Telemetry Identifiers -->
@@ -152,17 +152,17 @@ const ogImageUrl = new URL('/favicon.svg', SITE_CONFIG.url).href;
           <span class="text-zinc-600 hidden sm:inline">•</span>
           <div class="flex items-center gap-2 text-[11px] text-zinc-400">
             <span class="w-1.5 h-1.5 rounded-full bg-telemetry-green animate-pulse"></span>
-            <span>SYS_CORE: OPERATIONAL</span>
+            <span>Steam & Leetify Hub</span>
             <span class="text-zinc-600">•</span>
-            <span>NODE: SYD-01</span>
+            <span>Sydney, AU</span>
           </div>
         </div>
 
-        <!-- Copyright & Platform Stamp -->
+        <!-- Copyright & Tech -->
         <div class="flex items-center gap-3 text-[11px] text-zinc-500">
           <span>© {currentYear} huh4k</span>
           <span>•</span>
-          <span>HARDWARE_TELEMETRY_v2.0</span>
+          <span>links.huh4k.dev</span>
         </div>
       </div>
     </footer>

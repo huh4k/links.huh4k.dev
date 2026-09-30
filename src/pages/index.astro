@@ -12,80 +12,80 @@ const topGames = await getTopPlayedGames(3);
 ---
 
 <BaseLayout
-  title={`${SITE_CONFIG.author.name} // [HARDWARE_TELEMETRY_DASHBOARD]`}
+  title={`${SITE_CONFIG.author.name} — Steam & CS2 Hub`}
   description={SITE_CONFIG.description}
   currentPath="/"
 >
   <div class="space-y-6 sm:space-y-8">
-    <!-- Top Telemetry Status Strip -->
+    <!-- Top Telemetry Strip -->
     <div class="flex flex-wrap items-center justify-between gap-3 text-xs font-mono text-zinc-400 border-b border-[#1E2333] pb-3">
       <div class="flex items-center gap-2.5">
         <span class="w-2 h-2 rounded-full bg-telemetry-green shadow-sm shadow-telemetry-green/60 animate-pulse"></span>
-        <span class="text-white font-bold tracking-wider">[SYS_OPERATIONAL // MISSION_CONTROL_v2.0]</span>
+        <span class="text-white font-bold tracking-wider">[HUH4K // PROFILE & METRICS]</span>
         <span class="text-zinc-600 hidden sm:inline">•</span>
-        <span class="text-zinc-500 hidden sm:inline">VALVE_CLOUDFLARE_TELEMETRY</span>
+        <span class="text-zinc-400 hidden sm:inline">STEAM & LEETIFY VERIFIED</span>
       </div>
 
       <div class="flex items-center gap-2 text-[11px]">
         <button
           type="button"
           onclick="window.dispatchEvent(new CustomEvent('open-command-deck'))"
-          class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#151824] hover:bg-[#1E2333] border border-[#1E2333] text-zinc-300 hover:text-white transition-colors cursor-pointer tactile-btn"
+          class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#151824] hover:bg-[#1E2333] border border-[#1E2333] hover:border-telemetry-blue/50 text-zinc-300 hover:text-white transition-colors cursor-pointer tactile-btn"
         >
           <span class="text-telemetry-blue font-bold">/</span>
           <span>COMMAND DECK</span>
-          <kbd class="px-1 rounded bg-black/60 text-[9px] text-zinc-400">HOTKEY: /</kbd>
+          <kbd class="px-1 rounded bg-black/60 text-[9px] text-zinc-400 border border-white/5">/</kbd>
         </button>
       </div>
     </div>
 
     <!-- THE ASYMMETRIC BENTO MATRIX -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-stretch">
-      <!-- MODULE A: Identity & Telemetry Node (Span 5 cols on lg) -->
+      <!-- MODULE A: Identity & Live Presence (Span 5 cols on lg) -->
       <section
         class="lg:col-span-5 rounded-2xl border border-hardware bg-[#0F1118] p-5 sm:p-7 relative overflow-hidden flex flex-col justify-between telemetry-card shadow-xl gap-6"
       >
         <div class="absolute inset-0 bg-grid-pattern opacity-25 pointer-events-none"></div>
 
         <div class="relative z-10 space-y-5">
-          <!-- Monogram Header & System ID -->
+          <!-- Header Bar -->
           <div class="flex items-center justify-between border-b border-[#1E2333] pb-3">
             <div class="flex items-center gap-2">
-              <span class="px-2 py-0.5 rounded bg-telemetry-green/15 border border-telemetry-green/30 text-[10px] font-mono text-telemetry-green font-bold tracking-wider">
-                [SYS_NODE // 01]
+              <span class="px-2 py-0.5 rounded bg-telemetry-blue/15 border border-telemetry-blue/30 text-[10px] font-mono text-telemetry-blue font-bold tracking-wider">
+                [PROFILE]
               </span>
-              <span class="text-[11px] font-mono text-zinc-400">OPERATOR_PROFILE</span>
+              <span class="text-[11px] font-mono text-zinc-400">huh4k.dev</span>
             </div>
-            <span class="text-[10px] font-mono text-zinc-500 font-semibold tracking-wider">
-              ID: {steamId.slice(-6)}
+            <span class="text-[11px] font-mono text-zinc-500 font-medium">
+              STEAM ID: {steamId.slice(-6)}
             </span>
           </div>
 
-          <!-- Avatar & Glitch Typography Display -->
-          <div class="space-y-3">
-            <div class="flex items-center gap-3.5">
-              <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-[#1E2333] to-[#0A0C12] border border-hardware flex items-center justify-center font-mono font-black text-xl text-white tracking-wider shadow-inner shadow-black relative">
+          <!-- Avatar & Handle Display -->
+          <div class="space-y-3.5">
+            <div class="flex items-center gap-4">
+              <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-[#1E2333] to-[#0A0C12] border border-hardware flex items-center justify-center font-mono font-black text-xl text-white tracking-wider shadow-inner shadow-black relative shrink-0">
                 <span>H4K</span>
                 <span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-telemetry-green border-2 border-[#0F1118] shadow-sm shadow-telemetry-green/60 animate-pulse"></span>
               </div>
 
-              <div>
-                <div class="flex items-center gap-2">
+              <div class="min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
                   <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-white font-mono">
                     huh4k
                   </h1>
-                  <span class="text-xs font-mono px-2 py-0.5 rounded bg-[#1E2333] text-zinc-300 font-semibold">
-                    // huh4k
+                  <span class="text-xs font-mono px-2 py-0.5 rounded bg-[#1E2333] text-zinc-300 font-semibold border border-white/5">
+                    links.huh4k.dev
                   </span>
                 </div>
-                <p class="text-xs font-mono text-zinc-400 mt-0.5">
-                  Full-Stack Engineering & Competitive CS2
+                <p class="text-xs font-mono text-zinc-400 mt-1">
+                  Counter-Strike 2 • Software & Tools
                 </p>
               </div>
             </div>
 
-            <p class="text-xs sm:text-sm text-zinc-400 font-mono leading-relaxed bg-[#0A0C12]/80 p-3 rounded-lg border border-[#181D2B]">
-              Real-time Valve telemetry, Counter-Strike 2 Premier analytics, and verified platform uplinks.
+            <p class="text-xs sm:text-sm text-zinc-300 font-mono leading-relaxed bg-[#0A0C12]/80 p-3.5 rounded-lg border border-[#181D2B]">
+              Verified Steam gaming presence, live Counter-Strike 2 Premier rating, and platform links.
             </p>
           </div>
 
@@ -95,39 +95,39 @@ const topGames = await getTopPlayedGames(3);
           </div>
         </div>
 
-        <!-- Tactile Actions: Copy Discord & Hardware Specs -->
+        <!-- Tactile Actions: Copy Discord & Steam Community -->
         <div class="relative z-10 pt-4 border-t border-[#1E2333] space-y-3">
           <div class="flex items-center gap-2">
-            <!-- Copy Discord Button with Tactile Feedback -->
+            <!-- Copy Discord Button -->
             <button
               id="copy-discord-btn"
               type="button"
-              class="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-hardware bg-[#151824] hover:border-telemetry-blue hover:bg-[#1E2333] text-zinc-200 hover:text-white text-xs font-mono font-semibold transition-all tactile-btn cursor-pointer shadow-sm"
+              class="flex-1 inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-lg border border-hardware bg-[#151824] hover:border-telemetry-blue hover:bg-[#1E2333] text-zinc-200 hover:text-white text-xs font-mono font-semibold transition-all tactile-btn cursor-pointer shadow-sm"
               title="Copy Discord Tag"
             >
               <svg class="w-3.5 h-3.5 fill-current text-telemetry-blue" viewBox="0 0 24 24">
                 <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.894.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
               </svg>
-              <span id="discord-btn-text">COPY DISCORD // huh4k</span>
+              <span id="discord-btn-text">Copy Discord [huh4k]</span>
             </button>
 
-            <!-- Steam Community Quick Link -->
+            <!-- Steam Community Link -->
             <a
               href={steamProfileUrl}
               target="_blank"
               rel="noopener noreferrer"
-              class="px-3 py-2 rounded-lg border border-hardware bg-[#151824] hover:border-telemetry-blue text-zinc-300 hover:text-white text-xs font-mono font-semibold transition-all tactile-btn"
+              class="px-3.5 py-2.5 rounded-lg border border-hardware bg-[#151824] hover:border-telemetry-blue text-zinc-300 hover:text-white text-xs font-mono font-semibold transition-all tactile-btn"
               title="Open Steam Profile"
             >
-              <span>STEAM ↗</span>
+              <span>Steam Profile ↗</span>
             </a>
           </div>
 
-          <!-- Hardware Telemetry Specs -->
-          <div class="flex items-center justify-between text-[10px] font-mono text-zinc-500 pt-1">
-            <span>UPLINK: CLOUDFLARE_EDGE</span>
-            <span>STATUS: NOMINAL</span>
-            <span>LOC: SYDNEY_AU</span>
+          <!-- Quick Specs -->
+          <div class="flex items-center justify-between text-[11px] font-mono text-zinc-500 pt-1">
+            <span>Location: Sydney, AU</span>
+            <span class="text-zinc-600">•</span>
+            <span>Cloudflare Edge</span>
           </div>
         </div>
       </section>
@@ -137,7 +137,7 @@ const topGames = await getTopPlayedGames(3);
         <CS2StatsCard steamId={steamId} className="h-full" />
       </section>
 
-      <!-- MODULE C: Live Steam Activity & Top Games Shelf (Span 7 cols on lg) -->
+      <!-- MODULE C: Top Played Games Shelf (Span 7 cols on lg) -->
       <section
         class="lg:col-span-7 rounded-2xl border border-hardware bg-[#0F1118] p-5 sm:p-6 relative overflow-hidden flex flex-col justify-between telemetry-card shadow-xl gap-5"
       >
@@ -149,7 +149,7 @@ const topGames = await getTopPlayedGames(3);
             <div class="flex items-center gap-2.5">
               <span class="w-2.5 h-2.5 rounded-sm bg-telemetry-blue shadow-sm shadow-telemetry-blue/60"></span>
               <span class="text-xs font-mono font-bold tracking-wider text-white uppercase">
-                [VALVE_SUBSYSTEM // TOP_GAMES_TELEMETRY]
+                [STEAM // TOP PLAYED GAMES]
               </span>
             </div>
 
@@ -157,12 +157,12 @@ const topGames = await getTopPlayedGames(3);
               href="/games"
               class="inline-flex items-center gap-1.5 text-xs font-mono font-semibold text-telemetry-blue hover:text-white transition-colors"
             >
-              <span>EXPAND ARCHIVE</span>
+              <span>View All Games</span>
               <span>→</span>
             </a>
           </div>
 
-          <!-- Games Rack Items (Top 3) -->
+          <!-- Games List (Top 3) -->
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {topGames.map((game, index) => (
               <a
@@ -180,14 +180,14 @@ const topGames = await getTopPlayedGames(3);
                     class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                   />
                   <div class="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/80 font-mono text-[9px] text-telemetry-green font-bold border border-white/10">
-                    {new Intl.NumberFormat('en-US').format(game.playtimeHours)} HRS
+                    {new Intl.NumberFormat('en-US').format(game.playtimeHours)} hrs
                   </div>
                 </div>
 
                 <div class="space-y-1">
                   <div class="flex items-center justify-between text-[10px] font-mono text-zinc-500">
-                    <span>RANK_0{index + 1}</span>
-                    <span>APP: {game.appId}</span>
+                    <span>#0{index + 1}</span>
+                    <span>App {game.appId}</span>
                   </div>
                   <h3 class="text-xs font-mono font-bold text-white group-hover:text-telemetry-blue transition-colors truncate">
                     {game.name}
@@ -198,16 +198,16 @@ const topGames = await getTopPlayedGames(3);
           </div>
         </div>
 
-        <!-- Telemetry Footer -->
-        <div class="relative z-10 pt-2 border-t border-[#1E2333] flex items-center justify-between text-[10px] font-mono text-zinc-500">
-          <span>VALVE IPLAYER_SERVICE // SYNCHRONIZED</span>
+        <!-- Footer -->
+        <div class="relative z-10 pt-2 border-t border-[#1E2333] flex items-center justify-between text-[11px] font-mono text-zinc-500">
+          <span>Synced with Steam Community Library</span>
           <a href="/games" class="text-telemetry-blue hover:underline">
-            VIEW FULL GAMES SHELF ({topGames.length} SHOWN) →
+            Open Games Shelf →
           </a>
         </div>
       </section>
 
-      <!-- MODULE D: Developer & Platform Nodes 2x2 Grid (Span 5 cols on lg) -->
+      <!-- MODULE D: Platform Nodes 2x2 Grid (Span 5 cols on lg) -->
       <section
         class="lg:col-span-5 rounded-2xl border border-hardware bg-[#0F1118] p-5 sm:p-6 relative overflow-hidden flex flex-col justify-between telemetry-card shadow-xl gap-4"
       >
@@ -219,36 +219,36 @@ const topGames = await getTopPlayedGames(3);
             <div class="flex items-center gap-2.5">
               <span class="w-2.5 h-2.5 rounded-sm bg-telemetry-amber shadow-sm shadow-telemetry-amber/60"></span>
               <span class="text-xs font-mono font-bold tracking-wider text-white uppercase">
-                [PLATFORM_NODES // EXTERNAL_UPLINKS]
+                [QUICK LINKS]
               </span>
             </div>
-            <span class="text-[10px] font-mono text-zinc-500 font-semibold">
-              4 ACTIVE ROUTES
+            <span class="text-[11px] font-mono text-zinc-500">
+              Verified Profiles
             </span>
           </div>
 
           <!-- 2x2 Platform Grid -->
           <div class="grid grid-cols-2 gap-3">
-            <!-- Node 1: GitHub -->
+            <!-- Node 1: Steam Profile -->
             <a
-              href="https://github.com/huh4k"
+              href={steamProfileUrl}
               target="_blank"
               rel="noopener noreferrer"
-              class="group rounded-xl border border-hardware bg-[#0A0C12] hover:border-zinc-400 p-3.5 flex flex-col justify-between gap-3 transition-all tactile-btn"
+              class="group rounded-xl border border-hardware bg-[#0A0C12] hover:border-telemetry-blue p-3.5 flex flex-col justify-between gap-3 transition-all tactile-btn"
             >
               <div class="space-y-1">
-                <div class="flex items-center justify-between text-[10px] font-mono text-zinc-500">
-                  <span>[DEV_SOURCE]</span>
+                <div class="flex items-center justify-between text-[10px] font-mono text-telemetry-blue">
+                  <span>[STEAM]</span>
                   <span class="group-hover:text-white transition-colors">↗</span>
                 </div>
-                <h4 class="text-sm font-mono font-bold text-white group-hover:text-zinc-200 transition-colors">
-                  GitHub
+                <h4 class="text-sm font-mono font-bold text-white group-hover:text-telemetry-blue transition-colors">
+                  Steam Profile
                 </h4>
                 <p class="text-[11px] font-mono text-zinc-400 line-clamp-1">
-                  Repositories & code
+                  Community & badges
                 </p>
               </div>
-              <span class="text-[10px] font-mono text-zinc-500 group-hover:text-zinc-300">github.com/huh4k</span>
+              <span class="text-[10px] font-mono text-zinc-500 group-hover:text-zinc-300">Open Profile</span>
             </a>
 
             <!-- Node 2: Leetify -->
@@ -260,17 +260,17 @@ const topGames = await getTopPlayedGames(3);
             >
               <div class="space-y-1">
                 <div class="flex items-center justify-between text-[10px] font-mono text-[#BF3B68]">
-                  <span>[CS2_INTEL]</span>
+                  <span>[LEETIFY]</span>
                   <span class="group-hover:text-white transition-colors">↗</span>
                 </div>
                 <h4 class="text-sm font-mono font-bold text-white group-hover:text-[#BF3B68] transition-colors">
                   Leetify
                 </h4>
                 <p class="text-[11px] font-mono text-zinc-400 line-clamp-1">
-                  Aim score & analytics
+                  CS2 match analytics
                 </p>
               </div>
-              <span class="text-[10px] font-mono text-zinc-500 group-hover:text-zinc-300">CS2 Premier Hub</span>
+              <span class="text-[10px] font-mono text-zinc-500 group-hover:text-zinc-300">View Stats</span>
             </a>
 
             <!-- Node 3: Steam Inventory -->
@@ -282,17 +282,17 @@ const topGames = await getTopPlayedGames(3);
             >
               <div class="space-y-1">
                 <div class="flex items-center justify-between text-[10px] font-mono text-telemetry-amber">
-                  <span>[VALVE_ASSETS]</span>
+                  <span>[INVENTORY]</span>
                   <span class="group-hover:text-white transition-colors">↗</span>
                 </div>
                 <h4 class="text-sm font-mono font-bold text-white group-hover:text-telemetry-amber transition-colors">
-                  Inventory
+                  CS2 Inventory
                 </h4>
                 <p class="text-[11px] font-mono text-zinc-400 line-clamp-1">
-                  CS2 skins & items
+                  Weapon skins & stickers
                 </p>
               </div>
-              <span class="text-[10px] font-mono text-zinc-500 group-hover:text-zinc-300">Inspect Assets</span>
+              <span class="text-[10px] font-mono text-zinc-500 group-hover:text-zinc-300">Inspect Items</span>
             </a>
 
             <!-- Node 4: Games Shelf -->
@@ -302,7 +302,7 @@ const topGames = await getTopPlayedGames(3);
             >
               <div class="space-y-1">
                 <div class="flex items-center justify-between text-[10px] font-mono text-telemetry-blue">
-                  <span>[SYS_ARCHIVE]</span>
+                  <span>[GAMES]</span>
                   <span class="group-hover:text-white transition-colors">→</span>
                 </div>
                 <h4 class="text-sm font-mono font-bold text-white group-hover:text-telemetry-blue transition-colors">
@@ -312,27 +312,34 @@ const topGames = await getTopPlayedGames(3);
                   Full library view
                 </p>
               </div>
-              <span class="text-[10px] font-mono text-zinc-500 group-hover:text-zinc-300">Open Archive</span>
+              <span class="text-[10px] font-mono text-zinc-500 group-hover:text-zinc-300">Open Library</span>
             </a>
           </div>
         </div>
 
-        <!-- Telemetry Footer -->
-        <div class="relative z-10 pt-2 border-t border-[#1E2333] flex items-center justify-between text-[10px] font-mono text-zinc-500">
-          <span>ENCRYPTION: TLS_1.3</span>
+        <!-- Footer -->
+        <div class="relative z-10 pt-2 border-t border-[#1E2333] flex items-center justify-between text-[11px] font-mono text-zinc-500">
+          <a
+            href="https://github.com/huh4k"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-zinc-400 hover:text-white transition-colors"
+          >
+            [GITHUB] github.com/huh4k ↗
+          </a>
           <button
             type="button"
             onclick="window.dispatchEvent(new CustomEvent('open-command-deck'))"
             class="text-telemetry-blue hover:underline cursor-pointer"
           >
-            LAUNCH COMMAND DECK [ / ]
+            Press [ / ] for deck
           </button>
         </div>
       </section>
     </div>
   </div>
 
-  <!-- Client-side script for Discord tactile copy button -->
+  <!-- Client-side script for Discord copy button -->
   <script is:inline>
     const copyBtn = document.getElementById('copy-discord-btn');
     const copyText = document.getElementById('discord-btn-text');
@@ -342,7 +349,7 @@ const topGames = await getTopPlayedGames(3);
         try {
           await navigator.clipboard.writeText('huh4k');
           const original = copyText.textContent;
-          copyText.textContent = '[✓ DISCORD_COPIED: huh4k]';
+          copyText.textContent = '✓ Copied: huh4k';
           copyBtn.classList.add('border-telemetry-green', 'text-telemetry-green');
 
           setTimeout(() => {
@@ -350,8 +357,7 @@ const topGames = await getTopPlayedGames(3);
             copyBtn.classList.remove('border-telemetry-green', 'text-telemetry-green');
           }, 2000);
         } catch {
-          // Fallback if clipboard API blocked
-          copyText.textContent = 'TAG: huh4k';
+          copyText.textContent = 'Discord: huh4k';
         }
       });
     }

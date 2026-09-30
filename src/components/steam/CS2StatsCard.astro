@@ -15,19 +15,19 @@ const { bracket } = stats;
 
 // Format relative date for last match
 function formatLastMatch(isoString: string | null): string {
-  if (!isoString) return 'RECENT';
+  if (!isoString) return 'Recent';
   try {
     const date = new Date(isoString);
     const diffMs = Date.now() - date.getTime();
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    if (diffHours < 1) return 'JUST NOW';
-    if (diffHours < 24) return `${diffHours}H AGO`;
+    if (diffHours < 1) return 'Just now';
+    if (diffHours < 24) return `${diffHours}h ago`;
     const diffDays = Math.floor(diffHours / 24);
-    if (diffDays === 1) return 'YESTERDAY';
-    if (diffDays < 30) return `${diffDays}D AGO`;
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 30) return `${diffDays}d ago`;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   } catch {
-    return 'RECENT';
+    return 'Recent';
   }
 }
 
@@ -47,14 +47,14 @@ const progressPercent = rating >= 30000 ? 100 : Math.min(100, Math.max(0, Math.r
 const pointsNeeded = Math.max(0, nextTierTarget - rating);
 
 const tierNames: Record<number, string> = {
-  5000: 'LIGHT BLUE',
-  10000: 'BLUE',
-  15000: 'PURPLE',
-  20000: 'PINK',
-  25000: 'RED',
-  30000: 'GOLD',
+  5000: 'Light Blue',
+  10000: 'Blue',
+  15000: 'Purple',
+  20000: 'Pink',
+  25000: 'Red',
+  30000: 'Gold',
 };
-const nextTierName = tierNames[nextTierTarget] || 'MAX TIER';
+const nextTierName = tierNames[nextTierTarget] || 'Peak Tier';
 ---
 
 <div
@@ -63,12 +63,12 @@ const nextTierName = tierNames[nextTierTarget] || 'MAX TIER';
   <div class="absolute inset-0 bg-grid-pattern opacity-25 pointer-events-none"></div>
 
   <div class="relative z-10 flex flex-col justify-between h-full gap-5">
-    <!-- Telemetry Module Header -->
+    <!-- Header -->
     <div class="flex items-center justify-between gap-3 border-b border-[#1E2333] pb-3">
       <div class="flex items-center gap-2.5">
-        <span class="w-2.5 h-2.5 rounded-sm bg-telemetry-magenta shadow-sm shadow-[#BF3B68]/60"></span>
+        <span class="w-2 h-2 rounded-full bg-telemetry-magenta shadow-sm shadow-[#BF3B68]/60"></span>
         <span class="text-xs font-mono font-bold tracking-wider text-white uppercase">
-          [CS2_TELEMETRY // COMBAT_METRICS]
+          [CS2 // PREMIER PERFORMANCE]
         </span>
       </div>
 
@@ -80,12 +80,12 @@ const nextTierName = tierNames[nextTierTarget] || 'MAX TIER';
         aria-label="View CS2 profile on Leetify"
         title="Open Leetify Profile"
       >
-        <span>LEETIFY UPLINK</span>
+        <span>Leetify Profile</span>
         <span>↗</span>
       </a>
     </div>
 
-    <!-- Primary Rating Hero Matrix -->
+    <!-- Rating Display Card -->
     <div
       class={`rounded-xl border p-4 sm:p-5 flex flex-col gap-4 relative overflow-hidden ${bracket.bgColor} ${bracket.borderColor} ${bracket.glowColor} shadow-md`}
     >
@@ -93,7 +93,7 @@ const nextTierName = tierNames[nextTierTarget] || 'MAX TIER';
         <div class="space-y-1">
           <div class="flex items-center gap-2">
             <span class="text-[11px] font-mono uppercase tracking-wider text-zinc-400">
-              VALVE PREMIER // CS RATING
+              Counter-Strike 2 Premier
             </span>
             <span
               class={`text-[10px] font-mono px-2 py-0.5 rounded border ${bracket.borderColor} ${bracket.textColor} bg-black/60 font-bold tracking-wider`}
@@ -108,28 +108,27 @@ const nextTierName = tierNames[nextTierTarget] || 'MAX TIER';
             </span>
             {stats.premierRating !== null && stats.premierRating > 0 && (
               <span class="text-xs font-mono text-zinc-400 font-semibold uppercase">
-                PTS
+                pts
               </span>
             )}
           </div>
         </div>
 
         <div class="sm:text-right font-mono text-xs text-zinc-400 sm:border-l sm:border-white/10 sm:pl-4 space-y-0.5">
-          <div class="text-[10px] uppercase text-zinc-500 tracking-wider">SEASON_ENGAGEMENTS</div>
-          <div class="text-zinc-200 font-bold">{stats.recentMatchesCount} RECORDED MATCHES</div>
-          <div class="text-[10px] text-zinc-400">STATUS: {stats.statusLabel.toUpperCase()}</div>
+          <div class="text-[11px] text-zinc-200 font-semibold">{stats.recentMatchesCount} Matches Recorded</div>
+          <div class="text-[10px] text-zinc-400">Competitive Status: {stats.statusLabel}</div>
         </div>
       </div>
 
-      <!-- Segmented Tier Promotion Progress Bar -->
+      <!-- Tier Promotion Progress Bar -->
       <div class="space-y-1.5 pt-2 border-t border-white/10">
         <div class="flex items-center justify-between text-[11px] font-mono">
-          <span class="text-zinc-400 flex items-center gap-1.5">
+          <span class="text-zinc-300 flex items-center gap-1.5">
             <span class="w-1.5 h-1.5 rounded-full bg-telemetry-magenta"></span>
-            <span>NEXT TIER: {nextTierName}</span>
+            <span>Next Rank: {nextTierName} Tier</span>
           </span>
-          <span class="text-zinc-300 font-semibold">
-            {rating >= 30000 ? 'PEAK TIER REACHED' : `${new Intl.NumberFormat('en-US').format(pointsNeeded)} PTS TO PROMOTION`}
+          <span class="text-zinc-400 font-medium">
+            {rating >= 30000 ? 'Peak Tier Reached' : `${new Intl.NumberFormat('en-US').format(pointsNeeded)} pts to rank up`}
           </span>
         </div>
 
@@ -141,17 +140,17 @@ const nextTierName = tierNames[nextTierTarget] || 'MAX TIER';
         </div>
 
         <div class="flex items-center justify-between text-[10px] font-mono text-zinc-500">
-          <span>FLOOR: {new Intl.NumberFormat('en-US').format(tierFloor)}</span>
-          <span>{progressPercent}% COMPLETE</span>
-          <span>CEIL: {new Intl.NumberFormat('en-US').format(nextTierTarget)}</span>
+          <span>{new Intl.NumberFormat('en-US').format(tierFloor)} pts</span>
+          <span>{progressPercent}% tier progress</span>
+          <span>{new Intl.NumberFormat('en-US').format(nextTierTarget)} pts</span>
         </div>
       </div>
     </div>
 
-    <!-- Secondary Telemetry Rack (3-Column Mini Grid) -->
+    <!-- Secondary Metrics (Aim Score, Leetify Rating, Win Rate) -->
     <div class="grid grid-cols-3 gap-2.5 sm:gap-3">
       <StatBadge
-        label="AIM PRECISION"
+        label="AIM SCORE"
         value={stats.aimRating !== null ? stats.aimRating : '--'}
         sublabel="/ 100"
         variant="purple"
@@ -163,21 +162,21 @@ const nextTierName = tierNames[nextTierTarget] || 'MAX TIER';
         variant={leetifyVariant}
       />
       <StatBadge
-        label="MATCH WIN RATE"
+        label="WIN RATE"
         value={stats.winRate !== null ? `${stats.winRate}%` : '--'}
         sublabel="RECENT"
         variant="sky"
       />
     </div>
 
-    <!-- Telemetry Rack Footer -->
+    <!-- Footer Attribution -->
     <div class="pt-2.5 border-t border-[#1E2333] flex items-center justify-between text-[11px] font-mono text-zinc-500">
       <span class="flex items-center gap-1.5">
-        <span class="w-1.5 h-1.5 rounded-full bg-telemetry-green animate-pulse"></span>
-        <span>LEETIFY_API // SYNCED {lastMatchFormatted}</span>
+        <span class="w-1.5 h-1.5 rounded-full bg-telemetry-green"></span>
+        <span>Synced via Leetify • Last match {lastMatchFormatted}</span>
       </span>
 
-      <span class="text-zinc-600 hidden sm:inline">PROTOCOL: SECURE_POLL</span>
+      <span class="text-zinc-500 hidden sm:inline">CS2 Competitive</span>
     </div>
   </div>
 </div>
