@@ -5,13 +5,29 @@ export default {
   theme: {
     extend: {
       colors: {
-        dark: {
-          bg: '#090a0f',
-          card: '#10121a',
-          'card-hover': '#161924',
-          border: '#1e2230',
-          'border-subtle': '#181b26',
+        carbon: {
+          DEFAULT: '#08090D',
+          bg: '#08090D',
+          card: '#0F1118',
+          'card-hover': '#151824',
+          border: '#1E2333',
+          'border-subtle': '#181D2B',
           muted: '#8e96aa',
+        },
+        dark: {
+          bg: '#08090D',
+          card: '#0F1118',
+          'card-hover': '#151824',
+          border: '#1E2333',
+          'border-subtle': '#181D2B',
+          muted: '#8e96aa',
+        },
+        telemetry: {
+          green: '#22c55e',
+          blue: '#38bdf8',
+          magenta: '#BF3B68',
+          amber: '#f59e0b',
+          purple: '#c084fc',
         },
         brand: {
           blue: '#3b82f6',
@@ -29,6 +45,12 @@ export default {
       fontFamily: {
         sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
         mono: ['JetBrains Mono', 'Menlo', 'Monaco', 'Courier New', 'monospace'],
+      },
+      boxShadow: {
+        'telemetry-magenta': '0 0 20px -3px rgba(191, 59, 104, 0.35)',
+        'telemetry-blue': '0 0 20px -3px rgba(56, 189, 248, 0.35)',
+        'telemetry-green': '0 0 20px -3px rgba(34, 197, 94, 0.35)',
+        'telemetry-amber': '0 0 20px -3px rgba(245, 158, 11, 0.35)',
       },
     },
   },

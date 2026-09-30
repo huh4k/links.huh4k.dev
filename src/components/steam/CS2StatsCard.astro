@@ -11,24 +11,23 @@ interface Props {
 const { steamId, className = '', stats: propStats } = Astro.props;
 
 const stats: CS2RatingData = propStats || (await getCS2Stats(steamId));
-
 const { bracket } = stats;
 
 // Format relative date for last match
 function formatLastMatch(isoString: string | null): string {
-  if (!isoString) return 'Recent';
+  if (!isoString) return 'RECENT';
   try {
     const date = new Date(isoString);
     const diffMs = Date.now() - date.getTime();
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    if (diffHours < 1) return 'Just now';
-    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffHours < 1) return 'JUST NOW';
+    if (diffHours < 24) return `${diffHours}H AGO`;
     const diffDays = Math.floor(diffHours / 24);
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 30) return `${diffDays}d ago`;
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    if (diffDays === 1) return 'YESTERDAY';
+    if (diffDays < 30) return `${diffDays}D AGO`;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
   } catch {
-    return 'Recently';
+    return 'RECENT';
   }
 }
 
@@ -38,123 +37,147 @@ const leetifyFormatted =
     ? `${stats.leetifyRating > 0 ? '+' : ''}${stats.leetifyRating}`
     : '--';
 const leetifyVariant = stats.leetifyRating && stats.leetifyRating > 0 ? 'leetify' : 'zinc';
+
+// Compute tier advancement progress
+const rating = stats.premierRating || 0;
+const tierFloor = Math.floor(rating / 5000) * 5000;
+const nextTierTarget = tierFloor + 5000;
+const pointsInTier = Math.max(0, rating - tierFloor);
+const progressPercent = rating >= 30000 ? 100 : Math.min(100, Math.max(0, Math.round((pointsInTier / 5000) * 100)));
+const pointsNeeded = Math.max(0, nextTierTarget - rating);
+
+const tierNames: Record<number, string> = {
+  5000: 'LIGHT BLUE',
+  10000: 'BLUE',
+  15000: 'PURPLE',
+  20000: 'PINK',
+  25000: 'RED',
+  30000: 'GOLD',
+};
+const nextTierName = tierNames[nextTierTarget] || 'MAX TIER';
 ---
 
 <div
-  class={`rounded-2xl border border-dark-border bg-gradient-to-br from-dark-card to-[#0d0f17] p-5 sm:p-6 relative overflow-hidden transition-all duration-300 hover:border-zinc-700 shadow-xl ${className}`}
+  class={`rounded-2xl border border-hardware bg-[#0F1118] p-5 sm:p-6 relative overflow-hidden telemetry-card shadow-xl ${className}`}
 >
-  <div class="absolute inset-0 bg-grid-pattern opacity-30 pointer-events-none"></div>
+  <div class="absolute inset-0 bg-grid-pattern opacity-25 pointer-events-none"></div>
 
-  <div class="relative z-10 flex flex-col justify-between h-full gap-6">
-    <!-- Header -->
-    <div class="flex items-center justify-between gap-4">
-      <!-- CS2 Logo & Player Info -->
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-[#BF3B68]/15 border border-[#BF3B68]/35 flex items-center justify-center text-[#BF3B68] shrink-0 shadow-sm shadow-[#BF3B68]/20">
-          <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5v-9l6 4.5-6 4.5z"/>
-          </svg>
-        </div>
-
-        <div>
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-mono text-[#BF3B68] font-semibold uppercase tracking-wider">
-              Counter-Strike 2
-            </span>
-            <span class="w-1.5 h-1.5 rounded-full bg-[#BF3B68]/80"></span>
-            <span class="text-xs font-mono text-zinc-400">{stats.statusLabel}</span>
-          </div>
-          <h3 class="text-base sm:text-lg font-bold text-white tracking-tight">
-            {stats.playerName}
-          </h3>
-        </div>
+  <div class="relative z-10 flex flex-col justify-between h-full gap-5">
+    <!-- Telemetry Module Header -->
+    <div class="flex items-center justify-between gap-3 border-b border-[#1E2333] pb-3">
+      <div class="flex items-center gap-2.5">
+        <span class="w-2.5 h-2.5 rounded-sm bg-telemetry-magenta shadow-sm shadow-[#BF3B68]/60"></span>
+        <span class="text-xs font-mono font-bold tracking-wider text-white uppercase">
+          [CS2_TELEMETRY // COMBAT_METRICS]
+        </span>
       </div>
 
-      <!-- Direct Link to Leetify Profile -->
       <a
         href={stats.profileUrl}
         target="_blank"
         rel="noopener noreferrer"
-        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#BF3B68]/30 bg-[#BF3B68]/10 hover:border-[#BF3B68]/60 hover:bg-[#BF3B68]/20 text-xs font-mono text-[#BF3B68] hover:text-[#d64c7b] transition-colors"
-        aria-label="View profile on Leetify"
-        title="View Leetify Profile"
+        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-[#BF3B68]/40 bg-[#BF3B68]/15 hover:border-[#BF3B68] hover:bg-[#BF3B68]/25 text-[11px] font-mono font-semibold text-[#BF3B68] hover:text-white transition-all tactile-btn"
+        aria-label="View CS2 profile on Leetify"
+        title="Open Leetify Profile"
       >
-        <span>Leetify</span>
-        <span class="text-[#BF3B68]/70">↗</span>
+        <span>LEETIFY UPLINK</span>
+        <span>↗</span>
       </a>
     </div>
 
-    <!-- Primary Metric: CS2 Premier Rating -->
+    <!-- Primary Rating Hero Matrix -->
     <div
-      class={`rounded-xl border p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${bracket.bgColor} ${bracket.borderColor} ${bracket.glowColor} shadow-md`}
+      class={`rounded-xl border p-4 sm:p-5 flex flex-col gap-4 relative overflow-hidden ${bracket.bgColor} ${bracket.borderColor} ${bracket.glowColor} shadow-md`}
     >
-      <div class="space-y-1">
-        <div class="flex items-center gap-2">
-          <span class="text-xs font-mono uppercase tracking-wider text-zinc-400">
-            CS Rating // Premier
-          </span>
-          <span class={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${bracket.borderColor} ${bracket.textColor} bg-black/40 font-semibold`}>
-            {bracket.name} Tier
-          </span>
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="space-y-1">
+          <div class="flex items-center gap-2">
+            <span class="text-[11px] font-mono uppercase tracking-wider text-zinc-400">
+              VALVE PREMIER // CS RATING
+            </span>
+            <span
+              class={`text-[10px] font-mono px-2 py-0.5 rounded border ${bracket.borderColor} ${bracket.textColor} bg-black/60 font-bold tracking-wider`}
+            >
+              {bracket.name.toUpperCase()} TIER
+            </span>
+          </div>
+
+          <div class="flex items-baseline gap-2">
+            <span class={`text-3xl sm:text-5xl font-black font-mono tracking-tight ${bracket.textColor}`}>
+              {stats.formattedPremier}
+            </span>
+            {stats.premierRating !== null && stats.premierRating > 0 && (
+              <span class="text-xs font-mono text-zinc-400 font-semibold uppercase">
+                PTS
+              </span>
+            )}
+          </div>
         </div>
 
-        <div class="flex items-baseline gap-2">
-          <span class={`text-3xl sm:text-4xl font-extrabold font-mono tracking-tight ${bracket.textColor}`}>
-            {stats.formattedPremier}
-          </span>
-          {stats.premierRating !== null && stats.premierRating > 0 && (
-            <span class="text-xs font-mono text-zinc-400">
-              points
-            </span>
-          )}
+        <div class="sm:text-right font-mono text-xs text-zinc-400 sm:border-l sm:border-white/10 sm:pl-4 space-y-0.5">
+          <div class="text-[10px] uppercase text-zinc-500 tracking-wider">SEASON_ENGAGEMENTS</div>
+          <div class="text-zinc-200 font-bold">{stats.recentMatchesCount} RECORDED MATCHES</div>
+          <div class="text-[10px] text-zinc-400">STATUS: {stats.statusLabel.toUpperCase()}</div>
         </div>
       </div>
 
-      <div class="text-right sm:border-l sm:border-white/10 sm:pl-4">
-        <span class="text-[11px] font-mono text-zinc-400 block">Season Rank Status</span>
-        <span class="text-xs font-mono text-zinc-200 font-medium">
-          {stats.recentMatchesCount} recorded matches
-        </span>
+      <!-- Segmented Tier Promotion Progress Bar -->
+      <div class="space-y-1.5 pt-2 border-t border-white/10">
+        <div class="flex items-center justify-between text-[11px] font-mono">
+          <span class="text-zinc-400 flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-telemetry-magenta"></span>
+            <span>NEXT TIER: {nextTierName}</span>
+          </span>
+          <span class="text-zinc-300 font-semibold">
+            {rating >= 30000 ? 'PEAK TIER REACHED' : `${new Intl.NumberFormat('en-US').format(pointsNeeded)} PTS TO PROMOTION`}
+          </span>
+        </div>
+
+        <div class="w-full h-2 rounded bg-black/60 border border-white/10 overflow-hidden relative">
+          <div
+            class="h-full bg-gradient-to-r from-telemetry-magenta via-purple-500 to-telemetry-blue transition-all duration-700 rounded-sm"
+            style={`width: ${progressPercent}%`}
+          ></div>
+        </div>
+
+        <div class="flex items-center justify-between text-[10px] font-mono text-zinc-500">
+          <span>FLOOR: {new Intl.NumberFormat('en-US').format(tierFloor)}</span>
+          <span>{progressPercent}% COMPLETE</span>
+          <span>CEIL: {new Intl.NumberFormat('en-US').format(nextTierTarget)}</span>
+        </div>
       </div>
     </div>
 
-    <!-- Secondary Performance Metrics (3-Column Mini Grid) -->
-    <div class="grid grid-cols-3 gap-3">
+    <!-- Secondary Telemetry Rack (3-Column Mini Grid) -->
+    <div class="grid grid-cols-3 gap-2.5 sm:gap-3">
       <StatBadge
-        label="Leetify Rating"
-        value={leetifyFormatted}
-        sublabel="score"
-        variant={leetifyVariant}
-      />
-      <StatBadge
-        label="Aim Score"
+        label="AIM PRECISION"
         value={stats.aimRating !== null ? stats.aimRating : '--'}
         sublabel="/ 100"
         variant="purple"
       />
       <StatBadge
-        label="Win Rate"
+        label="LEETIFY RATING"
+        value={leetifyFormatted}
+        sublabel="SCORE"
+        variant={leetifyVariant}
+      />
+      <StatBadge
+        label="MATCH WIN RATE"
         value={stats.winRate !== null ? `${stats.winRate}%` : '--'}
-        sublabel="recent"
+        sublabel="RECENT"
         variant="sky"
       />
     </div>
 
-    <!-- Footer Attribution -->
-    <div class="pt-3 border-t border-dark-border/60 flex items-center justify-between text-xs font-mono text-zinc-500">
-      <a
-        href="https://leetify.com"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="inline-flex items-center gap-1.5 hover:text-[#BF3B68] transition-colors"
-      >
-        <span class="w-2 h-2 rounded-full bg-[#BF3B68]"></span>
-        <span>Powered by Leetify Public API</span>
-      </a>
-
-      <span title={`Last match recorded at ${stats.lastMatchAt || 'recently'}`}>
-        Synced {lastMatchFormatted}
+    <!-- Telemetry Rack Footer -->
+    <div class="pt-2.5 border-t border-[#1E2333] flex items-center justify-between text-[11px] font-mono text-zinc-500">
+      <span class="flex items-center gap-1.5">
+        <span class="w-1.5 h-1.5 rounded-full bg-telemetry-green animate-pulse"></span>
+        <span>LEETIFY_API // SYNCED {lastMatchFormatted}</span>
       </span>
+
+      <span class="text-zinc-600 hidden sm:inline">PROTOCOL: SECURE_POLL</span>
     </div>
   </div>
 </div>

@@ -4,20 +4,25 @@
 
 @layer base {
   :root {
-    --bg-primary: #090a0f;
-    --bg-secondary: #10121a;
-    --border-color: #1e2230;
+    --bg-primary: #08090D;
+    --bg-secondary: #0F1118;
+    --border-color: #1E2333;
     --text-primary: #f3f4f6;
-    --text-secondary: #9ca3af;
+    --text-secondary: #8e96aa;
+    --accent-magenta: #BF3B68;
+    --accent-blue: #38bdf8;
+    --accent-green: #22c55e;
+    --accent-amber: #f59e0b;
   }
 
   html {
     color-scheme: dark;
     scroll-behavior: smooth;
+    background-color: #08090D;
   }
 
   body {
-    background-color: #090a0f;
+    background-color: #08090D;
     color: #f3f4f6;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     min-height: 100vh;
@@ -27,38 +32,67 @@
   }
 
   ::selection {
-    background-color: #2563eb;
+    background-color: #BF3B68;
     color: #ffffff;
   }
 
   pre,
-  code {
+  code,
+  kbd {
     font-family: 'JetBrains Mono', Menlo, Monaco, Consolas, 'Courier New', monospace;
   }
 }
 
 @layer utilities {
+  /* Micro-dot blueprint matrix */
+  .bg-grid-pattern {
+    background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  .bg-dot-matrix {
+    background-image: radial-gradient(rgba(56, 189, 248, 0.12) 1px, transparent 1px);
+    background-size: 16px 16px;
+  }
+
+  /* Metallic top-edge highlight for industrial hardware cards */
+  .border-hardware {
+    border-color: #1E2333;
+    border-top-color: rgba(255, 255, 255, 0.15);
+  }
+
+  /* Tactile mechanical depression for interactive components */
+  .tactile-btn {
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .tactile-btn:active {
+    transform: translateY(1.5px) scale(0.985);
+  }
+
+  /* Hardware Telemetry Card hover lift */
+  .telemetry-card {
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease, box-shadow 0.25s ease;
+  }
+  .telemetry-card:hover {
+    transform: translateY(-2px);
+  }
+
   /* Custom scrollbar */
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
   }
 
   ::-webkit-scrollbar-track {
-    background: #090a0f;
+    background: #08090D;
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #1e2230;
-    border-radius: 4px;
+    background: #1E2333;
+    border-radius: 3px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: #2e3547;
-  }
-
-  .bg-grid-pattern {
-    background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
-    background-size: 24px 24px;
+    background: #2E364F;
   }
 }

@@ -4,6 +4,7 @@ import { SITE_CONFIG } from '../lib/config';
 import { getSteamId64 } from '../lib/steam';
 import SteamPresence from '../components/steam/SteamPresence';
 import SocialLinks from '../components/SocialLinks.astro';
+import CommandDeck from '../components/CommandDeck';
 
 interface Props {
   title?: string;
@@ -22,6 +23,7 @@ const currentYear = new Date().getFullYear();
 const isHome = currentPath === '/';
 const isGames = currentPath === '/games';
 const canonicalUrl = new URL(Astro.url.pathname, SITE_CONFIG.url).href;
+const ogImageUrl = new URL('/favicon.svg', SITE_CONFIG.url).href;
 ---
 
 <!doctype html>
@@ -32,104 +34,135 @@ const canonicalUrl = new URL(Astro.url.pathname, SITE_CONFIG.url).href;
     <title>{title}</title>
     <meta name="title" content={title} />
     <meta name="description" content={description} />
-    <meta name="theme-color" content="#090a0f" />
+    <meta name="theme-color" content="#08090D" />
     <link rel="canonical" href={canonicalUrl} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
-    <!-- Open Graph (Embed Previews for Discord, iMessage, and Chat Apps) -->
+    <!-- Open Graph / Discord / iMessage Embed Previews -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content={SITE_CONFIG.name} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonicalUrl} />
-    <meta property="og:image" content={new URL('/favicon.svg', SITE_CONFIG.url).href} />
+    <meta property="og:image" content={ogImageUrl} />
+
+    <!-- Twitter / X Cards -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImageUrl} />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
   </head>
-  <body class="bg-dark-bg text-zinc-100 flex flex-col min-h-screen selection:bg-blue-600 selection:text-white">
-    <!-- Navbar Header -->
-    <header class="sticky top-0 z-50 w-full border-b border-dark-border/80 bg-dark-bg/90 backdrop-blur-md">
-      <div class="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3 sm:gap-4">
-        <!-- Brand -->
+  <body class="bg-[#08090D] text-zinc-100 flex flex-col min-h-screen selection:bg-telemetry-magenta selection:text-white relative">
+    <!-- Background Blueprint Dot Matrix Grid -->
+    <div class="fixed inset-0 bg-grid-pattern opacity-30 pointer-events-none z-0"></div>
+
+    <!-- Interactive Command Deck Modal Island -->
+    <CommandDeck client:load steamId={steamId} />
+
+    <!-- Mission Control Navbar Header -->
+    <header class="sticky top-0 z-50 w-full border-b border-[#1E2333] bg-[#08090D]/90 backdrop-blur-md">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3 sm:gap-4">
+        <!-- Brand & System Node Indicator -->
         <a
           href="/"
-          class="group flex items-center gap-2 font-mono text-sm tracking-tight text-zinc-200 hover:text-white transition-colors shrink-0"
-          aria-label="huh4k links home"
+          class="group flex items-center gap-2.5 font-mono text-sm tracking-tight text-zinc-200 hover:text-white transition-colors shrink-0"
+          aria-label="huh4k mission control home"
         >
-          <span class="inline-block w-2.5 h-2.5 rounded-sm bg-blue-500 group-hover:scale-110 transition-transform"></span>
-          <span class="font-semibold text-zinc-100">huh4k</span>
-          <span class="text-zinc-500 hidden min-[400px]:inline">~/links</span>
+          <span class="inline-block w-2.5 h-2.5 rounded-sm bg-telemetry-green shadow-sm shadow-telemetry-green/60 animate-pulse"></span>
+          <span class="font-bold text-white tracking-wide">[H4K // SYS]</span>
+          <span class="text-zinc-500 hidden sm:inline font-mono text-xs">huh4k.dev</span>
         </a>
 
-        <!-- Navigation Links -->
-        <nav class="flex items-center gap-3 sm:gap-6 text-sm font-medium whitespace-nowrap">
-          <a
-            href="/"
-            class={`transition-colors text-xs sm:text-sm ${isHome ? 'text-white font-semibold' : 'text-zinc-400 hover:text-zinc-200'}`}
-          >
-            Links
-          </a>
-          <a
-            href="/games"
-            class={`transition-colors flex items-center gap-1.5 text-xs sm:text-sm ${isGames ? 'text-white font-semibold' : 'text-zinc-400 hover:text-zinc-200'}`}
-          >
-            <span>Games</span>
-            <span class="hidden sm:inline text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">
-              Steam
-            </span>
-          </a>
-          <a
-            href="/leetify"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="text-[#BF3B68] hover:text-[#d64c7b] transition-colors inline-flex items-center gap-1 font-mono text-xs font-medium"
-          >
-            <span>Leetify</span>
-            <span class="text-[10px]">↗</span>
-          </a>
-          <a
-            href={`https://steamcommunity.com/profiles/${steamId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            class="text-zinc-400 hover:text-zinc-200 transition-colors hidden sm:inline-flex items-center gap-1 font-mono text-xs"
-          >
-            <span>Steam</span>
-            <span>↗</span>
-          </a>
-        </nav>
+        <!-- Navigation Links & Hotkey Trigger -->
+        <div class="flex items-center gap-3 sm:gap-6 font-mono text-xs whitespace-nowrap">
+          <nav class="flex items-center gap-3 sm:gap-5 font-medium">
+            <a
+              href="/"
+              class={`transition-colors py-1 ${isHome ? 'text-telemetry-blue font-bold border-b border-telemetry-blue' : 'text-zinc-400 hover:text-zinc-200'}`}
+            >
+              [LINKS]
+            </a>
+            <a
+              href="/games"
+              class={`transition-colors py-1 flex items-center gap-1 ${isGames ? 'text-telemetry-blue font-bold border-b border-telemetry-blue' : 'text-zinc-400 hover:text-zinc-200'}`}
+            >
+              <span>[GAMES]</span>
+              <span class="hidden sm:inline text-[9px] px-1 py-0.2 rounded bg-telemetry-blue/20 text-telemetry-blue border border-telemetry-blue/30">
+                VALVE
+              </span>
+            </a>
+            <a
+              href="/leetify"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-[#BF3B68] hover:text-white transition-colors inline-flex items-center gap-1 font-semibold"
+            >
+              <span>[LEETIFY]</span>
+              <span class="text-[10px]">↗</span>
+            </a>
+            <a
+              href="https://github.com/huh4k"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-zinc-400 hover:text-white transition-colors hidden md:inline-flex items-center gap-1"
+            >
+              <span>[GITHUB]</span>
+              <span class="text-[10px]">↗</span>
+            </a>
+          </nav>
 
-        <!-- Steam Live Presence Widget in Navbar -->
-        <div class="hidden sm:flex items-center pl-2 border-l border-dark-border/70 shrink-0">
+          <!-- Interactive Command Deck Prompt Trigger -->
+          <button
+            type="button"
+            onclick="window.dispatchEvent(new CustomEvent('open-command-deck'))"
+            class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded border border-[#1E2333] bg-[#0F1118] hover:border-telemetry-blue/50 text-zinc-400 hover:text-white text-[11px] transition-all tactile-btn cursor-pointer"
+            title="Open Command Deck (Press '/')"
+          >
+            <span class="text-telemetry-blue font-bold">/</span>
+            <span>DECK</span>
+            <kbd class="px-1 py-0.2 rounded bg-black/50 text-[9px] text-zinc-500 border border-white/5">/</kbd>
+          </button>
+        </div>
+
+        <!-- Steam Live Presence Status Pill -->
+        <div class="hidden sm:flex items-center pl-2 border-l border-[#1E2333] shrink-0">
           <SteamPresence client:load variant="badge" />
         </div>
       </div>
     </header>
 
-    <!-- Main Content -->
-    <main class="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-8 sm:py-12">
+    <!-- Main Mission Control Deck -->
+    <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-10 relative z-10">
       <slot />
     </main>
 
-    <!-- Footer -->
-    <footer class="border-t border-dark-border/80 bg-[#07080c] py-12 text-sm text-zinc-500">
-      <div class="max-w-5xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-6">
-        <!-- Status & Socials -->
+    <!-- Industrial Mission-Control Footer -->
+    <footer class="border-t border-[#1E2333] bg-[#06070A] py-10 text-xs font-mono text-zinc-500 relative z-10">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-6">
+        <!-- Status & Telemetry Identifiers -->
         <div class="flex flex-col sm:flex-row items-center gap-4">
-          <SocialLinks />
-          <span class="text-xs font-mono text-zinc-500 hidden sm:inline">•</span>
-          <span class="text-xs font-mono text-zinc-400">Steam & Leetify Integration</span>
+          <SocialLinks showLabels={false} />
+          <span class="text-zinc-600 hidden sm:inline">•</span>
+          <div class="flex items-center gap-2 text-[11px] text-zinc-400">
+            <span class="w-1.5 h-1.5 rounded-full bg-telemetry-green animate-pulse"></span>
+            <span>SYS_CORE: OPERATIONAL</span>
+            <span class="text-zinc-600">•</span>
+            <span>NODE: SYD-01</span>
+          </div>
         </div>
 
-        <!-- Copyright & Tech -->
-        <div class="flex items-center gap-3 text-xs font-mono text-zinc-500">
-          <span>© {currentYear} {SITE_CONFIG.name}</span>
+        <!-- Copyright & Platform Stamp -->
+        <div class="flex items-center gap-3 text-[11px] text-zinc-500">
+          <span>© {currentYear} huh4k</span>
           <span>•</span>
-          <span>Steam + Leetify + Astro</span>
+          <span>HARDWARE_TELEMETRY_v2.0</span>
         </div>
       </div>
     </footer>
