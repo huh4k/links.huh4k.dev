@@ -12,80 +12,114 @@ interface SteamPresenceProps {
   initialStatus?: SteamPresenceStatus;
 }
 
-export default function SteamPresence({
-  variant = 'badge',
-  className = '',
-  initialStatus,
-}: SteamPresenceProps) {
-  const [status, setStatus] = useState<SteamPresenceStatus | null>(initialStatus || null);
-  const [loading, setLoading] = useState(!initialStatus);
+// Module-level shared presence state and singleton polling
+// Eliminates duplicate requests from multiple component instances (navbar + profile)
+let cachedStatus: SteamPresenceStatus | null = null;
+let inflightPromise: Promise<SteamPresenceStatus> | null = null;
+let activeInterval: ReturnType<typeof setInterval> | null = null;
+let listenerAttached = false;
+const listeners = new Set<(status: SteamPresenceStatus) => void>();
 
-  const fetchStatus = async () => {
+async function executeSharedFetch(): Promise<SteamPresenceStatus> {
+  if (inflightPromise) return inflightPromise;
+
+  inflightPromise = (async () => {
     try {
       const res = await fetch(`/api/steam/status.json?t=${Date.now()}`, {
         cache: 'no-store',
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (await res.json()) as SteamPresenceStatus;
-      setStatus(data);
-    } catch (err) {
-      // Graceful fallback to offline
-      setStatus((prev) =>
-        prev || {
-          state: 'offline',
-          label: 'Offline',
-          personaname: 'huh4k',
-          avatarUrl: '',
-          profileUrl: 'https://steamcommunity.com',
-          lastUpdated: new Date().toISOString(),
-        }
-      );
+      cachedStatus = data;
+      listeners.forEach((callback) => callback(data));
+      return data;
+    } catch {
+      const fallback: SteamPresenceStatus = cachedStatus || {
+        state: 'offline',
+        label: 'Offline',
+        personaname: 'huh4k',
+        avatarUrl: '',
+        profileUrl: 'https://steamcommunity.com',
+        lastUpdated: new Date().toISOString(),
+      };
+      cachedStatus = fallback;
+      listeners.forEach((callback) => callback(fallback));
+      return fallback;
     } finally {
-      setLoading(false);
+      inflightPromise = null;
     }
-  };
+  })();
+
+  return inflightPromise;
+}
+
+function startSharedPolling() {
+  if (typeof window === 'undefined') return;
+  if (!activeInterval) {
+    activeInterval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        executeSharedFetch();
+      }
+    }, 30000);
+  }
+}
+
+function stopSharedPolling() {
+  if (activeInterval) {
+    clearInterval(activeInterval);
+    activeInterval = null;
+  }
+}
+
+function initVisibilityManager() {
+  if (typeof document === 'undefined' || listenerAttached) return;
+  listenerAttached = true;
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      executeSharedFetch();
+      startSharedPolling();
+    } else {
+      stopSharedPolling();
+    }
+  });
+}
+
+export default function SteamPresence({
+  variant = 'badge',
+  className = '',
+  initialStatus,
+}: SteamPresenceProps) {
+  const [status, setStatus] = useState<SteamPresenceStatus | null>(
+    initialStatus || cachedStatus || null
+  );
+  const [loading, setLoading] = useState(!initialStatus && !cachedStatus);
 
   useEffect(() => {
-    let intervalId: ReturnType<typeof setInterval> | null = null;
+    initVisibilityManager();
 
-    const startPolling = () => {
-      if (!intervalId) {
-        intervalId = setInterval(fetchStatus, 30000);
-      }
+    const handleUpdate = (updated: SteamPresenceStatus) => {
+      setStatus(updated);
+      setLoading(false);
     };
 
-    const stopPolling = () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-        intervalId = null;
-      }
-    };
+    listeners.add(handleUpdate);
 
-    const handleVisibilityChange = () => {
-      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
-        fetchStatus();
-        startPolling();
-      } else {
-        stopPolling();
-      }
-    };
-
-    // Initial fetch
-    fetchStatus();
-
-    // Start polling if currently visible
-    if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
-      startPolling();
+    if (cachedStatus) {
+      setStatus(cachedStatus);
+      setLoading(false);
+    } else {
+      executeSharedFetch();
     }
 
-    if (typeof document !== 'undefined') {
-      document.addEventListener('visibilitychange', handleVisibilityChange);
+    if (document.visibilityState === 'visible') {
+      startSharedPolling();
     }
 
     return () => {
-      stopPolling();
-      if (typeof document !== 'undefined') {
-        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      listeners.delete(handleUpdate);
+      if (listeners.size === 0) {
+        stopSharedPolling();
       }
     };
   }, []);

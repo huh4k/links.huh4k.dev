@@ -25,12 +25,36 @@ export default function CommandDeck({ steamId }: CommandDeckProps) {
   const steamInventoryUrl = `https://steamcommunity.com/profiles/${steamId}/inventory/`;
 
   const copyDiscord = async () => {
+    let succeeded = false;
     try {
-      await navigator.clipboard.writeText('huh4k');
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText('huh4k');
+        succeeded = true;
+      }
+    } catch {
+      // Fallback handled below
+    }
+
+    if (!succeeded) {
+      try {
+        const el = document.createElement('textarea');
+        el.value = 'huh4k';
+        el.setAttribute('readonly', '');
+        el.style.position = 'absolute';
+        el.style.left = '-9999px';
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+        succeeded = true;
+      } catch {
+        // Ignore
+      }
+    }
+
+    if (succeeded) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Fallback
     }
   };
 

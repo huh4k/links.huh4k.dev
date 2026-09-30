@@ -83,10 +83,6 @@ const topGames = await getTopPlayedGames(3);
                 </p>
               </div>
             </div>
-
-            <p class="text-xs sm:text-sm text-zinc-300 font-mono leading-relaxed bg-[#0A0C12]/80 p-3.5 rounded-lg border border-[#181D2B]">
-              Verified Steam gaming presence, live Counter-Strike 2 Premier rating, and platform links.
-            </p>
           </div>
 
           <!-- Live Steam Presence Status Island -->
@@ -125,9 +121,9 @@ const topGames = await getTopPlayedGames(3);
 
           <!-- Quick Specs -->
           <div class="flex items-center justify-between text-[11px] font-mono text-zinc-500 pt-1">
-            <span>Location: Sydney, AU</span>
-            <span class="text-zinc-600">•</span>
             <span>Cloudflare Edge</span>
+            <span class="text-zinc-600">•</span>
+            <span>Active Uplink</span>
           </div>
         </div>
       </section>
@@ -341,13 +337,40 @@ const topGames = await getTopPlayedGames(3);
 
   <!-- Client-side script for Discord copy button -->
   <script is:inline>
-    const copyBtn = document.getElementById('copy-discord-btn');
-    const copyText = document.getElementById('discord-btn-text');
+    function setupDiscordCopy() {
+      const copyBtn = document.getElementById('copy-discord-btn');
+      const copyText = document.getElementById('discord-btn-text');
 
-    if (copyBtn && copyText) {
-      copyBtn.addEventListener('click', async () => {
-        try {
-          await navigator.clipboard.writeText('huh4k');
+      if (copyBtn && copyText && !copyBtn.dataset.bound) {
+        copyBtn.dataset.bound = 'true';
+        copyBtn.addEventListener('click', async () => {
+          let copied = false;
+          try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              await navigator.clipboard.writeText('huh4k');
+              copied = true;
+            }
+          } catch {
+            // Fallback handled below
+          }
+
+          if (!copied) {
+            try {
+              const el = document.createElement('textarea');
+              el.value = 'huh4k';
+              el.setAttribute('readonly', '');
+              el.style.position = 'absolute';
+              el.style.left = '-9999px';
+              document.body.appendChild(el);
+              el.select();
+              document.execCommand('copy');
+              document.body.removeChild(el);
+              copied = true;
+            } catch {
+              // Ignore
+            }
+          }
+
           const original = copyText.textContent;
           copyText.textContent = '✓ Copied: huh4k';
           copyBtn.classList.add('border-telemetry-green', 'text-telemetry-green');
@@ -356,10 +379,11 @@ const topGames = await getTopPlayedGames(3);
             copyText.textContent = original;
             copyBtn.classList.remove('border-telemetry-green', 'text-telemetry-green');
           }, 2000);
-        } catch {
-          copyText.textContent = 'Discord: huh4k';
-        }
-      });
+        });
+      }
     }
+
+    setupDiscordCopy();
+    document.addEventListener('astro:page-load', setupDiscordCopy);
   </script>
 </BaseLayout>
