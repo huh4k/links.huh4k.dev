@@ -9,6 +9,7 @@ interface Props {
 const { className = '' } = Astro.props;
 const steamId = getSteamId64();
 const steamProfileUrl = `https://steamcommunity.com/profiles/${steamId}`;
+const steamInventoryUrl = `https://steamcommunity.com/profiles/${steamId}/inventory/`;
 ---
 
 <div class={`flex items-center flex-wrap gap-2.5 ${className}`}>
@@ -44,18 +45,21 @@ const steamProfileUrl = `https://steamcommunity.com/profiles/${steamId}`;
     <span>Leetify</span>
   </a>
 
-  <!-- Links Hub -->
+  <!-- Steam Inventory Link -->
   <a
-    href="/"
-    class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-dark-border bg-dark-card hover:border-zinc-500 hover:bg-dark-card-hover text-zinc-300 hover:text-white transition-colors text-xs font-mono"
-    aria-label="links.huh4k.dev"
-    title="links.huh4k.dev"
+    href={steamInventoryUrl}
+    target="_blank"
+    rel="noopener noreferrer"
+    class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-amber-500/35 bg-amber-500/10 hover:border-amber-500/60 hover:bg-amber-500/20 text-amber-400 hover:text-amber-300 transition-colors text-xs font-mono"
+    aria-label="Steam Inventory"
+    title="Steam CS2 Inventory"
   >
-    <svg class="w-4 h-4 text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+    <svg class="w-4 h-4 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+      <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+      <line x1="12" y1="22.08" x2="12" y2="12"></line>
     </svg>
-    <span>links.huh4k.dev</span>
+    <span>Inventory</span>
   </a>
 
   <!-- Games Shelf -->

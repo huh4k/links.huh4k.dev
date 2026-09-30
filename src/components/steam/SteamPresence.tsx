@@ -46,10 +46,48 @@ export default function SteamPresence({
   };
 
   useEffect(() => {
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
+    const startPolling = () => {
+      if (!intervalId) {
+        intervalId = setInterval(fetchStatus, 30000);
+      }
+    };
+
+    const stopPolling = () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        fetchStatus();
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    };
+
+    // Initial fetch
     fetchStatus();
-    // Poll every 30 seconds for responsive presence
-    const interval = setInterval(fetchStatus, 30000);
-    return () => clearInterval(interval);
+
+    // Start polling if currently visible
+    if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+      startPolling();
+    }
+
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+    }
+
+    return () => {
+      stopPolling();
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      }
+    };
   }, []);
 
   // Default offline fallback while loading

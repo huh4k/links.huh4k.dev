@@ -30,32 +30,35 @@
     background-color: #2563eb;
     color: #ffffff;
   }
+
+  pre,
+  code {
+    font-family: 'JetBrains Mono', Menlo, Monaco, Consolas, 'Courier New', monospace;
+  }
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
+@layer utilities {
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
 
-::-webkit-scrollbar-track {
-  background: #090a0f;
-}
+  ::-webkit-scrollbar-track {
+    background: #090a0f;
+  }
 
-::-webkit-scrollbar-thumb {
-  background: #1e2230;
-  border-radius: 4px;
-}
+  ::-webkit-scrollbar-thumb {
+    background: #1e2230;
+    border-radius: 4px;
+  }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #2e3547;
-}
+  ::-webkit-scrollbar-thumb:hover {
+    background: #2e3547;
+  }
 
-pre, code {
-  font-family: 'JetBrains Mono', Menlo, Monaco, Consolas, 'Courier New', monospace;
-}
-
-.bg-grid-pattern {
-  background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
-  background-size: 24px 24px;
+  .bg-grid-pattern {
+    background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
 }

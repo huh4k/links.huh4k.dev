@@ -9,6 +9,7 @@ import { getSteamId64 } from '../lib/steam';
 
 const steamId = getSteamId64();
 const steamProfileUrl = `https://steamcommunity.com/profiles/${steamId}`;
+const steamInventoryUrl = `https://steamcommunity.com/profiles/${steamId}/inventory/`;
 ---
 
 <BaseLayout
@@ -53,7 +54,7 @@ const steamProfileUrl = `https://steamcommunity.com/profiles/${steamId}`;
         <h2 class="text-xs font-mono uppercase tracking-wider text-blue-400">
           01 // Quick Links
         </h2>
-        <span class="text-xs font-mono text-zinc-500">Steam • links.huh4k.dev • /leetify • /games</span>
+        <span class="text-xs font-mono text-zinc-500">Steam • Inventory • /leetify • /games</span>
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -79,24 +80,26 @@ const steamProfileUrl = `https://steamcommunity.com/profiles/${steamId}`;
           <span class="text-xs font-mono text-zinc-500 group-hover:text-zinc-300">Open Steam →</span>
         </a>
 
-        <!-- Links Hub Card -->
+        <!-- Steam Inventory Card -->
         <a
-          href="/"
-          class="group rounded-xl border border-dark-border bg-dark-card p-5 transition-all duration-300 hover:border-blue-500/50 hover:bg-dark-card-hover flex flex-col justify-between gap-4"
+          href={steamInventoryUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="group rounded-xl border border-dark-border bg-dark-card p-5 transition-all duration-300 hover:border-amber-500/50 hover:bg-dark-card-hover flex flex-col justify-between gap-4"
         >
           <div class="space-y-2">
             <div class="flex items-center justify-between">
-              <span class="text-xs font-mono text-blue-400">links.huh4k.dev</span>
-              <span class="text-zinc-500 group-hover:text-blue-400 transition-colors">→</span>
+              <span class="text-xs font-mono text-amber-400">Steam Community</span>
+              <span class="text-zinc-500 group-hover:text-amber-400 transition-colors">↗</span>
             </div>
-            <h3 class="text-lg font-semibold text-white group-hover:text-blue-400 transition-colors">
-              Links Hub
+            <h3 class="text-lg font-semibold text-white group-hover:text-amber-400 transition-colors">
+              Steam Inventory
             </h3>
             <p class="text-xs text-zinc-400 leading-relaxed">
-              Official link index for verified profiles and gaming platforms.
+              CS2 weapon finishes, collectibles, trading cards, and showcase inventory.
             </p>
           </div>
-          <span class="text-xs font-mono text-zinc-500 group-hover:text-zinc-300">links.huh4k.dev →</span>
+          <span class="text-xs font-mono text-zinc-500 group-hover:text-zinc-300">View Inventory →</span>
         </a>
 
         <!-- Leetify Card -->
