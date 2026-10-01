@@ -35,11 +35,12 @@ export function getSteamApiKey(): string | undefined {
 }
 
 export function getSteamId64(): string {
-  return (
+  const rawId = (
     process.env.STEAM_ID64 ||
     (typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.STEAM_ID64 : undefined) ||
     DEFAULT_STEAM_ID
   );
+  return /^\d{17,20}$/.test(rawId) ? rawId : DEFAULT_STEAM_ID;
 }
 
 /**

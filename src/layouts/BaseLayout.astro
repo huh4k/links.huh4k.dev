@@ -54,6 +54,11 @@ const ogImageUrl = new URL('/favicon.svg', SITE_CONFIG.url).href;
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+    <link rel="dns-prefetch" href="https://avatars.steamstatic.com" />
+    <link rel="dns-prefetch" href="https://shared.cloudflare.steamstatic.com" />
+    <link rel="dns-prefetch" href="https://cdn.cloudflare.steamstatic.com" />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
@@ -63,8 +68,8 @@ const ogImageUrl = new URL('/favicon.svg', SITE_CONFIG.url).href;
     <!-- Background Blueprint Dot Matrix Grid -->
     <div class="fixed inset-0 bg-grid-pattern opacity-25 pointer-events-none z-0"></div>
 
-    <!-- Command Deck Modal Island -->
-    <CommandDeck client:load steamId={steamId} />
+    <!-- Command Deck Modal Island (hydrates on idle to maximize FCP) -->
+    <CommandDeck client:idle steamId={steamId} />
 
     <!-- Navbar Header -->
     <header class="sticky top-0 z-50 w-full border-b border-[#1E2333] bg-[#08090D]/90 backdrop-blur-md">

@@ -19,6 +19,8 @@ const formattedHours = new Intl.NumberFormat('en-US').format(game.playtimeHours)
       alt={`${game.name} banner art`}
       loading="lazy"
       decoding="async"
+      width="460"
+      height="215"
       class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
       onerror={`this.onerror=null; this.src='${game.headerUrl}';`}
     />

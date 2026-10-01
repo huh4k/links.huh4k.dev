@@ -7,6 +7,10 @@ import cloudflare from '@astrojs/cloudflare';
 export default defineConfig({
   output: 'static',
   adapter: cloudflare(),
+  prefetch: {
+    prefetchAll: false,
+    defaultStrategy: 'hover',
+  },
   integrations: [
     tailwind({
       applyBaseStyles: false,
