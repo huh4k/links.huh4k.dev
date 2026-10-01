@@ -77,6 +77,31 @@
     transform: translateY(-2px);
   }
 
+  /* Reactive cursor spotlight: radial glow follows pointer over card */
+  .spotlight-card {
+    --mouse-x: 50%;
+    --mouse-y: 50%;
+    position: relative;
+  }
+  .spotlight-card::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    background: radial-gradient(
+      220px circle at var(--mouse-x) var(--mouse-y),
+      rgba(56, 189, 248, 0.12),
+      transparent 70%
+    );
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .spotlight-card:hover::before {
+    opacity: 1;
+  }
+
   /* Custom scrollbar */
   ::-webkit-scrollbar {
     width: 6px;

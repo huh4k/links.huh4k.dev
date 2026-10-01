@@ -120,29 +120,39 @@ const nextTierName = tierNames[nextTierTarget] || 'Peak Tier';
         </div>
       </div>
 
-      <!-- Tier Promotion Progress Bar -->
-      <div class="space-y-1.5 pt-2 border-t border-white/10">
-        <div class="flex items-center justify-between text-[11px] font-mono">
-          <span class="text-zinc-300 flex items-center gap-1.5">
-            <span class="w-1.5 h-1.5 rounded-full bg-telemetry-magenta"></span>
-            <span>Next Rank: {nextTierName} Tier</span>
-          </span>
-          <span class="text-zinc-400 font-medium">
-            {rating >= 30000 ? 'Peak Tier Reached' : `${new Intl.NumberFormat('en-US').format(pointsNeeded)} pts to rank up`}
-          </span>
+      <!-- 7-Tier Rank Ladder Visualizer -->
+      <div class="space-y-2 pt-2 border-t border-white/10">
+        <div class="text-[10px] font-mono text-zinc-500 uppercase tracking-wider mb-2">Premier Rank Ladder</div>
+        <div class="flex items-end gap-1 w-full">
+          {[
+            { label: 'GRY',  floor: 0,     ceil: 4999,  color: '#71717a', glow: 'shadow-zinc-500/40' },
+            { label: 'LBL',  floor: 5000,  ceil: 9999,  color: '#38bdf8', glow: 'shadow-sky-400/50' },
+            { label: 'BLU',  floor: 10000, ceil: 14999, color: '#3b82f6', glow: 'shadow-blue-500/50' },
+            { label: 'PRP',  floor: 15000, ceil: 19999, color: '#a855f7', glow: 'shadow-purple-500/50' },
+            { label: 'PNK',  floor: 20000, ceil: 24999, color: '#ec4899', glow: 'shadow-pink-500/50' },
+            { label: 'RED',  floor: 25000, ceil: 29999, color: '#ef4444', glow: 'shadow-red-500/50' },
+            { label: 'GLD',  floor: 30000, ceil: 99999, color: '#f59e0b', glow: 'shadow-amber-400/60' },
+          ].map((tier) => (
+            <div
+              class={`flex-1 flex flex-col items-center gap-1 transition-all duration-300 ${rating >= tier.floor && rating <= tier.ceil ? 'scale-105' : ''}`}
+            >
+              <div
+                class={`w-full rounded-sm transition-all duration-500 ${rating >= tier.floor && rating <= tier.ceil ? `shadow-sm ${tier.glow}` : ''}`}
+                style={`height: ${rating >= tier.floor && rating <= tier.ceil ? '28px' : rating > tier.ceil ? '18px' : '10px'}; background-color: ${rating >= tier.floor && rating <= tier.ceil ? tier.color : rating > tier.ceil ? tier.color + '60' : '#1E2333'}; border: 1px solid ${rating >= tier.floor && rating <= tier.ceil ? tier.color : rating > tier.ceil ? tier.color + '40' : '#2E364F'}; ${rating >= tier.floor && rating <= tier.ceil ? `box-shadow: 0 0 8px ${tier.color}55;` : ''}`}
+              ></div>
+              <span
+                class="text-[9px] font-mono font-bold tabular-nums"
+                style={`color: ${rating >= tier.floor && rating <= tier.ceil ? tier.color : rating > tier.ceil ? tier.color + 'aa' : '#3f4a60'};`}
+              >{tier.label}</span>
+            </div>
+          ))}
         </div>
-
-        <div class="w-full h-2 rounded bg-black/60 border border-white/10 overflow-hidden relative">
-          <div
-            class="h-full bg-gradient-to-r from-telemetry-magenta via-purple-500 to-telemetry-blue transition-all duration-700 rounded-sm"
-            style={`width: ${progressPercent}%`}
-          ></div>
-        </div>
-
-        <div class="flex items-center justify-between text-[10px] font-mono text-zinc-500">
-          <span>{new Intl.NumberFormat('en-US').format(tierFloor)} pts</span>
-          <span>{progressPercent}% tier progress</span>
-          <span>{new Intl.NumberFormat('en-US').format(nextTierTarget)} pts</span>
+        <div class="flex items-center justify-between text-[10px] font-mono text-zinc-500 mt-1">
+          <span>0</span>
+          <span class={`font-semibold ${bracket.textColor}`}>
+            {rating >= 30000 ? '★ Peak Tier' : `${new Intl.NumberFormat('en-US').format(pointsNeeded)} pts to next tier`}
+          </span>
+          <span>30K+</span>
         </div>
       </div>
     </div>

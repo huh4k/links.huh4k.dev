@@ -73,7 +73,22 @@ const ogImageUrl = new URL('/favicon.svg', SITE_CONFIG.url).href;
 
     <!-- Navbar Header -->
     <header class="sticky top-0 z-50 w-full border-b border-[#1E2333] bg-[#08090D]/90 backdrop-blur-md">
-      <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3 sm:gap-4">
+      <!-- HUD strip: UTC clock + SFX toggle -->
+      <div class="w-full border-b border-[#1E2333]/60 bg-[#06070A] px-4 sm:px-6 h-7 flex items-center justify-between font-mono text-[10px] text-zinc-600">
+        <span class="flex items-center gap-2">
+          <span class="w-1.5 h-1.5 rounded-full bg-telemetry-green animate-pulse"></span>
+          <span class="text-zinc-500 hidden sm:inline">UPLINK ACTIVE</span>
+        </span>
+        <span id="hud-clock" class="text-zinc-400 tabular-nums tracking-wider">UTC --:--:--</span>
+        <button
+          id="sfx-toggle"
+          type="button"
+          class="text-zinc-600 hover:text-zinc-300 transition-colors cursor-pointer tactile-btn select-none"
+          title="Toggle click sounds"
+        >[SFX: <span id="sfx-state">OFF</span>]</button>
+      </div>
+
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3 sm:gap-4">
         <!-- Brand -->
         <a
           href="/"
@@ -169,5 +184,88 @@ const ogImageUrl = new URL('/favicon.svg', SITE_CONFIG.url).href;
         </div>
       </div>
     </footer>
+
+    <!-- HUD Clock script -->
+    <script is:inline>
+      (function () {
+        function pad(n) { return String(n).padStart(2, '0'); }
+        function tick() {
+          const el = document.getElementById('hud-clock');
+          if (!el) return;
+          const now = new Date();
+          el.textContent = 'UTC ' + pad(now.getUTCHours()) + ':' + pad(now.getUTCMinutes()) + ':' + pad(now.getUTCSeconds());
+        }
+        tick();
+        setInterval(tick, 1000);
+      })();
+    </script>
+
+    <!-- SFX Web Audio toggle -->
+    <script is:inline>
+      (function () {
+        let sfxEnabled = false;
+        let audioCtx = null;
+
+        function playClick() {
+          if (!sfxEnabled) return;
+          try {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const o = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            o.connect(g);
+            g.connect(audioCtx.destination);
+            o.type = 'square';
+            o.frequency.setValueAtTime(880, audioCtx.currentTime);
+            o.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + 0.04);
+            g.gain.setValueAtTime(0.08, audioCtx.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.06);
+            o.start(audioCtx.currentTime);
+            o.stop(audioCtx.currentTime + 0.06);
+          } catch (e) { /* ignore */ }
+        }
+
+        function updateLabel() {
+          const el = document.getElementById('sfx-state');
+          if (el) el.textContent = sfxEnabled ? 'ON' : 'OFF';
+        }
+
+        const btn = document.getElementById('sfx-toggle');
+        if (btn) {
+          btn.addEventListener('click', function () {
+            sfxEnabled = !sfxEnabled;
+            updateLabel();
+            if (sfxEnabled) playClick();
+          });
+        }
+
+        // Attach click sound to all tactile buttons and links
+        document.addEventListener('click', function (e) {
+          if (!sfxEnabled) return;
+          const t = e.target;
+          if (t && (t.closest('.tactile-btn') || t.closest('a') || t.closest('button'))) {
+            playClick();
+          }
+        }, { capture: true, passive: true });
+      })();
+    </script>
+
+    <!-- Cursor spotlight: reactive border glow on bento cards -->
+    <script is:inline>
+      (function () {
+        let raf = null;
+        function onMove(e) {
+          if (raf) return;
+          raf = requestAnimationFrame(function () {
+            raf = null;
+            document.querySelectorAll('.spotlight-card').forEach(function (card) {
+              const rect = card.getBoundingClientRect();
+              card.style.setProperty('--mouse-x', (e.clientX - rect.left) + 'px');
+              card.style.setProperty('--mouse-y', (e.clientY - rect.top) + 'px');
+            });
+          });
+        }
+        document.addEventListener('pointermove', onMove, { passive: true });
+      })();
+    </script>
   </body>
 </html>

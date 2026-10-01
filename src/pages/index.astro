@@ -2,6 +2,7 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import SteamPresence from '../components/steam/SteamPresence';
 import CS2StatsCard from '../components/steam/CS2StatsCard.astro';
+import CS2LoadoutShowcase from '../components/steam/CS2LoadoutShowcase.astro';
 import { SITE_CONFIG } from '../lib/config';
 import { getSteamId64, getTopPlayedGames } from '../lib/steam';
 
@@ -43,7 +44,7 @@ const topGames = await getTopPlayedGames(3);
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-stretch">
       <!-- MODULE A: Identity & Live Presence (Span 5 cols on lg) -->
       <section
-        class="lg:col-span-5 rounded-2xl border border-hardware bg-[#0F1118] p-5 sm:p-7 relative overflow-hidden flex flex-col justify-between telemetry-card shadow-xl gap-6"
+        class="lg:col-span-5 rounded-2xl border border-hardware bg-[#0F1118] p-5 sm:p-7 relative overflow-hidden flex flex-col justify-between telemetry-card spotlight-card shadow-xl gap-6"
       >
         <div class="absolute inset-0 bg-grid-pattern opacity-25 pointer-events-none"></div>
 
@@ -135,7 +136,7 @@ const topGames = await getTopPlayedGames(3);
 
       <!-- MODULE C: Top Played Games Shelf (Span 7 cols on lg) -->
       <section
-        class="lg:col-span-7 rounded-2xl border border-hardware bg-[#0F1118] p-5 sm:p-6 relative overflow-hidden flex flex-col justify-between telemetry-card shadow-xl gap-5"
+        class="lg:col-span-7 rounded-2xl border border-hardware bg-[#0F1118] p-5 sm:p-6 relative overflow-hidden flex flex-col justify-between telemetry-card spotlight-card shadow-xl gap-5"
       >
         <div class="absolute inset-0 bg-grid-pattern opacity-25 pointer-events-none"></div>
 
@@ -205,9 +206,14 @@ const topGames = await getTopPlayedGames(3);
         </div>
       </section>
 
+      <!-- MODULE C-2: CS2 Loadout (Span 5 cols on lg, pairs with Module C) -->
+      <section class="lg:col-span-5">
+        <CS2LoadoutShowcase steamInventoryUrl={steamInventoryUrl} className="h-full" />
+      </section>
+
       <!-- MODULE D: Platform Nodes 2x2 Grid (Span 5 cols on lg) -->
       <section
-        class="lg:col-span-5 rounded-2xl border border-hardware bg-[#0F1118] p-5 sm:p-6 relative overflow-hidden flex flex-col justify-between telemetry-card shadow-xl gap-4"
+        class="lg:col-span-5 rounded-2xl border border-hardware bg-[#0F1118] p-5 sm:p-6 relative overflow-hidden flex flex-col justify-between telemetry-card spotlight-card shadow-xl gap-4"
       >
         <div class="absolute inset-0 bg-grid-pattern opacity-25 pointer-events-none"></div>
 
