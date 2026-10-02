@@ -1,12 +1,16 @@
 import React, { Suspense, useState, useEffect, useRef, useMemo } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useLoader } from '@react-three/fiber';
 import { OrbitControls, Center, useGLTF, useProgress, Html } from '@react-three/drei';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
+import { OBJLoader } from 'three-stdlib';
 import * as THREE from 'three';
+import { getWeaponModelPath, isObjModelUrl, WEAPON_MODEL_MAP } from '../utils/weaponModels';
 
 export interface ModelViewerProps {
-  /** Public URL or path to the .glb model file */
+  /** Public URL or path to the .glb or .obj model file */
   modelUrl?: string;
+  /** Fallback icon image URL */
+  fallbackIconUrl?: string;
   /** Custom wrapper CSS classes for container sizing */
   className?: string;
   /** Whether idle auto-rotation is enabled by default (default: true) */
@@ -29,9 +33,9 @@ export interface ModelViewerProps {
   weaponName?: string;
   /** Whether to show the bottom interaction hint pill (default: true) */
   showControlsHint?: boolean;
-  /** Optional callback fired when GLB successfully finishes loading */
+  /** Optional callback fired when model successfully finishes loading */
   onLoaded?: () => void;
-  /** Optional callback fired if GLB loading or parsing fails */
+  /** Optional callback fired if model loading or parsing fails */
   onError?: (err: Error) => void;
 }
 
@@ -155,7 +159,7 @@ export function FallbackWeaponMesh() {
 /**
  * GLTF Scene loader with automatic bounding-box normalization and cleanup.
  */
-function WeaponScene({
+export function WeaponScene({
   modelUrl,
   onLoaded,
 }: {
@@ -213,6 +217,96 @@ function WeaponScene({
   return (
     <Center>
       <primitive object={normalizedScene} />
+    </Center>
+  );
+}
+
+/**
+ * Wavefront OBJ Scene loader for CS2 weapon models.
+ * Calculates pristine vertex normals, centers geometry, normalizes scale to targetSize 2.4,
+ * applies studio CS2 PBR material (metalness 0.65, roughness 0.35, #c8d1dc),
+ * renders with horizontal profile rotation [0, Math.PI / 2, 0],
+ * and disposes GPU resources on unmount.
+ */
+export function ObjWeaponScene({
+  modelUrl,
+  onLoaded,
+}: {
+  modelUrl: string;
+  onLoaded?: () => void;
+}) {
+  const rawObj = useLoader(OBJLoader, modelUrl);
+  const loadedNotified = useRef(false);
+
+  useEffect(() => {
+    loadedNotified.current = false;
+  }, [modelUrl]);
+
+  useEffect(() => {
+    if (!loadedNotified.current && onLoaded) {
+      loadedNotified.current = true;
+      onLoaded();
+    }
+  }, [onLoaded, modelUrl]);
+
+  const processedScene = useMemo(() => {
+    const clone = rawObj.clone(true);
+
+    // Studio CS2 Weapon PBR Material
+    const weaponMaterial = new THREE.MeshStandardMaterial({
+      color: new THREE.Color('#c8d1dc'), // subtle slate finish tint
+      metalness: 0.65,
+      roughness: 0.35,
+      side: THREE.FrontSide,
+    });
+
+    clone.traverse((child) => {
+      if ((child as THREE.Mesh).isMesh) {
+        const mesh = child as THREE.Mesh;
+        if (mesh.geometry) {
+          // Compute pristine vertex normals for accurate specular highlights
+          mesh.geometry.computeVertexNormals();
+          // Center the geometry vertices locally around (0, 0, 0)
+          mesh.geometry.center();
+        }
+        mesh.material = weaponMaterial;
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+      }
+    });
+
+    // Scale normalization via Box3
+    const box = new THREE.Box3().setFromObject(clone);
+    const size = new THREE.Vector3();
+    box.getSize(size);
+    const maxDim = Math.max(size.x, size.y, size.z);
+    if (maxDim > 0) {
+      const targetSize = 2.4; // Uniform presentation size
+      clone.scale.setScalar(targetSize / maxDim);
+    }
+
+    return { group: clone, material: weaponMaterial };
+  }, [rawObj]);
+
+  // Clean up cloned geometries, materials, and textures on unmount or URL transition
+  useEffect(() => {
+    return () => {
+      disposeThreeObject(processedScene.group);
+      processedScene.material.dispose();
+      try {
+        useLoader.clear(OBJLoader, modelUrl);
+      } catch {
+        // Safe fallback
+      }
+    };
+  }, [processedScene, modelUrl]);
+
+  // Render rotated 90 degrees around Y (horizontal profile view, muzzle pointing right)
+  return (
+    <Center>
+      <group rotation={[0, Math.PI / 2, 0]}>
+        <primitive object={processedScene.group} />
+      </group>
     </Center>
   );
 }
@@ -347,7 +441,7 @@ export function ModelViewerSkeleton({
 }
 
 /**
- * Error boundary catching GLB fetch / parse exceptions and falling back to procedural mesh.
+ * Error boundary catching model fetch / parse exceptions and falling back to procedural mesh.
  */
 interface ModelErrorBoundaryProps {
   children: React.ReactNode;
@@ -384,12 +478,14 @@ class ModelErrorBoundary extends React.Component<ModelErrorBoundaryProps, ModelE
 
 /**
  * Interactive 3D Weapon Model Viewer component using React Three Fiber.
+ * Supports Wavefront .obj CS2 models and binary .glb/.gltf models.
  * Includes studio 3-point lighting rig, OrbitControls with clamping,
  * idle auto-rotation with pause/resume, responsive container fit, and
  * full WebGL resource disposal on unmount.
  */
 export default function ModelViewer({
   modelUrl,
+  fallbackIconUrl: _fallbackIconUrl,
   className = 'w-full h-80 min-h-[340px]',
   autoRotate = true,
   autoRotateSpeed = 1.5,
@@ -411,6 +507,14 @@ export default function ModelViewer({
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  const effectiveUrl = useMemo(() => {
+    if (modelUrl) return modelUrl;
+    if (weaponName) return getWeaponModelPath(weaponName);
+    return undefined;
+  }, [modelUrl, weaponName]);
+
+  const isObj = effectiveUrl ? isObjModelUrl(effectiveUrl) : false;
 
   if (!isMounted) {
     return <ModelViewerSkeleton className={className} weaponName={weaponName} />;
@@ -435,7 +539,7 @@ export default function ModelViewer({
         <StudioLighting />
 
         <ModelErrorBoundary
-          key={modelUrl}
+          key={effectiveUrl || 'fallback'}
           onError={onError}
           fallback={
             <Center>
@@ -444,8 +548,12 @@ export default function ModelViewer({
           }
         >
           <Suspense fallback={<CanvasSpinner weaponName={weaponName} />}>
-            {modelUrl ? (
-              <WeaponScene modelUrl={modelUrl} onLoaded={onLoaded} />
+            {effectiveUrl ? (
+              isObj ? (
+                <ObjWeaponScene modelUrl={effectiveUrl} onLoaded={onLoaded} />
+              ) : (
+                <WeaponScene modelUrl={effectiveUrl} onLoaded={onLoaded} />
+              )
             ) : (
               <Center>
                 <FallbackWeaponMesh />
@@ -476,7 +584,7 @@ export default function ModelViewer({
   );
 }
 
-export { ModelViewer };
+export { ModelViewer, getWeaponModelPath, isObjModelUrl, WEAPON_MODEL_MAP };
 
 /**
  * Interactive test harness component for testing mounting, unmounting,

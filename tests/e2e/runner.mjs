@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 /**
- * CS2 Inventory Pipeline & 3D ModelViewer E2E Test Runner
- * Executes requirement-driven opaque-box tests across Tiers 1-4 for features F1-F18.
+ * CS2 Inventory Pipeline & 3D Weapon Model Engine — Comprehensive E2E Test Runner
+ * Executes requirement-driven opaque-box tests across Tiers 1-4 for features F1-F19.
  */
 
 import { spawnSync } from 'node:child_process';
@@ -10,7 +10,7 @@ import process from 'node:process';
 
 // Check if running under tsx to resolve TypeScript imports cleanly.
 // If run directly via `node tests/e2e/runner.mjs`, transparently re-spawn under `npx tsx`.
-if (!process.env.TSX_RUNNER_ACTIVE && !process.execArgv.some(arg => arg.includes('tsx'))) {
+if (!process.env.TSX_RUNNER_ACTIVE && !process.execArgv.some((arg) => arg.includes('tsx'))) {
   const result = spawnSync('npx', ['-y', 'tsx', ...process.argv.slice(1)], {
     stdio: 'inherit',
     env: { ...process.env, TSX_RUNNER_ACTIVE: '1' },
@@ -36,40 +36,49 @@ const BG_GREEN = '\x1b[42m\x1b[30m\x1b[1m';
 const BG_RED = '\x1b[41m\x1b[37m\x1b[1m';
 
 const FEATURE_NAMES = {
-  F1: 'Steam Inventory Fetching',
-  F2: 'Inspect Link Construction',
-  F3: 'CSFloat Inspect Enrichment',
-  F4: 'In-Memory LRU & Throttling',
-  F5: 'Resilient Error Handling',
-  F6: 'Typed SSR API Endpoint',
-  F7: 'TypeScript Type Definitions',
-  F8: 'Steam Utilities Module',
-  F9: '3D Dependencies Setup',
-  F10: 'Interactive 3D ModelViewer',
-  F11: 'Studio 3-Point Lighting Rig',
-  F12: 'OrbitControls with Limits',
-  F13: 'Idle Auto-Rotation & Pause',
-  F14: 'Responsive Canvas & Auto-Center',
-  F15: 'Visual Loading Skeleton & Spinner',
-  F16: 'WebGL Resource Disposal',
-  F17: 'Mock Verification Script',
-  F18: 'Placeholder GLB & Test Route',
+  F1: 'Direct asset_properties parsing',
+  F2: 'Rarity tag parsing fix',
+  F3: 'Item category classification',
+  F4: 'LRU Cache Pre-Seeding',
+  F5: 'Live Steam ID Resolution',
+  F6: '35 .obj Model Migration',
+  F7: 'Weapon Model Mapping',
+  F8: 'ModelViewer Dual-Format Support',
+  F9: 'OBJ Geometry Normalization',
+  F10: 'CS2 Weapon PBR Material',
+  F11: 'WebGL Memory Cleanup',
+  F12: 'Real User Primary Loadout',
+  F13: 'Interactive Loadout Bento Card',
+  F14: '[VIEW ALL SKINS] Link',
+  F15: 'Dedicated /inventory Route',
+  F16: 'Inventory Category Filtering & Search',
+  F17: 'Interactive 3D Inspect Stage',
+  F18: 'Global Navigation & Command Deck',
+  F19: 'Privacy Invariant Enforcement',
 };
 
 async function main() {
   const runnerStart = performance.now();
 
-  console.log('\n' + BOLD + CYAN + '================================================================================' + RESET);
-  console.log(BOLD + '  CS2 INVENTORY PIPELINE & 3D MODELVIEWER — E2E TEST SUITE (TIERS 1–4)' + RESET);
-  console.log(BOLD + CYAN + '================================================================================' + RESET);
-  console.log(GRAY + `  Runtime: Node ${process.version} | Timestamp: ${new Date().toISOString()}` + RESET + '\n');
+  // Parse CLI flags for tier selection (e.g. --tier=1)
+  const tierArg = process.argv.find((a) => a.startsWith('--tier='));
+  const selectedTier = tierArg ? parseInt(tierArg.split('=')[1], 10) : null;
 
-  // Run all tiers sequentially
+  console.log('\n' + BOLD + CYAN + '================================================================================' + RESET);
+  console.log(BOLD + '  CS2 INVENTORY & 3D WEAPON ENGINE — E2E TEST SUITE (TIERS 1–4, F1–F19)' + RESET);
+  console.log(BOLD + CYAN + '================================================================================' + RESET);
+  console.log(GRAY + `  Runtime: Node ${process.version} | Timestamp: ${new Date().toISOString()}` + RESET);
+  if (selectedTier) {
+    console.log(YELLOW + `  Filtering: Running only Tier ${selectedTier}` + RESET);
+  }
+  console.log('');
+
+  // Run tiers
   try {
-    await runTier1();
-    await runTier2();
-    await runTier3();
-    await runTier4();
+    if (!selectedTier || selectedTier === 1) await runTier1();
+    if (!selectedTier || selectedTier === 2) await runTier2();
+    if (!selectedTier || selectedTier === 3) await runTier3();
+    if (!selectedTier || selectedTier === 4) await runTier4();
   } catch (error) {
     console.error(RED + 'Fatal error during test suite execution:' + RESET, error);
     process.exit(1);
@@ -120,35 +129,35 @@ async function main() {
   }
 
   // --------------------------------------------------------------------------
-  // Feature Coverage Checklist (F1–F18)
+  // Feature Coverage Checklist (F1–F19)
   // --------------------------------------------------------------------------
   console.log('\n' + BOLD + '================================================================================' + RESET);
-  console.log(BOLD + '  FEATURE COVERAGE MATRIX (F1–F18)' + RESET);
+  console.log(BOLD + '  FEATURE COVERAGE MATRIX (F1–F19)' + RESET);
   console.log(BOLD + '================================================================================' + RESET);
-  console.log(`  ${BOLD}${'ID'.padEnd(6)} ${'Feature Name'.padEnd(38)} ${'Status'.padEnd(16)} Test Count${RESET}`);
+  console.log(`  ${BOLD}${'ID'.padEnd(6)} ${'Feature Name'.padEnd(42)} ${'Status'.padEnd(16)} Test Count${RESET}`);
   console.log(GRAY + '  ' + '-'.repeat(76) + RESET);
 
   let allFeaturesCovered = true;
-  for (let i = 1; i <= 18; i++) {
+  for (let i = 1; i <= 19; i++) {
     const fId = `F${i}`;
     const name = FEATURE_NAMES[fId] || 'Feature';
     const info = harness.featureMap.get(fId);
     const isCovered = info && info.covered && info.tests.length > 0;
-    if (!isCovered) allFeaturesCovered = false;
+    if (!selectedTier && !isCovered) allFeaturesCovered = false;
 
     const status = isCovered ? `${GREEN}✓ COVERED${RESET}` : `${RED}✗ MISSING${RESET}`;
     const count = info ? info.tests.length : 0;
-    console.log(`  ${fId.padEnd(6)} ${name.padEnd(38)} ${status.padEnd(25)} ${count} tests`);
+    console.log(`  ${fId.padEnd(6)} ${name.padEnd(42)} ${status.padEnd(25)} ${count} tests`);
   }
 
   // --------------------------------------------------------------------------
   // Final Verdict Banner
   // --------------------------------------------------------------------------
   console.log('\n' + BOLD + '================================================================================' + RESET);
-  if (totalFailed === 0 && allFeaturesCovered) {
+  if (totalFailed === 0 && (selectedTier || allFeaturesCovered)) {
     console.log(`  ${BG_GREEN} ALL E2E TEST TIERS PASSED (100%) ${RESET}`);
     console.log(`  ${GREEN}✓ Tests: ${totalPassed} passed, ${totalTests} total${RESET}`);
-    console.log(`  ${GREEN}✓ Features: 18/18 covered${RESET}`);
+    console.log(`  ${GREEN}✓ Features: ${selectedTier ? 'Filtered Tier' : '19/19 covered'}${RESET}`);
     console.log(`  ${GRAY}  Total Time: ${totalDuration}ms${RESET}`);
     console.log(BOLD + '================================================================================\n' + RESET);
     process.exit(0);
@@ -161,7 +170,7 @@ async function main() {
   }
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error('Unhandled error:', err);
   process.exit(1);
 });

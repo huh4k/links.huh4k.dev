@@ -15,7 +15,7 @@ export const GET: APIRoute = async (context) => {
       runtimeEnv?.STEAM_ID64 ||
       process.env.STEAM_ID64 ||
       SITE_CONFIG?.author?.steamId ||
-      '76561198000000000';
+      '76561198920486334';
 
     const apiKey = runtimeEnv?.STEAM_API_KEY || process.env.STEAM_API_KEY;
 

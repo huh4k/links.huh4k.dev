@@ -1,0 +1,76 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import InventoryExplorer from '../components/steam/InventoryExplorer';
+import { fetchCS2Inventory } from '../utils/steam';
+import { SITE_CONFIG } from '../lib/config';
+
+// Server-side pre-fetch authentic CS2 inventory data
+const steamId = SITE_CONFIG.author.steamId;
+const inventoryItems = await fetchCS2Inventory(steamId);
+const steamInventoryUrl = `https://steamcommunity.com/profiles/${steamId}/inventory/#730`;
+---
+
+<BaseLayout
+  title="CS2 Inventory & 3D Weapon Inspect — huh4k"
+  description="Counter-Strike 2 inventory showcase with interactive 3D weapon inspect, native float wear ratings, pattern templates, and in-game preview links."
+  currentPath="/inventory"
+>
+  <div class="space-y-8">
+    <!-- Breadcrumb & Top Navigation Links -->
+    <div class="flex items-center justify-between">
+      <a
+        href="/"
+        class="inline-flex items-center gap-1.5 text-xs font-mono text-zinc-400 hover:text-white transition-colors tactile-btn"
+      >
+        <span>← Back to Links Hub</span>
+      </a>
+
+      <div class="flex items-center gap-3 text-xs font-mono">
+        <a
+          href="/"
+          class="text-zinc-400 hover:text-white transition-colors"
+        >
+          links.huh4k.dev
+        </a>
+        <span class="text-zinc-600">•</span>
+        <a
+          href={steamInventoryUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-telemetry-amber hover:text-yellow-400 transition-colors inline-flex items-center gap-1"
+        >
+          <span>Steam Community Inventory</span>
+          <span class="text-[10px]">↗</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Page Header & Telemetry Summary -->
+    <div class="space-y-3 pb-3 border-b border-[#1E2333]/80">
+      <div class="inline-flex items-center gap-2 text-xs font-mono text-telemetry-blue uppercase tracking-wider">
+        <span class="w-2 h-2 rounded-full bg-telemetry-green animate-pulse"></span>
+        <span>03 // COUNTER-STRIKE 2 INVENTORY & WEAPON ARSENAL</span>
+      </div>
+
+      <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-white font-mono">
+            CS2 Inventory & 3D Weapon Inspect
+          </h1>
+          <p class="text-sm text-zinc-400 mt-1 max-w-2xl">
+            Live Counter-Strike 2 weapon arsenal extracted natively from Valve Steam Community telemetry with authentic Wear Rating floats, Pattern Template seeds, and real-time 3D model inspection.
+          </p>
+        </div>
+
+        <!-- Telemetry Header Badge -->
+        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[#1E2333] bg-[#0F1118] text-xs font-mono text-zinc-300 shrink-0">
+          <span class="w-1.5 h-1.5 rounded-full bg-telemetry-blue animate-pulse"></span>
+          <span>26 Enriched Items • Direct Asset Properties • Cloudflare Edge Synced</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Client-Side Interactive Inventory Island -->
+    <InventoryExplorer client:load initialItems={inventoryItems} />
+  </div>
+</BaseLayout>

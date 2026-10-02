@@ -1,6 +1,6 @@
 /**
  * Lightweight E2E Test Harness and Assertion Utilities
- * Provides suite execution, assertions, timing, and feature coverage tracking.
+ * Provides suite execution, assertions, timing, and feature coverage tracking for F1 to F19.
  */
 
 export class TestHarness {
@@ -8,8 +8,8 @@ export class TestHarness {
     this.suites = [];
     this.currentSuite = null;
     this.featureMap = new Map();
-    // Initialize F1 to F18
-    for (let i = 1; i <= 18; i++) {
+    // Initialize F1 to F19
+    for (let i = 1; i <= 19; i++) {
       this.featureMap.set(`F${i}`, { covered: false, tests: [] });
     }
   }

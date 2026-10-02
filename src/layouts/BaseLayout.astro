@@ -21,6 +21,7 @@ const {
 const steamId = getSteamId64();
 const currentYear = new Date().getFullYear();
 const isHome = currentPath === '/';
+const isInventory = currentPath === '/inventory';
 const isGames = currentPath === '/games';
 const canonicalUrl = new URL(Astro.url.pathname, SITE_CONFIG.url).href;
 const ogImageUrl = new URL('/favicon.svg', SITE_CONFIG.url).href;
@@ -110,6 +111,15 @@ const ogImageUrl = new URL('/favicon.svg', SITE_CONFIG.url).href;
               [Links]
             </a>
             <a
+              href="/inventory"
+              class={`transition-colors py-1 flex items-center gap-1 ${isInventory ? 'text-telemetry-blue font-bold border-b border-telemetry-blue' : 'text-zinc-400 hover:text-zinc-200'}`}
+            >
+              <span>[Inventory]</span>
+              <span class="hidden sm:inline text-[9px] px-1 py-0.2 rounded bg-telemetry-amber/20 text-telemetry-amber border border-telemetry-amber/30">
+                CS2
+              </span>
+            </a>
+            <a
               href="/games"
               class={`transition-colors py-1 flex items-center gap-1 ${isGames ? 'text-telemetry-blue font-bold border-b border-telemetry-blue' : 'text-zinc-400 hover:text-zinc-200'}`}
             >
@@ -170,7 +180,17 @@ const ogImageUrl = new URL('/favicon.svg', SITE_CONFIG.url).href;
         <div class="flex flex-col sm:flex-row items-center gap-4">
           <SocialLinks showLabels={false} />
           <span class="text-zinc-600 hidden sm:inline">•</span>
-          <div class="flex items-center gap-2 text-[11px] text-zinc-400">
+          <div class="flex items-center gap-3 text-[11px] text-zinc-400">
+            <a
+              href="/inventory"
+              class={`transition-colors flex items-center gap-1 ${isInventory ? 'text-telemetry-blue font-semibold' : 'text-zinc-400 hover:text-zinc-200'}`}
+            >
+              <span>[Inventory]</span>
+              <span class="text-[9px] px-1 py-0.2 rounded bg-telemetry-amber/20 text-telemetry-amber border border-telemetry-amber/30">
+                CS2
+              </span>
+            </a>
+            <span class="text-zinc-600 hidden sm:inline">•</span>
             <span class="w-1.5 h-1.5 rounded-full bg-telemetry-green animate-pulse"></span>
             <span>Steam & Leetify Hub</span>
           </div>

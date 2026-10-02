@@ -40,11 +40,42 @@ export interface RawSteamDescription {
   tags?: RawSteamTag[];
 }
 
+export interface RawSteamAssetProperty {
+  propertyid: number;
+  int_value?: string | number;
+  float_value?: string | number;
+  string_value?: string;
+  name?: string;
+}
+
+export interface RawSteamAssetAccessoryProperty {
+  propertyid: number;
+  float_value?: string | number;
+  int_value?: string | number;
+}
+
+export interface RawSteamAssetAccessory {
+  classid: string;
+  parent_relationship_properties?: RawSteamAssetAccessoryProperty[];
+  nested_accessories?: Array<{
+    classid: string;
+  }>;
+}
+
+export interface RawSteamAssetPropertiesEntry {
+  appid: number;
+  contextid: string;
+  assetid: string;
+  asset_properties?: RawSteamAssetProperty[];
+  asset_accessories?: RawSteamAssetAccessory[];
+}
+
 export interface RawSteamInventoryResponse {
   success: number | boolean;
   total_inventory_count?: number;
   assets?: RawSteamAsset[];
   descriptions?: RawSteamDescription[];
+  asset_properties?: RawSteamAssetPropertiesEntry[];
   rwgrsn?: number;
   error?: string;
 }
@@ -88,9 +119,12 @@ export interface EnrichedInventoryItem {
   rarity: string;          // e.g. "Covert", "Classified", "Mil-Spec"
   rarityColor?: string;    // e.g. "#eb4b4b"
   type: string;            // e.g. "Rifle", "Pistol", "Knife"
+  certificate?: string | null; // inspect certificate hash if available
 }
 
 // Aliases for convenience and spec compatibility
+export type RawAssetProperty = RawSteamAssetProperty;
+export type RawAssetPropertiesEntry = RawSteamAssetPropertiesEntry;
 export type SteamInventoryAsset = RawSteamAsset;
 export type SteamInventoryDescription = RawSteamDescription;
 export type SteamInventoryResponse = RawSteamInventoryResponse;

@@ -23,7 +23,7 @@ export const SITE_CONFIG: SiteConfig = {
     handle: '@huh4k',
     steam: 'https://steamcommunity.com',
     leetify: 'https://leetify.com',
-    steamId: '76561198000000000',
+    steamId: '76561198920486334',
     status: 'Links',
   },
 };

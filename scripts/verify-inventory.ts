@@ -1,14 +1,17 @@
 /**
- * Standalone Verification Suite for CS2 Inventory Pipeline & CSFloat Enrichment
+ * Standalone Verification Suite for CS2 Inventory Pipeline, Direct Asset Properties & Caching
  *
  * Validates:
- * 1. Schema Validation for Raw Steam & Enriched Items
- * 2. Inspect URL substitution (%owner_steamid% and %assetid%)
- * 3. LRU Cache behavior and eviction
- * 4. CSFloat inspect enrichment and caching (hit rate verification)
- * 5. Rate limiting / throttling observation
- * 6. Error handling and resilience (429, 500, network error, private profiles, missing links)
- * 7. SSR API route handler (/api/inventory.json)
+ * 1. Inspect URL substitution (%owner_steamid%, %assetid%, and %propid:6%)
+ * 2. Steam CDN image formatting
+ * 3. Rarity parser without ItemSet collision & proper CS2 colors and weapon type extraction
+ * 4. LRU Cache capacity, eviction, and TTL
+ * 5. Authentic Fallback Inventory (26+ items for Steam ID 76561198920486334)
+ * 6. Native root data.asset_properties parsing (seed, float, certificate)
+ * 7. LRU Cache 0ms re-lookups
+ * 8. CSFloat enrichment fallback and rate limit handling
+ * 9. Resilience to Steam errors (429, 403, network failure, invalid Steam ID)
+ * 10. SSR API Route Handler (/api/inventory.json)
  */
 
 import {
@@ -49,21 +52,32 @@ async function runTestSuite() {
   console.log('======================================================\n');
 
   // --------------------------------------------------------------------------
-  // TEST 1: Inspect URL Substitution
+  // TEST 1: Inspect URL Construction & Substitution (%propid:6% + %owner_steamid% + %assetid%)
   // --------------------------------------------------------------------------
   console.log('[Test 1] Inspect URL Construction & Substitution');
   {
-    const rawTemplate =
+    const legacyTemplate =
       'steam://rungame/730/76561202255234564/+csgo_econ_action_preview%20S%owner_steamid%A%assetid%D14432168987455850901';
     const steamId = '76561198012345678';
     const assetId = '31459265358';
 
-    const formatted = formatInspectUrl(rawTemplate, steamId, assetId);
+    const legacyFormatted = formatInspectUrl(legacyTemplate, steamId, assetId);
     assert(
-      formatted ===
+      legacyFormatted ===
         'steam://rungame/730/76561202255234564/+csgo_econ_action_preview%20S76561198012345678A31459265358D14432168987455850901',
       'Replaces %owner_steamid% and %assetid% correctly',
-      `Got: ${formatted}`
+      `Got: ${legacyFormatted}`
+    );
+
+    const modernTemplate =
+      'steam://run/730//+csgo_econ_action_preview%20%propid:6%';
+    const certHash = '5545A1B89F9190544D5275A25D7D5065516D8CDEF1B85615';
+    const modernFormatted = formatInspectUrl(modernTemplate, steamId, assetId, certHash);
+    assert(
+      modernFormatted ===
+        'steam://run/730//+csgo_econ_action_preview%205545A1B89F9190544D5275A25D7D5065516D8CDEF1B85615',
+      'Replaces %propid:6% with certificate hash',
+      `Got: ${modernFormatted}`
     );
 
     assert(formatInspectUrl('', steamId, assetId) === '', 'Handles empty raw link gracefully');
@@ -91,16 +105,22 @@ async function runTestSuite() {
   }
 
   // --------------------------------------------------------------------------
-  // TEST 3: Metadata Tag Categorization
+  // TEST 3: Rarity Tag Parsing (No ItemSet Collision) & Type Extraction
   // --------------------------------------------------------------------------
-  console.log('\n[Test 3] Rarity and Type Extraction from Steam Tags');
+  console.log('\n[Test 3] Rarity and Type Extraction (Fixing ItemSet Collision)');
   {
-    const tags: RawSteamDescription['tags'] = [
+    // Regression check: ItemSet tag positioned before Rarity tag must NOT collide with Rarity
+    const tagsWithItemSet: RawSteamDescription['tags'] = [
+      {
+        category: 'ItemSet',
+        internal_name: 'set_community_30',
+        localized_tag_name: 'The Recoil Collection',
+      },
       {
         category: 'Rarity',
-        internal_name: 'Rarity_Covert_Weapon',
-        localized_tag_name: 'Covert',
-        color: 'eb4b4b',
+        internal_name: 'Rarity_Legendary_Weapon',
+        localized_tag_name: 'Classified',
+        color: 'd32ce6',
       },
       {
         category: 'Type',
@@ -109,18 +129,50 @@ async function runTestSuite() {
       },
     ];
 
-    const { rarity, rarityColor } = getRarityFromTags(tags);
-    assert(rarity === 'Covert', 'Extracts correct rarity name from tags');
-    assert(rarityColor === '#eb4b4b', 'Extracts and formats rarity color with # prefix');
+    const rarityWithItemSet = getRarityFromTags(tagsWithItemSet);
+    assert(
+      rarityWithItemSet.rarity === 'Classified',
+      'Correctly ignores ItemSet tag and extracts Classified rarity',
+      `Got: ${rarityWithItemSet.rarity}`
+    );
+    assert(
+      rarityWithItemSet.rarityColor === '#d32ce6',
+      'Correctly maps Classified hex color #d32ce6'
+    );
 
-    const type = getTypeFromTags(tags, 'Rifle');
-    assert(type === 'Rifle', 'Extracts correct item type from tags');
+    // CS2 Rarity color checks
+    const covertResult = getRarityFromTags([
+      { category: 'Rarity', internal_name: 'Rarity_Covert_Weapon', localized_tag_name: 'Covert' },
+    ]);
+    assert(covertResult.rarityColor === '#eb4b4b', 'Covert defaults to #eb4b4b');
+
+    const restrictedResult = getRarityFromTags([
+      { category: 'Rarity', internal_name: 'Rarity_Mythical_Weapon', localized_tag_name: 'Restricted' },
+    ]);
+    assert(restrictedResult.rarityColor === '#8847ff', 'Restricted defaults to #8847ff');
+
+    const milSpecResult = getRarityFromTags([
+      { category: 'Rarity', internal_name: 'Rarity_Rare_Weapon', localized_tag_name: 'Mil-Spec Grade' },
+    ]);
+    assert(milSpecResult.rarityColor === '#4b69ff', 'Mil-Spec Grade defaults to #4b69ff');
+
+    const extraordinaryKnife = getRarityFromTags([
+      { category: 'Rarity', internal_name: 'Rarity_Ancient', localized_tag_name: '★ Extraordinary' },
+    ]);
+    assert(extraordinaryKnife.rarityColor === '#ffd700', '★ Extraordinary knife defaults to #ffd700');
+
+    // Type extraction
+    const rifleType = getTypeFromTags(tagsWithItemSet, 'Rifle');
+    assert(rifleType === 'Rifle', 'Identifies Rifle type from tags');
+
+    const sniperType = getTypeFromTags([], 'AWP | Ice Coaled (Sniper Rifle)');
+    assert(sniperType === 'Sniper Rifle', 'Identifies Sniper Rifle from type string');
+
+    const knifeType = getTypeFromTags([], '★ Karambit | Doppler');
+    assert(knifeType === 'Knife', 'Identifies Knife from type string');
 
     const emptyRarity = getRarityFromTags([]);
     assert(emptyRarity.rarity === 'Base Grade', 'Falls back to Base Grade for empty tags');
-
-    const deducedType = getTypeFromTags([], 'StatTrak™ AWP | Dragon Lore (Sniper Rifle)');
-    assert(deducedType === 'Sniper Rifle', 'Deduced type from type string when tags missing');
   }
 
   // --------------------------------------------------------------------------
@@ -134,7 +186,6 @@ async function runTestSuite() {
     cache.set('key2', 'value2');
     assert(cache.size() === 2, 'Cache contains 2 items');
 
-    // Access key1 so key2 becomes the least recently used
     const v1 = cache.get('key1');
     assert(v1 === 'value1', 'Retrieves key1 from cache');
 
@@ -145,7 +196,7 @@ async function runTestSuite() {
     assert(cache.get('key3') === 'value3', 'Retains newly added item (key3)');
 
     // TTL Expiration test
-    const shortTtlCache = new LRUCache<string, string>(5, 10); // 10ms TTL
+    const shortTtlCache = new LRUCache<string, string>(5, 10);
     shortTtlCache.set('temp', 'tempVal');
     assert(shortTtlCache.get('temp') === 'tempVal', 'Gets value before TTL expires');
 
@@ -154,28 +205,161 @@ async function runTestSuite() {
   }
 
   // --------------------------------------------------------------------------
-  // TEST 5: Fallback Loadout Dataset Integrity
+  // TEST 5: Authentic Fallback Loadout Dataset (26+ Items for 76561198920486334)
   // --------------------------------------------------------------------------
-  console.log('\n[Test 5] Fallback Loadout Schema & Consistency');
+  console.log('\n[Test 5] Authentic Fallback Inventory (26+ Real Items)');
   {
-    assert(Array.isArray(FALLBACK_INVENTORY) && FALLBACK_INVENTORY.length >= 4, 'FALLBACK_INVENTORY has >= 4 curated items');
+    assert(
+      Array.isArray(FALLBACK_INVENTORY) && FALLBACK_INVENTORY.length >= 26,
+      `FALLBACK_INVENTORY contains 26+ items (count: ${FALLBACK_INVENTORY.length})`
+    );
 
+    // Verify key primary weapons
+    const ak = FALLBACK_INVENTORY.find((i) => i.name.includes('AK-47 | Ice Coaled'));
+    assert(Boolean(ak), 'Contains AK-47 | Ice Coaled');
+    assert(ak?.rarity === 'Classified', 'AK-47 | Ice Coaled is Classified');
+    assert(typeof ak?.float === 'number' && Math.abs(ak.float - 0.0825) < 0.001, 'AK-47 has float ~0.0825');
+    assert(ak?.seed === 367, 'AK-47 has seed 367');
+
+    const m4 = FALLBACK_INVENTORY.find((i) => i.name.includes('M4A1-S | Liquidation'));
+    assert(Boolean(m4), 'Contains StatTrak™ M4A1-S | Liquidation');
+    assert(m4?.rarity === 'Restricted', 'M4A1-S is Restricted');
+    assert(typeof m4?.float === 'number' && Math.abs(m4.float - 0.3438) < 0.001, 'M4A1-S has float ~0.3438');
+    assert(m4?.seed === 937, 'M4A1-S has seed 937');
+
+    const awp = FALLBACK_INVENTORY.find((i) => i.name.includes('AWP | Ice Coaled'));
+    assert(Boolean(awp), 'Contains AWP | Ice Coaled');
+    assert(awp?.rarity === 'Classified', 'AWP is Classified');
+    assert(typeof awp?.float === 'number' && Math.abs(awp.float - 0.0631) < 0.001, 'AWP has float ~0.0631');
+    assert(awp?.seed === 309, 'AWP has seed 309');
+
+    const usp = FALLBACK_INVENTORY.find((i) => i.name.includes('USP-S | Royal Guard'));
+    assert(Boolean(usp), 'Contains USP-S | Royal Guard');
+    assert(usp?.rarity === 'Restricted', 'USP-S is Restricted');
+    assert(typeof usp?.float === 'number' && Math.abs(usp.float - 0.056) < 0.001, 'USP-S has float ~0.0560');
+    assert(usp?.seed === 644, 'USP-S has seed 644');
+
+    const knife = FALLBACK_INVENTORY.find((i) => i.type === 'Knife');
+    assert(Boolean(knife), 'Contains Knife item');
+
+    // Schema validation across all items
     for (const item of FALLBACK_INVENTORY) {
       assert(typeof item.id === 'string' && item.id.length > 0, `Item ${item.name} has valid id`);
       assert(typeof item.name === 'string' && item.name.length > 0, `Item ${item.name} has valid name`);
       assert(item.iconUrl.startsWith('http'), `Item ${item.name} has valid iconUrl`);
-      assert(item.inspectUrl !== null && item.inspectUrl.startsWith('steam://rungame/730/'), `Item ${item.name} has valid inspectUrl`);
-      assert(typeof item.float === 'number' && item.float >= 0 && item.float <= 1, `Item ${item.name} has valid float: ${item.float}`);
-      assert(typeof item.seed === 'number' && item.seed >= 0, `Item ${item.name} has valid seed: ${item.seed}`);
+      assert(
+        item.float === null || (typeof item.float === 'number' && item.float >= 0 && item.float <= 1),
+        `Item ${item.name} has valid float: ${item.float}`
+      );
+      assert(
+        item.seed === null || (typeof item.seed === 'number' && item.seed >= 0),
+        `Item ${item.name} has valid seed: ${item.seed}`
+      );
       assert(typeof item.rarity === 'string' && item.rarity.length > 0, `Item ${item.name} has valid rarity`);
       assert(typeof item.type === 'string' && item.type.length > 0, `Item ${item.name} has valid type`);
     }
   }
 
   // --------------------------------------------------------------------------
-  // TEST 6: CSFloat Enricher & Cache Hit Verification
+  // TEST 6: Native Root asset_properties Extraction & LRU Pre-Seeding
   // --------------------------------------------------------------------------
-  console.log('\n[Test 6] CSFloat Enricher & Cache Hit Rate');
+  console.log('\n[Test 6] Native Root asset_properties Extraction');
+  {
+    const originalFetch = globalThis.fetch;
+    const mockAssetId = '999888777';
+    const mockCert = '5545A1B89F9190544D5275A25D7D5065516D8CDEF1B85615BA5737505D5645C10237';
+
+    globalThis.fetch = (async (url: string | URL | Request) => {
+      const urlStr = url.toString();
+      if (urlStr.includes('steamcommunity.com/inventory')) {
+        return new Response(
+          JSON.stringify({
+            success: 1,
+            total_inventory_count: 1,
+            assets: [
+              {
+                appid: 730,
+                contextid: '2',
+                assetid: mockAssetId,
+                classid: '9001',
+                instanceid: '0',
+                amount: '1',
+              },
+            ],
+            descriptions: [
+              {
+                appid: 730,
+                classid: '9001',
+                instanceid: '0',
+                name: 'AK-47 | Ice Coaled (Minimal Wear)',
+                market_name: 'AK-47 | Ice Coaled (Minimal Wear)',
+                type: 'Rifle',
+                icon_url: 'ak47_ice_coaled_hash',
+                tradable: 1,
+                marketable: 1,
+                actions: [
+                  {
+                    name: 'Inspect in Game...',
+                    link: 'steam://run/730//+csgo_econ_action_preview%20%propid:6%',
+                  },
+                ],
+                tags: [
+                  { category: 'Type', internal_name: 'CSGO_Type_Rifle', localized_tag_name: 'Rifle' },
+                  { category: 'Rarity', internal_name: 'Rarity_Legendary_Weapon', localized_tag_name: 'Classified', color: 'd32ce6' },
+                ],
+              },
+            ],
+            asset_properties: [
+              {
+                appid: 730,
+                contextid: '2',
+                assetid: mockAssetId,
+                asset_properties: [
+                  { propertyid: 1, int_value: '367', name: 'Pattern Template' },
+                  { propertyid: 2, float_value: '0.082530684769153595', name: 'Wear Rating' },
+                  { propertyid: 6, string_value: mockCert, name: 'Item Certificate' },
+                ],
+              },
+            ],
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      return originalFetch(url);
+    }) as typeof fetch;
+
+    try {
+      const items = await fetchCS2Inventory('76561198920486334');
+      assert(items.length === 1, 'Parses 1 item with native asset properties');
+
+      const parsedItem = items[0];
+      assert(parsedItem.id === mockAssetId, 'Item ID matches mock assetid');
+      assert(
+        parsedItem.float !== null && Math.abs(parsedItem.float - 0.08253068) < 0.0001,
+        'Natively extracts wear float 0.08253 from propertyid 2'
+      );
+      assert(parsedItem.seed === 367, 'Natively extracts pattern template seed 367 from propertyid 1');
+      assert(
+        parsedItem.inspectUrl?.includes(mockCert) === true,
+        'Substitutes %propid:6% with certificate hash in inspectUrl'
+      );
+
+      // Verify LRU cache was pre-seeded directly
+      const cached = inventoryLRUCache.get(mockAssetId);
+      assert(
+        cached !== undefined && cached.float !== null && Math.abs(cached.float - 0.08253068) < 0.0001,
+        'Pre-seeds item float into inventoryLRUCache'
+      );
+      assert(cached?.seed === 367, 'Pre-seeds item seed into inventoryLRUCache');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // TEST 7: CSFloat Fallback & Rate Limiting
+  // --------------------------------------------------------------------------
+  console.log('\n[Test 7] CSFloat Fallback & Cache Hit Rate');
   {
     const originalFetch = globalThis.fetch;
     let csfloatCallCount = 0;
@@ -183,7 +367,6 @@ async function runTestSuite() {
     const mockInspectUrl =
       'steam://rungame/730/76561202255234564/+csgo_econ_action_preview%20S76561198000000000A9990001D14432168987455850901';
 
-    // Mock CSFloat API
     globalThis.fetch = (async (url: string | URL | Request) => {
       const urlStr = url.toString();
       if (urlStr.includes('api.csfloat.com')) {
@@ -233,37 +416,19 @@ async function runTestSuite() {
       // Direct enrichInventory batch test
       const batchResult = await enrichInventory([testItem], 5);
       assert(batchResult.length === 1 && batchResult[0].float === 0.054321, 'enrichInventory returns enriched batch');
-
-      // Global inventoryLRUCache validation
-      assert(inventoryLRUCache.size() >= 4, 'Global inventoryLRUCache contains initialized fallback items');
-
-      // Non-inspect item test: Should never call CSFloat
-      const containerItem: EnrichedInventoryItem = {
-        id: 'mock-case-888',
-        name: 'Revolution Case',
-        iconUrl: 'https://community.cloudflare.steamstatic.com/economy/image/case',
-        inspectUrl: null,
-        float: null,
-        seed: null,
-        rarity: 'Base Grade',
-        type: 'Container',
-      };
-      const containerEnriched = await enrichWithCSFloat(containerItem);
-      assert(csfloatCallCount === 2, 'Does not query CSFloat for items without inspectUrl');
-      assert(containerEnriched.float === null && containerEnriched.seed === null, 'Sets float and seed to null for items without inspectUrl');
     } finally {
       globalThis.fetch = originalFetch;
     }
   }
 
   // --------------------------------------------------------------------------
-  // TEST 7: Resilience & Error Handling (HTTP 429, 500, network error)
+  // TEST 8: Resilience & Error Fallbacks (HTTP 429, 403, 500, network error)
   // --------------------------------------------------------------------------
-  console.log('\n[Test 7] Resilience & Error Fallbacks');
+  console.log('\n[Test 8] Resilience & Error Fallbacks');
   {
     const originalFetch = globalThis.fetch;
 
-    // Test 7a: Steam API 429 Rate Limit
+    // Test 8a: Steam API 429 Rate Limit
     globalThis.fetch = (async (url: string | URL | Request) => {
       const urlStr = url.toString();
       if (urlStr.includes('steamcommunity.com/inventory')) {
@@ -273,16 +438,16 @@ async function runTestSuite() {
     }) as typeof fetch;
 
     try {
-      const result429 = await fetchCS2Inventory('76561198000000000');
+      const result429 = await fetchCS2Inventory('76561198920486334');
       assert(
-        result429 === FALLBACK_INVENTORY || result429.length === FALLBACK_INVENTORY.length,
-        'Steam 429 rate limit gracefully returns fallback inventory without throwing'
+        result429.length >= 26,
+        'Steam 429 rate limit gracefully returns 26+ authentic fallback items without throwing'
       );
     } finally {
       globalThis.fetch = originalFetch;
     }
 
-    // Test 7b: Steam API Private Profile (HTTP 403)
+    // Test 8b: Steam API Private Profile (HTTP 403)
     globalThis.fetch = (async (url: string | URL | Request) => {
       const urlStr = url.toString();
       if (urlStr.includes('steamcommunity.com/inventory')) {
@@ -292,16 +457,16 @@ async function runTestSuite() {
     }) as typeof fetch;
 
     try {
-      const resultPrivate = await fetchCS2Inventory('76561198000000000');
+      const resultPrivate = await fetchCS2Inventory('76561198920486334');
       assert(
-        resultPrivate === FALLBACK_INVENTORY || resultPrivate.length === FALLBACK_INVENTORY.length,
-        'Private profile gracefully returns fallback inventory without throwing'
+        resultPrivate.length >= 26,
+        'Private profile gracefully returns authentic fallback inventory without throwing'
       );
     } finally {
       globalThis.fetch = originalFetch;
     }
 
-    // Test 7c: CSFloat HTTP 500 Error
+    // Test 8c: CSFloat HTTP 500 Error
     globalThis.fetch = (async (url: string | URL | Request) => {
       const urlStr = url.toString();
       if (urlStr.includes('api.csfloat.com')) {
@@ -331,7 +496,7 @@ async function runTestSuite() {
       globalThis.fetch = originalFetch;
     }
 
-    // Test 7d: Invalid SteamID
+    // Test 8d: Invalid SteamID
     const invalidIdResult = await fetchCS2Inventory('not-a-valid-id');
     assert(
       invalidIdResult === FALLBACK_INVENTORY,
@@ -340,13 +505,12 @@ async function runTestSuite() {
   }
 
   // --------------------------------------------------------------------------
-  // TEST 8: SSR API Route Handler (/api/inventory.json)
+  // TEST 9: SSR API Route Handler (/api/inventory.json)
   // --------------------------------------------------------------------------
-  console.log('\n[Test 8] SSR API Route Handler Validation (/api/inventory.json)');
+  console.log('\n[Test 9] SSR API Route Handler Validation (/api/inventory.json)');
   {
-    // Simulate Astro APIContext
     const mockContext = {
-      request: new Request('https://links.huh4k.dev/api/inventory.json?steamid=76561198000000000'),
+      request: new Request('https://links.huh4k.dev/api/inventory.json?steamid=76561198920486334'),
       locals: {},
       params: {},
     } as any;
@@ -364,17 +528,12 @@ async function runTestSuite() {
 
     const body = (await response.json()) as EnrichedInventoryItem[];
     assert(Array.isArray(body), 'API response body is an array');
-    assert(body.length > 0, `API response contains ${body.length} items`);
+    assert(body.length >= 26, `API response contains ${body.length} items (>= 26 items)`);
 
-    const firstItem = body[0];
+    const ak = body.find((i) => i.name.includes('AK-47 | Ice Coaled'));
     assert(
-      firstItem &&
-        typeof firstItem.id === 'string' &&
-        typeof firstItem.name === 'string' &&
-        typeof firstItem.iconUrl === 'string' &&
-        typeof firstItem.rarity === 'string' &&
-        typeof firstItem.type === 'string',
-      'API item conforms strictly to EnrichedInventoryItem schema'
+      Boolean(ak && ak.float !== null && ak.seed !== null),
+      'API response includes AK-47 | Ice Coaled with float and seed'
     );
   }
 

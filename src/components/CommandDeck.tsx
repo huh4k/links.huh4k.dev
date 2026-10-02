@@ -73,9 +73,19 @@ export default function CommandDeck({ steamId }: CommandDeckProps) {
     {
       id: 'inventory',
       tag: '[INVENTORY]',
-      title: 'CS2 Inventory',
-      subtitle: 'Inspect CS2 weapon skins, stickers, and items',
-      badge: 'Skins ↗',
+      title: 'CS2 Inventory Explorer',
+      subtitle: 'Browse all 26+ weapon skins with live 3D inspect & float ratings',
+      badge: '/inventory',
+      action: () => {
+        window.location.href = '/inventory';
+      },
+    },
+    {
+      id: 'steam-inventory',
+      tag: '[STEAM INVENTORY]',
+      title: 'Steam Community Inventory',
+      subtitle: 'Official Steam Community inventory page',
+      badge: 'Steam ↗',
       action: () => {
         window.open(steamInventoryUrl, '_blank', 'noopener,noreferrer');
       },

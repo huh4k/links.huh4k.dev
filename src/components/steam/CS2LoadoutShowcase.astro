@@ -1,135 +1,48 @@
 ---
+/**
+ * CS2 Loadout Showcase Astro Wrapper
+ *
+ * Mounts the interactive React island CS2LoadoutCard (Module C-2 in Homepage Bento Grid).
+ * Features 5 authentic weapon slots, interactive 3D model inspect stage,
+ * segmented float wear bar, paint seed badge, rarity styling, and [VIEW ALL SKINS] →
+ * button routing to /inventory.
+ */
+import CS2LoadoutCard, { DEFAULT_LOADOUT_WEAPONS } from './CS2LoadoutCard';
+
 interface Props {
-  steamInventoryUrl: string;
+  steamInventoryUrl?: string;
   className?: string;
 }
 
-const { steamInventoryUrl, className = '' } = Astro.props;
-
-const slots = [
-  {
-    slot: 'RIFLE',
-    weapon: 'AK-47',
-    skin: 'Redline',
-    wear: 'FT',
-    rarity: 'Classified',
-    rarityColor: '#d32ce6',
-    rarityShadow: 'shadow-[#d32ce6]/30',
-  },
-  {
-    slot: 'RIFLE',
-    weapon: 'M4A1-S',
-    skin: 'Printstream',
-    wear: 'FN',
-    rarity: 'Covert',
-    rarityColor: '#eb4b4b',
-    rarityShadow: 'shadow-red-500/30',
-  },
-  {
-    slot: 'SIDEARM',
-    weapon: 'Desert Eagle',
-    skin: 'Blaze',
-    wear: 'FN',
-    rarity: 'Restricted',
-    rarityColor: '#8847ff',
-    rarityShadow: 'shadow-purple-500/30',
-  },
-  {
-    slot: 'MELEE',
-    weapon: 'Karambit',
-    skin: 'Doppler',
-    wear: 'FN',
-    rarity: '★ Extraordinary',
-    rarityColor: '#ffd700',
-    rarityShadow: 'shadow-yellow-400/40',
-  },
-];
+const {
+  steamInventoryUrl = 'https://steamcommunity.com/profiles/76561198920486334/inventory/',
+  className = '',
+} = Astro.props;
 ---
 
-<div
-  class={`rounded-2xl border border-hardware bg-[#0F1118] p-5 sm:p-6 relative overflow-hidden telemetry-card spotlight-card shadow-xl ${className}`}
->
-  <div class="absolute inset-0 bg-grid-pattern opacity-25 pointer-events-none"></div>
+<CS2LoadoutCard
+  client:visible
+  weapons={DEFAULT_LOADOUT_WEAPONS}
+  steamInventoryUrl={steamInventoryUrl}
+  className={className}
+/>
 
-  <div class="relative z-10 space-y-4">
-    <!-- Header -->
-    <div class="flex items-center justify-between border-b border-[#1E2333] pb-3">
-      <div class="flex items-center gap-2.5">
-        <span class="w-2.5 h-2.5 rounded-sm bg-telemetry-amber shadow-sm shadow-telemetry-amber/60"></span>
-        <span class="text-xs font-mono font-bold tracking-wider text-white uppercase">
-          [CS2 // LOADOUT]
-        </span>
-      </div>
-      <a
-        href={steamInventoryUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        class="inline-flex items-center gap-1 text-[11px] font-mono text-telemetry-amber hover:text-white transition-colors"
-      >
-        <span>Full Inventory</span>
-        <span>↗</span>
-      </a>
+<noscript>
+  <div class="rounded-2xl border border-hardware bg-[#0F1118] p-5 sm:p-6 text-zinc-400 font-mono text-xs space-y-3">
+    <div class="flex items-center justify-between border-b border-[#1E2333] pb-2 text-white font-bold">
+      <span>[CS2 // LOADOUT]</span>
+      <span class="text-telemetry-amber">JavaScript Required for 3D Inspect</span>
     </div>
-
-    <!-- Weapon Slots Grid -->
-    <div class="grid grid-cols-2 gap-2.5">
-      {slots.map((item) => (
-        <a
-          href={steamInventoryUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          class="group rounded-xl bg-[#0A0C12] border transition-all duration-200 p-3 flex flex-col gap-2 tactile-btn overflow-hidden relative"
-          style={`border-color: ${item.rarityColor}33; --hover-color: ${item.rarityColor};`}
-          onmouseover={`this.style.borderColor='${item.rarityColor}88'`}
-          onmouseout={`this.style.borderColor='${item.rarityColor}33'`}
-        >
-          <!-- Rarity top glow bar -->
-          <div
-            class="absolute top-0 left-0 right-0 h-0.5 rounded-t-xl opacity-70 group-hover:opacity-100 transition-opacity"
-            style={`background: ${item.rarityColor};`}
-          ></div>
-
-          <div class="flex items-center justify-between">
-            <span class="text-[9px] font-mono text-zinc-500 tracking-wider">[{item.slot}]</span>
-            <span
-              class="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded"
-              style={`color: ${item.rarityColor}; background: ${item.rarityColor}18; border: 1px solid ${item.rarityColor}33;`}
-            >
-              {item.wear}
-            </span>
-          </div>
-
-          <div class="space-y-0.5">
-            <div class="text-xs font-mono font-bold text-white group-hover:text-white/90 truncate">
-              {item.weapon}
-            </div>
-            <div class="text-[11px] font-mono truncate" style={`color: ${item.rarityColor}cc;`}>
-              {item.skin}
-            </div>
-          </div>
-
-          <div class="text-[9px] font-mono text-zinc-600">{item.rarity}</div>
-        </a>
-      ))}
-    </div>
-
-    <!-- Footer -->
-    <div class="pt-1 border-t border-[#1E2333] flex items-center justify-between text-[11px] font-mono text-zinc-500">
-      <a
-        href="/test/model-viewer"
-        class="inline-flex items-center gap-1 text-telemetry-blue hover:underline transition-colors"
-      >
-        <span>[3D INSPECT]</span>
-        <span>→</span>
+    <p class="text-zinc-500">
+      Featured Weapons: AK-47 Ice Coaled (MW, Float: 0.0825), StatTrak™ M4A1-S Liquidation (FT, Float: 0.3438), AWP Ice Coaled (FN, Float: 0.0631), USP-S Royal Guard (FN, Float: 0.0560), ★ Karambit Doppler (FN, Float: 0.0089).
+    </p>
+    <div class="pt-2 flex items-center justify-between">
+      <a href="/inventory" class="text-telemetry-blue hover:underline font-bold">
+        [VIEW ALL SKINS] →
       </a>
-      <a
-        href={steamInventoryUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        class="text-telemetry-amber hover:underline transition-colors"
-      >
+      <a href={steamInventoryUrl} target="_blank" rel="noopener noreferrer" class="text-zinc-500 hover:text-white">
         Steam Inventory ↗
       </a>
     </div>
   </div>
-</div>
+</noscript>
