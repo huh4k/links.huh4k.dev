@@ -1,0 +1,80 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ModelViewer, { ModelViewerToggleHarness } from '../../components/ModelViewer';
+---
+
+<BaseLayout
+  title="ModelViewer 3D Test Harness | CS2 Inspect"
+  description="Interactive 3D weapon model viewer test harness verifying React Three Fiber, OrbitControls, studio lighting, fallback mesh, and disposal lifecycle."
+  currentPath="/test/model-viewer"
+>
+  <div class="max-w-5xl mx-auto px-4 py-12 space-y-8">
+    <div class="border-b border-slate-800 pb-4">
+      <div class="flex items-center gap-3">
+        <span class="px-2.5 py-1 text-xs font-semibold rounded-md bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+          R2 & R3 Test Harness
+        </span>
+        <h1 class="text-2xl font-bold text-white tracking-wide">3D ModelViewer Test Suite</h1>
+      </div>
+      <p class="text-sm text-slate-400 mt-2">
+        Validating React Three Fiber in Astro with studio 3-point lighting rig, pitch-clamped OrbitControls, idle auto-rotation, procedural fallback mesh, and unmount resource disposal.
+      </p>
+    </div>
+
+    <!-- Primary Test: GLB Model Loading -->
+    <div class="bg-slate-900/60 p-6 rounded-2xl border border-slate-800 space-y-3">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-lg font-semibold text-slate-200">Test 1: Binary GLB Loading</h2>
+          <p class="text-xs text-slate-400 mt-0.5">
+            Asset: <code class="text-cyan-400 bg-slate-950 px-1.5 py-0.5 rounded">/models/placeholder-weapon.glb</code> &bull; Direct client hydration (<code class="text-slate-300">client:load</code>) &bull; Studio 3-point lighting &bull; Damped OrbitControls &bull; Auto-rotation pause on drag
+          </p>
+        </div>
+        <span class="px-2 py-1 text-[11px] font-mono rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          client:load
+        </span>
+      </div>
+      <div class="h-96 w-full">
+        <ModelViewer
+          client:load
+          modelUrl="/models/placeholder-weapon.glb"
+          weaponName="Combat Knife | Case Hardened"
+          className="w-full h-full"
+        />
+      </div>
+    </div>
+
+    <!-- Secondary Test: Procedural Fallback Geometry -->
+    <div class="bg-slate-900/60 p-6 rounded-2xl border border-slate-800 space-y-3">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-lg font-semibold text-slate-200">Test 2: Procedural Fallback Geometry</h2>
+          <p class="text-xs text-slate-400 mt-0.5">
+            No URL provided &bull; Lazy hydration on viewport enter (<code class="text-slate-300">client:visible</code>) &bull; Stylized CS2 tactical knife Three.js primitive mesh
+          </p>
+        </div>
+        <span class="px-2 py-1 text-[11px] font-mono rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+          client:visible
+        </span>
+      </div>
+      <div class="h-80 w-full">
+        <ModelViewer
+          client:visible
+          weaponName="Procedural Test Blade"
+          className="w-full h-full"
+        />
+      </div>
+    </div>
+
+    <!-- Tertiary Test: Lifecycle & Unmount WebGL Resource Disposal -->
+    <div class="bg-slate-900/60 p-6 rounded-2xl border border-slate-800 space-y-3">
+      <div>
+        <h2 class="text-lg font-semibold text-slate-200">Test 3: Mount / Unmount Lifecycle & Disposal</h2>
+        <p class="text-xs text-slate-400 mt-0.5">
+          Toggling mounts/unmounts ModelViewer dynamically to verify full GPU buffer and texture disposal without WebGL context loss.
+        </p>
+      </div>
+      <ModelViewerToggleHarness client:load />
+    </div>
+  </div>
+</BaseLayout>
