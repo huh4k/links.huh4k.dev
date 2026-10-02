@@ -103,6 +103,16 @@ export default function CommandDeck({ steamId }: CommandDeckProps) {
       },
     },
     {
+      id: 'models',
+      tag: '[3D WEAPONS]',
+      title: '3D Weapon Inspect',
+      subtitle: 'Interactive 3D model viewer with studio lighting & OrbitControls',
+      badge: '3D Viewer',
+      action: () => {
+        window.location.href = '/test/model-viewer';
+      },
+    },
+    {
       id: 'github',
       tag: '[GITHUB]',
       title: 'GitHub Profile',

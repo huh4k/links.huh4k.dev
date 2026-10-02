@@ -115,8 +115,21 @@ const slots = [
 
     <!-- Footer -->
     <div class="pt-1 border-t border-[#1E2333] flex items-center justify-between text-[11px] font-mono text-zinc-500">
-      <span>CS2 Weapon Finishes</span>
-      <span class="text-telemetry-amber">Steam Inventory ↗</span>
+      <a
+        href="/test/model-viewer"
+        class="inline-flex items-center gap-1 text-telemetry-blue hover:underline transition-colors"
+      >
+        <span>[3D INSPECT]</span>
+        <span>→</span>
+      </a>
+      <a
+        href={steamInventoryUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="text-telemetry-amber hover:underline transition-colors"
+      >
+        Steam Inventory ↗
+      </a>
     </div>
   </div>
 </div>
