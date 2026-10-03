@@ -1,22 +1,23 @@
 # TEST_INFRA — E2E Test Infrastructure & Coverage Specification
 
-**Project**: CS2 Steam Inventory Pipeline & 3D Weapon Model Engine Upgrade  
-**Author**: `test_writer_e2e`  
-**Date**: 2026-10-02  
-**Status**: COMPLETE (116/116 tests passing, 100% feature coverage F1–F19 across 4 tiers)  
+**Project**: CS2 R2 Texture Integration & PBR Shader Upgrade  
+**Author**: `test_writer_e2e_r3`  
+**Date**: 2026-10-03  
+**Status**: COMPLETE (282/282 tests passing, 100% feature coverage F1–F26 across 4 tiers + full regression pass)  
 **Integrity Mode**: Development / Non-Bypassing  
 
 ---
 
 ## 1. Executive Summary & Philosophy
 
-The E2E test infrastructure implements an **opaque-box, requirement-driven testing methodology** structured across **4 progressive tiers** as mandated by the Project Pattern. It validates the full CS2 server-side inventory pipeline, static 3D `.obj` and `.glb` weapon engine, homepage bottom-right loadout bento card, and dedicated `/inventory` showcase page without modifying application source code under `src/`.
+The E2E test infrastructure implements an **opaque-box, requirement-driven testing methodology** structured across **4 progressive tiers** as mandated by the Project Pattern. It thoroughly exercises the CS2 Cloudflare R2 texture asset pipeline (`src/utils/r2Textures.ts`), the procedural weapon skin finish compositor and live wear simulation engine (`src/utils/skinCompositor.ts`), the Three.js studio PBR shader system (`src/components/ModelViewer.tsx`), the homepage bento loadout cards (`src/components/steam/CS2LoadoutCard.tsx`), and the full inventory 3D inspect stage with 3-way inspect view dock (`src/components/steam/InventoryExplorer.tsx`).
 
 ### Core Testing Tenets:
-1. **Opaque-Box Verification**: Tests validate public interface contracts, observable behaviors, HTTP API responses, Three.js scene graph properties, geometric transformations, and UI state logic rather than private implementation details.
-2. **Progressive Testability**: Features are verified first in complete isolation (Tier 1: >=5 tests per feature covering F1–F19), then under adversarial boundaries and corner cases (Tier 2), next in pairwise cross-feature combinations (Tier 3), and finally in multi-step real-world application workflows (Tier 4). Verification mechanisms never require features more complex than what they verify.
-3. **Deterministic Mocking**: Upstream network dependencies (Steam Community Inventory API and CSFloat Inspect API) are isolated using high-fidelity in-memory HTTP response mocks during testing, preventing external rate-limit exhaustion, network flakiness, or downtime.
+1. **Opaque-Box Verification**: Tests validate public interface contracts, mathematical invariants, observable behaviors, Three.js scene graph states, material parameters (`MeshPhysicalMaterial`), UV geometry bindings (`uv2`), and UI workflows rather than internal implementation details.
+2. **Progressive Testability**: Features are verified first in complete isolation (Tier 1: >=5 tests per feature covering all 26 features F1–F26, 130 tests total), then under adversarial boundaries and corner cases (Tier 2: 25 tests), next in pairwise cross-feature combinations (Tier 3: 6 tests), and finally in multi-step real-world application workflows (Tier 4: 5 multi-step journeys).
+3. **Resilient Non-Blocking Assertions**: Upstream network dependencies (Cloudflare R2 CDN, Steam Community API, CSFloat) are tested against simulated 404s, CORS restrictions, and network timeouts to guarantee zero unhandled rejections, smooth procedural canvas fallback, and instant synchronous base colors.
 4. **Universal CLI Invocation**: The test runner is written in native ECMAScript Modules (`.mjs`) with transparent `tsx` bridging, executing cleanly via `node tests/e2e/runner.mjs` with exit code `0` on 100% pass and code `1` on failure.
+5. **Zero Regression Guarantee**: Runs both the newly implemented 166-test R2 Texture & PBR Upgrade suite and the 116-test Steam pipeline & 3D model engine regression suite (282 tests total).
 
 ---
 
@@ -25,202 +26,259 @@ The E2E test infrastructure implements an **opaque-box, requirement-driven testi
 ```
 links.huh4k.dev
 ├── tests/
-│   └── e2e/
-│       ├── harness.mjs                # Zero-dependency test harness, assertion library, and F1–F19 coverage tracker
-│       ├── runner.mjs                 # CLI test runner with tier filtering, ANSI reporting, and summary tables
-│       ├── tier1-features.test.mjs    # Tier 1: Isolation tests for F1–F19 (95 tests total, 5 per feature)
-│       ├── tier2-boundary.test.mjs    # Tier 2: Boundary values, extreme floats/seeds, rate limits, and mesh limits (10 tests)
-│       ├── tier3-combinations.test.mjs# Tier 3: Pairwise cross-feature integration flows (6 tests)
-│       └── tier4-scenarios.test.mjs   # Tier 4: Real-world end-to-end user application workflows (5 scenarios)
-├── TEST_INFRA.md                      # This document
-└── TEST_READY.md                      # Orchestrator handoff signal file
+│   ├── e2e/
+│   │   ├── runner.mjs                         # Master CLI test runner (supports --tier and --suite)
+│   │   ├── harness.mjs                        # Legacy pipeline test harness (F1–F19)
+│   │   ├── tier1-features.test.mjs            # Pipeline Tier 1: Isolation tests (95 tests)
+│   │   ├── tier2-boundary.test.mjs            # Pipeline Tier 2: Boundary & Corner Cases (10 tests)
+│   │   ├── tier3-combinations.test.mjs        # Pipeline Tier 3: Cross-Feature Combinations (6 tests)
+│   │   ├── tier4-scenarios.test.mjs           # Pipeline Tier 4: Real-World Scenarios (5 tests)
+│   │   └── r2-texture-pbr/                    # CS2 R2 Texture & PBR Upgrade Test Suite
+│   │       ├── harness.mjs                    # R2 PBR harness, assertions & F1–F26 tracker
+│   │       ├── tier1-features.test.mjs        # Tier 1: Isolation tests for F1–F26 (130 tests)
+│   │       ├── tier2-boundary.test.mjs        # Tier 2: Extreme float/seed & 404 tests (25 tests)
+│   │       ├── tier3-combinations.test.mjs    # Tier 3: Pairwise cross-feature flows (6 tests)
+│   │       └── tier4-scenarios.test.mjs       # Tier 4: Real-world user journeys (5 tests)
+├── TEST_INFRA.md                              # This document
+└── TEST_READY.md                              # Signoff and readiness publication report
 ```
 
 ---
 
 ## 3. How to Run the Tests
 
-### Execute Full Suite (All 4 Tiers, 116 tests):
+### Execute Full Test Suite (Both Suites, 282 tests):
 ```bash
 node tests/e2e/runner.mjs
 ```
 
-### Execute Individual Tiers (CLI Tier Filtering):
+### Execute Only R2 Texture & PBR Upgrade Suite (166 tests):
 ```bash
-node tests/e2e/runner.mjs --tier=1    # Tier 1: Isolation (95 tests, ~330ms)
-node tests/e2e/runner.mjs --tier=2    # Tier 2: Boundary & Corner Cases (10 tests, ~10ms)
-node tests/e2e/runner.mjs --tier=3    # Tier 3: Cross-Feature Combinations (6 tests, ~8.7s)
-node tests/e2e/runner.mjs --tier=4    # Tier 4: Real-World Scenarios (5 tests, ~10ms)
+node tests/e2e/runner.mjs --suite=r2
+```
+
+### Execute Only Pipeline Regression Suite (116 tests):
+```bash
+node tests/e2e/runner.mjs --suite=pipeline
+```
+
+### Execute Specific Tiers:
+```bash
+node tests/e2e/runner.mjs --tier=1             # Tier 1: Feature Coverage (225 tests)
+node tests/e2e/runner.mjs --tier=2             # Tier 2: Boundary & Corner Cases (35 tests)
+node tests/e2e/runner.mjs --tier=3             # Tier 3: Cross-Feature Interactions (12 tests)
+node tests/e2e/runner.mjs --tier=4             # Tier 4: Real-World Scenarios (10 tests)
+node tests/e2e/runner.mjs --tier=1 --suite=r2  # R2 Tier 1 only (130 tests, ~350ms)
 ```
 
 All commands format clean terminal tables, print detailed failure diagnostics if assertions fail, and exit with code `0` on pass or code `1` on fail.
 
 ---
 
-## 4. Multi-Tier Architecture & Coverage Breakdown
+## 4. Multi-Tier Architecture & Coverage Breakdown (F1–F26)
 
-### Tier 1 — Feature Coverage (Isolation: F1–F19, 95 Tests)
-Validates each feature independently in isolation against documented requirements (>=5 tests per feature):
+### Tier 1 — Feature Coverage in Isolation (130 Tests, 5 per feature)
+Validates each feature independently in isolation against documented requirements:
 
-- **F1 (Direct asset_properties parsing)**:
-  - F1.1: Extracts `propertyid === 2` (`Wear Rating`) as exact 64-bit float.
-  - F1.2: Extracts `propertyid === 1` (`Pattern Template`) as exact integer seed.
-  - F1.3: Extracts `propertyid === 6` (`Item Certificate`) as hex inspect hash string.
-  - F1.4: Inspect link token substitution replaces `%propid:6%` with certificate hash.
-  - F1.5: Root `data.asset_properties` array maps assetid directly to wear and seed.
-- **F2 (Rarity tag parsing fix)**:
-  - F2.1: `getRarityFromTags` extracts `Covert` tier with `#eb4b4b`.
-  - F2.2: `getRarityFromTags` extracts `Classified` tier with `#d32ce6`.
-  - F2.3: `getRarityFromTags` extracts `Restricted` tier with `#8847ff`.
-  - F2.4: `getRarityFromTags` extracts `Mil-Spec Grade` tier with `#4b69ff`.
-  - F2.5: `getRarityFromTags` falls back cleanly to `Base Grade` with `#b0c3d9` on empty/missing tags.
-- **F3 (Item category classification)**:
-  - F3.1: Extracts `Rifle` category.
-  - F3.2: Extracts `Pistol` category.
-  - F3.3: Extracts `Sniper Rifle` category.
-  - F3.4: Extracts `SMG` and `Shotgun` categories.
-  - F3.5: Extracts `Collectible`, `Tool`, and non-weapon types.
-- **F4 (LRU Cache Pre-Seeding)**:
-  - F4.1: Pre-seeding LRU cache enables $O(1)$ zero-latency cache hits.
-  - F4.2: Enforces capacity ceiling with oldest-item eviction.
-  - F4.3: Cache read promotes entry to most-recently-used position.
-  - F4.4: TTL expiration purges stale items.
-  - F4.5: Operations (`has`, `get`, `set`, `delete`, `clear`, `size`) maintain invariant state.
-- **F5 (Live Steam ID Resolution)**:
-  - F5.1: Live Steam ID `76561198920486334` is a valid 17-digit SteamID64.
-  - F5.2: Fallback inventory dataset contains authentic primary weapons.
-  - F5.3: Fallback items have valid non-null floats, seeds, and inspect URLs.
-  - F5.4: Private profile (HTTP 401/403) gracefully returns fallback loadout.
-  - F5.5: Invalid Steam ID format gracefully returns fallback inventory without throwing.
-- **F6 (35 .obj Model Migration)**:
-  - F6.1: `public/models/` contains all 35 CS2 weapon `.obj` files.
-  - F6.2: All 35 `.obj` files have non-zero size and valid Wavefront headers.
-  - F6.3: Models are within Cloudflare Pages 25MB asset limit.
-  - F6.4: `placeholder-weapon.glb` binary fallback exists alongside `.obj` models.
-  - F6.5: `public/models/` covers all 6 CS2 weapon classes.
-- **F7 (Weapon Model Mapping)**:
-  - F7.1: Maps base CS2 weapons to dedicated `.obj` paths (`AK-47`, `AWP`, `M4A1-S`, `Desert Eagle`).
-  - F7.2: Strips `StatTrak™`, `★`, and `Souvenir` prefixes accurately.
-  - F7.3: Handles weapon skin pipes and wear suffixes.
-  - F7.4: Resolves weapon aliases (`SG 553`, `Dual Berettas`, `Zeus x27`).
-  - F7.5: Falls back to placeholder GLB for knives and unknown inputs.
-- **F8 (ModelViewer Dual-Format Support)**:
-  - F8.1: `isObjModelUrl` correctly identifies OBJ format URLs.
-  - F8.2: `ModelViewer` exports all required interfaces and components.
-  - F8.3: SSR mounting guard renders `ModelViewerSkeleton` without `<canvas>`.
-  - F8.4: Hostile SSR traps on `window`/`document` do not throw.
-  - F8.5: `ModelViewer` accepts `weaponName` and resolves model automatically.
-- **F9 (OBJ Geometry Normalization)**:
-  - F9.1: `computeVertexNormals` produces smooth normal vectors on BufferGeometry.
-  - F9.2: `geometry.center()` translates vertices so bounding center is `(0, 0, 0)`.
-  - F9.3: Scale factor normalization $targetSize / maxDim$ ($targetSize = 2.4$) scales large weapons (AWP).
-  - F9.4: Scale factor normalization scales small weapons (HKP2000).
-  - F9.5: Zero dimension guard prevents division by zero.
-- **F10 (CS2 Weapon PBR Material)**:
-  - F10.1: MeshStandardMaterial metalness is configured to `0.65`.
-  - F10.2: MeshStandardMaterial roughness is configured to `0.35`.
-  - F10.3: MeshStandardMaterial color hex is slate finish `#c8d1dc`.
-  - F10.4: Horizontal profile rotation is $90^\circ$ around Y axis (`[0, Math.PI / 2, 0]`).
-  - F10.5: Studio lighting specification verifies 5-light rig parameters.
-- **F11 (WebGL Memory Cleanup)**:
-  - F11.1: `disposeThreeObject` cleans up mesh geometry and material.
-  - F11.2: `disposeThreeObject` cleans up multi-material arrays.
-  - F11.3: `disposeThreeObject` cleans textures referenced on material properties.
-  - F11.4: `disposeThreeObject` safely handles circular references without infinite loops.
-  - F11.5: `disposeThreeObject` traversal does not crash on empty group or null meshes.
-- **F12 (Real User Primary Loadout)**:
-  - F12.1: Primary Rifle: AK-47 | Ice Coaled (Minimal Wear, float: 0.0825, seed: 367, Classified `#d32ce6`).
-  - F12.2: CT Rifle: StatTrak™ M4A1-S | Liquidation (Field-Tested, float: 0.3438, seed: 937, Restricted `#8847ff`).
-  - F12.3: Sniper: AWP | Ice Coaled (Factory New, float: 0.0631, seed: 309, Classified `#d32ce6`).
-  - F12.4: Sidearm: USP-S | Royal Guard (Factory New, float: 0.0560, seed: 644, Restricted `#8847ff`).
-  - F12.5: Knife slot maps to Combat Knife / Karambit placeholder GLB.
-- **F13 (Interactive Loadout Bento Card)**:
-  - F13.1: Loadout card tab switching state supports 5 weapon slots (0 to 4).
-  - F13.2: Float wear bar percentage calculation maps float to percentage.
-  - F13.3: Wear bracket segmentation thresholds partition `[0.0, 1.0]`.
-  - F13.4: Dynamic rarity styling matches weapon tier colors.
-  - F13.5: Pattern seed badge formatting displays `Seed #<seed>`.
-- **F14 ([VIEW ALL SKINS] Link)**:
-  - F14.1: Target route is `/inventory`.
-  - F14.2: Button label contains `VIEW ALL SKINS` and directional arrow `→`.
-  - F14.3: Navigation link uses same-tab routing (no `target="_blank"`).
-  - F14.4: Disambiguates internal showcase link from external Steam Community link.
-  - F14.5: Homepage bento card markup integrates `/inventory` button.
-- **F15 (Dedicated /inventory Route)**:
-  - F15.1: `/inventory` page layout structure extends BaseLayout.
-  - F15.2: SSR data pre-fetching calls `fetchCS2Inventory`.
-  - F15.3: Inventory page provides breadcrumb navigation back to root.
-  - F15.4: Inventory telemetry header presents item count and edge status.
-  - F15.5: Responsive grid specification supports 26+ items without overflow.
-- **F16 (Inventory Category Filtering & Search)**:
-  - F16.1: Category filter taxonomy contains all 6 required filter pills.
-  - F16.2: Rifles category filter matches AK-47, M4A1-S, and Galil AR.
-  - F16.3: Snipers category filter matches AWP and SSG 08.
-  - F16.4: Client-side instant search matches item name case-insensitively.
-  - F16.5: Empty search query returns all items; non-matching query returns 0.
-- **F17 (Interactive 3D Inspect Stage)**:
-  - F17.1: Clicking an item dynamically resolves its 3D model path.
-  - F17.2: Selecting weapon binds accurate `.obj` path for M4A1-S.
-  - F17.3: Inspect stage displays float wear and pattern seed telemetry.
-  - F17.4: Direct in-game inspect URL uses `steam://` protocol.
-  - F17.5: Non-weapon items (medals, stickers) fall back to thumbnail preview or placeholder.
-- **F18 (Global Navigation & Command Deck)**:
-  - F18.1: `BaseLayout.astro` defines navigation shell and route contract.
-  - F18.2: BaseLayout displays active state indicator on `currentPath="/inventory"`.
-  - F18.3: BaseLayout displays `CS2` badge for inventory navigation item.
-  - F18.4: `CommandDeck.tsx` registers command with `/inventory` badge.
-  - F18.5: CommandDeck action triggers navigation to `/inventory`.
-- **F19 (Privacy Invariant Enforcement)**:
-  - F19.1: Zero instances of personal surname in `src/` or `public/`.
-  - F19.2: Zero instances of personal first name in `src/` or `public/`.
-  - F19.3: Zero instances of personal email addresses in `src/` or `public/`.
-  - F19.4: Zero physical address or personal location data in `src/`.
-  - F19.5: Identity strictly restricted to alias `huh4k` and Steam ID `76561198920486334`.
+- **F1 (R2 Base Weapon Map Resolution)**:
+  - F1.1: AK-47 resolves authentic AO, Surface, and Masks maps with Source 2 VRF asset hashes (`rif_ak47_ao_psd_3cdda94d.png`, `rif_ak47_surface_psd_1262e7bf.png`, `rif_ak47_masks_psd_cc08789a.png`).
+  - F1.2: M4A1-S resolves canonical AO, Surface, and Masks maps (`rif_m4a1_s_ao.png`).
+  - F1.3: AWP resolves canonical AO, Surface, and Masks maps (`snip_awp_ao.png`).
+  - F1.4: USP-S resolves `pist_223` canonical texture maps.
+  - F1.5: Handles secondary weapons and returns null for unrecognized items or knives.
+- **F2 (R2 Paint Finish Map Resolution)**:
+  - F2.1: Resolves `anodized_air` finish to `paints/anodized_air.png`.
+  - F2.2: Resolves `gunsmith` finish to `paints/gunsmith.png`.
+  - F2.3: Resolves `custom` finish to `paints/custom.png` with alias handling.
+  - F2.4: Resolves `antiqued`, `anodized_multi`, and `hydrographic` finishes.
+  - F2.5: Returns null for unknown finish or empty/whitespace input.
+- **F3 (Asynchronous Cached Texture Loader)**:
+  - F3.1: `loadR2Texture` handles SSR environment safely without throwing.
+  - F3.2: `getTextureCache` and `setCachedTexture` allow manual injection and cache inspection.
+  - F3.3: `clearTextureCache` purges cached textures cleanly.
+  - F3.4: Invalid or empty URL returns null without throwing unhandled exceptions.
+  - F3.5: Deduplicates cache hits, returning identical texture instance.
+- **F4 (Weapon Key Normalizer)**:
+  - F4.1: Normalizes "AK-47" and "AK-47 | Ice Coaled" to "rif_ak47".
+  - F4.2: Normalizes "StatTrak™ M4A1-S | Liquidation" to "rif_m4a1_s".
+  - F4.3: Normalizes "AWP | Ice Coaled" to "snip_awp" and "USP-S | Royal Guard" to "pist_223".
+  - F4.4: Normalizes "Zeus x27", "MAC-10", "UMP-45", "Galil AR", "Glock-18".
+  - F4.5: Returns null for knives, collectibles, or empty string.
+- **F5 (AK-47 | Ice Coaled Composite)**:
+  - F5.1: `getSkinFallbackColor` for AK-47 Ice Coaled returns radiant cyan `#00e5ff`.
+  - F5.2: Base PBR values: metalness 0.35, roughness 0.28, clearcoat 0.45.
+  - F5.3: `compositeSkinFinish` generates `CanvasTexture` with `sRGB` color space.
+  - F5.4: RepeatWrapping configured on `wrapS` and `wrapT`.
+  - F5.5: Minimal Wear float (0.0825) preserves clearcoat > 0.35.
+- **F6 (M4A1-S | Liquidation Composite)**:
+  - F6.1: `getSkinFallbackColor` for M4A1-S Liquidation returns crimson `#e11d48`.
+  - F6.2: Base PBR values: metalness 0.45, roughness 0.32, clearcoat 0.35.
+  - F6.3: `compositeSkinFinish` generates `CanvasTexture` with `sRGB` color space.
+  - F6.4: Field-Tested float (0.3438) yields moderate roughness and attenuated clearcoat.
+  - F6.5: Base color hex matches `#e11d48`.
+- **F7 (AWP | Ice Coaled Composite)**:
+  - F7.1: `getSkinFallbackColor` for AWP Ice Coaled returns `#00e5ff`.
+  - F7.2: Base PBR values: metalness 0.30, roughness 0.22, clearcoat 0.50.
+  - F7.3: Factory New float (0.0631) maintains clearcoat > 0.40 and roughness < 0.30.
+  - F7.4: `compositeSkinFinish` generates `CanvasTexture` with `sRGB` color space.
+  - F7.5: Base color hex matches `#00e5ff`.
+- **F8 (USP-S | Royal Guard Composite)**:
+  - F8.1: `getSkinFallbackColor` for USP-S Royal Guard returns deep imperial red `#991b1b`.
+  - F8.2: Base PBR values: metalness 0.75, roughness 0.18, clearcoat 0.65.
+  - F8.3: Factory New float (0.0560) retains high clearcoat > 0.50 and high metalness > 0.70.
+  - F8.4: `compositeSkinFinish` generates `CanvasTexture` with `sRGB` color space.
+  - F8.5: Base color hex matches `#991b1b`.
+- **F9 (MAC-10 | Candy Apple Composite)**:
+  - F9.1: `getSkinFallbackColor` for MAC-10 Candy Apple returns candy apple red `#dc2626`.
+  - F9.2: Base PBR values: metalness 0.70, roughness 0.12, clearcoat 0.85.
+  - F9.3: Factory New float (0.02) yields high clearcoat > 0.75 (high-gloss enamel).
+  - F9.4: `compositeSkinFinish` generates `CanvasTexture` with `sRGB` color space.
+  - F9.5: Base color hex matches `#dc2626`.
+- **F10 (Zeus x27 | Electric Blue Composite)**:
+  - F10.1: `getSkinFallbackColor` for Zeus x27 Electric Blue returns cobalt blue `#2563eb`.
+  - F10.2: Base PBR values: metalness 0.30, roughness 0.35, clearcoat 0.20.
+  - F10.3: `compositeSkinFinish` generates `CanvasTexture` with `sRGB` color space.
+  - F10.4: Seed modulation generates deterministically.
+  - F10.5: Base color hex matches `#2563eb`.
+- **F11 (Galil AR | Control Composite)**:
+  - F11.1: `getSkinFallbackColor` for Galil AR Control returns tactical slate blue `#3b82f6`.
+  - F11.2: Base PBR values: metalness 0.45, roughness 0.38, clearcoat 0.15.
+  - F11.3: `compositeSkinFinish` generates `CanvasTexture` with `sRGB` color space.
+  - F11.4: Base color hex is non-empty hex.
+  - F11.5: Seed variation adjusts tactical layout parameters.
+- **F12 (Glock-18 | Catacombs Composite)**:
+  - F12.1: `getSkinFallbackColor` for Glock-18 Catacombs returns dark slide hex `#18181b`.
+  - F12.2: Base PBR values: metalness 0.20, roughness 0.42, clearcoat 0.10.
+  - F12.3: `compositeSkinFinish` generates `CanvasTexture` with `sRGB` color space.
+  - F12.4: Seed alters procedural skull coordinates.
+  - F12.5: Returns valid `SkinCompositeResult`.
+- **F13 (UMP-45 | Late Night Transit Composite)**:
+  - F13.1: `getSkinFallbackColor` for UMP-45 Late Night Transit returns midnight chassis `#0f172a`.
+  - F13.2: Base PBR values: metalness 0.75, roughness 0.70, clearcoat 0.0.
+  - F13.3: Battle-Scarred float (0.8643) drives effective clearcoat strictly to 0.0.
+  - F13.4: Battle-Scarred float drives effective roughness > 0.75 and effective metalness > 0.50.
+  - F13.5: `compositeSkinFinish` generates `CanvasTexture` with `sRGB` color space.
+- **F14 (Generic Procedural Fallback Compositor)**:
+  - F14.1: Generates procedural texture for arbitrary unlisted skin.
+  - F14.2: Respects `rarityColor` prop (`#eb4b4b` for Covert).
+  - F14.3: Falls back to default color when `rarityColor` is omitted.
+  - F14.4: Returns valid `SkinCompositeResult` with all 5 required properties.
+  - F14.5: Produces `CanvasTexture` with `RepeatWrapping`.
+- **F15 (Live Float Wear Simulation Mathematics)**:
+  - F15.1: `calculateEffectiveWear` at float 0.00 preserves base pristine parameters.
+  - F15.2: `calculateEffectiveWear` at float 1.00 increases roughness to maximum ~0.85 and sets clearcoat to 0.0.
+  - F15.3: `calculateEffectiveWear` drops clearcoat strictly to 0.0 for any float > 0.55.
+  - F15.4: `calculateEffectiveWear` gracefully handles null and undefined float (defaults to 0.0).
+  - F15.5: `calculateEffectiveWear` clamps negative float (<0) and overflow float (>1).
+- **F16 (Pattern Seed Modulation)**:
+  - F16.1: Seed 0 evaluates to valid baseline deterministic pattern.
+  - F16.2: Seed 1000 evaluates without overflow or NaN.
+  - F16.3: Null or undefined seed defaults safely to 0.
+  - F16.4: Seed variation does not alter calculated wear parameters.
+  - F16.5: Negative seeds are safely handled without crash.
+- **F17 (Extended ModelViewerProps)**:
+  - F17.1: `ModelViewerProps` interface accepts `float: number | null`.
+  - F17.2: `ModelViewerProps` interface accepts `seed: number | null`.
+  - F17.3: `ModelViewerProps` interface accepts `rarityColor: string`.
+  - F17.4: `ModelViewerProps` interface accepts `skinName: string`.
+  - F17.5: `ModelViewerProps` handles omission of new props with backward compatibility.
+- **F18 (MeshPhysicalMaterial Upgrade)**:
+  - F18.1: CS2 weapon meshes configure `THREE.MeshPhysicalMaterial`.
+  - F18.2: Material supports `clearcoat` property.
+  - F18.3: Material supports `clearcoatRoughness` property.
+  - F18.4: Material `metalness` and `roughness` values are bounded in `[0, 1]`.
+  - F18.5: Material `side` is configured to `THREE.FrontSide`.
+- **F19 (Three.js uv2 Attribute Binding)**:
+  - F19.1: Assigns `geometry.attributes.uv2` from `geometry.attributes.uv` for `aoMap` shader.
+  - F19.2: `geometry.attributes.uv2` has identical count and itemSize to `uv`.
+  - F19.3: If `uv2` already exists, does not throw or corrupt geometry.
+  - F19.4: Handles geometry without UVs without throwing unhandled exceptions.
+  - F19.5: Cloned meshes maintain valid `uv2` buffer attributes.
+- **F20 (AO & Surface & Diffuse Texture Binding)**:
+  - F20.1: `MeshPhysicalMaterial` binds `aoMap` with `aoMapIntensity = 1.2`.
+  - F20.2: `MeshPhysicalMaterial` binds `roughnessMap` to surface texture.
+  - F20.3: `MeshPhysicalMaterial` binds `map` to composited skin diffuse texture.
+  - F20.4: If `aoTexture` is null, `material.aoMap` remains null/undefined without throwing.
+  - F20.5: If `surfaceTexture` is null, `material.roughnessMap` remains null/undefined without throwing.
+- **F21 (Synchronous Fallback Colors)**:
+  - F21.1: `getSkinFallbackColor` is synchronous (returns string immediately).
+  - F21.2: Returns `#00e5ff` for "Ice Coaled".
+  - F21.3: Returns `#e11d48` for "Liquidation".
+  - F21.4: Returns `#dc2626` for "Candy Apple".
+  - F21.5: Returns fallback color when skin name is unknown or empty.
+- **F22 (WebGL Resource Disposal)**:
+  - F22.1: `disposeThreeObject` cleans up `MeshPhysicalMaterial`.
+  - F22.2: `disposeThreeObject` disposes attached textures (`map`, `aoMap`, `roughnessMap`).
+  - F22.3: `CanvasTexture` disposal reclaims resources without error.
+  - F22.4: `disposeThreeObject` handles null / empty groups safely.
+  - F22.5: Repeated disposal calls are idempotent and do not throw.
+- **F23 (CS2LoadoutCard Integration)**:
+  - F23.1: `DEFAULT_LOADOUT_WEAPONS` contains AK-47 Ice Coaled with float 0.0825, seed 367.
+  - F23.2: `DEFAULT_LOADOUT_WEAPONS` contains M4A1-S Liquidation with float 0.3438, seed 937.
+  - F23.3: `DEFAULT_LOADOUT_WEAPONS` contains AWP Ice Coaled with float 0.0631, seed 309.
+  - F23.4: `DEFAULT_LOADOUT_WEAPONS` contains USP-S Royal Guard with float 0.0560, seed 644.
+  - F23.5: `CS2LoadoutCard` weapons provide `rarityColor` for PBR fallback styling.
+- **F24 (InventoryExplorer 3D Stage Integration)**:
+  - F24.1: `InventoryExplorer` provides wear tier mapping helper `getWearTier`.
+  - F24.2: `getWearTier` handles null float safely without throwing.
+  - F24.3: `InventoryExplorer` category filter taxonomy matches all 6 required classes.
+  - F24.4: `matchesCategory` correctly classifies items.
+  - F24.5: `normalizeSkinIdentifier` extracts `weaponBase` and `skinName` tokens.
+- **F25 (Inspect View Dock Toggle)**:
+  - F25.1: Inspect view dock supports 3-way toggle options: 3D Model, Steam 2D Artwork, Launch CS2 Inspect.
+  - F25.2: Default inspect view mode is 3D Model.
+  - F25.3: Switching to 2D artwork view toggles visible view container.
+  - F25.4: Launch CS2 Inspect button provides valid `steam://` inspect link.
+  - F25.5: View dock buttons are accessible and maintain state across items.
+- **F26 (Privacy Invariant Enforcement)**:
+  - F26.1: Zero personal surname ("cafici") in `src/`.
+  - F26.2: Zero personal first name ("charlie") in `src/`.
+  - F26.3: Zero personal email addresses in `src/`.
+  - F26.4: Zero physical addresses or local user paths in client code.
+  - F26.5: User identity strictly constrained to alias `huh4k` and Steam ID `76561198920486334`.
 
 ---
 
-### Tier 2 — Boundary & Corner Cases (10 Tests)
-Tests edge conditions, network error codes, pathological inputs, and extreme camera limits:
-- **Boundary 2.1**: Extreme float boundaries: exact `0.00000000` (Factory New, 0.00%) and `1.00000000` (Battle-Scarred, 100.00%).
-- **Boundary 2.2**: Wear rating bracket transitions: exact boundaries `0.07` (FN/MW), `0.15` (MW/FT), `0.38` (FT/WW), `0.45` (WW/BS).
-- **Boundary 2.3**: Extreme pattern seed boundaries: seed `0` and seed `1000` integer parsing and `#0` / `#1000` formatting.
-- **Boundary 2.4**: External rate limiting: Steam HTTP 429 returns fallback loadout; CSFloat 429 returns null float/seed without crashing.
-- **Boundary 2.5**: Missing `asset_properties`: non-weapon items without wear ratings default cleanly to `float: null`, `seed: null`.
-- **Boundary 2.6**: Malformed inspect URLs: handles empty strings, null values, lone tokens, and URI-encoded query params.
-- **Boundary 2.7**: Empty inventory: zero assets or `total_inventory_count: 0` triggers fallback inventory cleanly.
-- **Boundary 2.8**: Huge `.obj` meshes vs small meshes: AWP (53.66 units) vs Negev (39.67 units) vs HKP2000 (7.22 units) normalized to identical scale envelope 2.4.
-- **Boundary 2.9**: Camera polar angle clamping: strictly between `[π/4, 0.65π]` clamped across zenith (0), nadir (π), -100, and +100.
-- **Boundary 2.10**: Search input edge cases: regex special characters (`[`, `]`, `*`, `+`, `?`, `\`, `^`, `$`), unicode characters, leading/trailing whitespace, and case insensitivity.
+### Tier 2 — Boundary & Corner Cases (25 Tests)
+- **Extreme Float Boundaries**: 0.00 Factory New pristine, 1.00 Battle-Scarred, wear bracket boundaries (0.07, 0.15, 0.38, 0.45), null/undefined defaults, and hostile NaN/negative/overflow clamping.
+- **Extreme Pattern Seed Boundaries**: Seed 0 baseline coordinates, Seed 1000 max CS2 seed, null/undefined defaults, large seeds >1,000,000, and negative seeds.
+- **Network Failure & 404 Simulation**: Non-blocking returns on missing AO, Surface, and Mask maps; invalid URL protocols; repeated sequential failed requests deduplicated without hammering; non-string inputs safely handled.
+- **Rapid Tab Switching & Unmount Memory**: 10 rapid skin compositing cycles without context collision; idempotent double disposal of `CanvasTexture`; instantaneous PBR restoration when switching between BS and FN skins; `disposeThreeObject` recursive cleanup; empty group safety.
+- **Collectibles & Non-Weapon Fallbacks**: Medals/Pins return null for weapon maps; non-weapon items return null weapon keys; fallback colors default to tactical hex; generic compositor handles collectibles safely; knives fallback to Doppler rarity styling.
 
 ---
 
-### Tier 3 — Cross-Feature Combinations (6 Tests)
-Tests pairwise multi-module integration flows:
-- **Combination 3.1**: `asset_properties` $\rightarrow$ `LRU cache` $\rightarrow$ `/api/inventory.json`: Seeded properties retrieved in 0ms and served via SSR endpoint HTTP 200.
-- **Combination 3.2**: Weapon name $\rightarrow$ `getWeaponModelPath` $\rightarrow$ `ModelViewer OBJLoader`: Skin market name resolves dedicated `.obj` path and mounts via `ModelViewer`.
-- **Combination 3.3**: Category filter pill $\rightarrow$ search query $\rightarrow$ 3D inspect stage: Clicking `[Rifles]`, querying "Ice Coaled", selects AK-47 and binds `/models/weapon_rif_ak47.obj`.
-- **Combination 3.4**: Loadout tab switch $\rightarrow$ 3D model update $\rightarrow$ float bar color & seed: Switching between AK-47, M4A1-S, and AWP updates model path, rarity border, and seed badge.
-- **Combination 3.5**: Fallback inventory $\rightarrow$ weapon model mapping $\rightarrow$ ModelViewer: All fallback skins resolve to valid 3D assets.
-- **Combination 3.6**: Inspect link `%propid:6%` substitution $\rightarrow$ Inspect in Game action: Certificate hash replaces `%propid:6%` and formats executable in-game inspect action.
+### Tier 3 — Cross-Feature Interactions (6 Tests)
+- **Pair 3.1**: Live float wear modulation with clearcoat (Candy Apple at float 0.05, 0.60, 0.90) verifying continuous clearcoat loss and strict zeroing past 0.55.
+- **Pair 3.2**: R2 texture 404 fallback combined with procedural composite canvas texture and `MeshPhysicalMaterial` PBR setup (`aoMapIntensity: 1.2`).
+- **Pair 3.3**: 2D/3D inspect view dock toggling with active loadout cards preserving weapon telemetry and state across 3D and 2D modes.
+- **Pair 3.4**: Weapon key normalizer -> R2 Texture Resolver -> Procedural Compositor end-to-end pipeline.
+- **Pair 3.5**: Geometry `uv2` attribute binding -> `MeshPhysicalMaterial` PBR shader initialization.
+- **Pair 3.6**: Pattern seed modulation + float wear simulation on AK-47 Ice Coaled across seeds 367 and 937.
 
 ---
 
-### Tier 4 — Real-World Application Scenarios (5 Workflows)
-Simulates end-to-end user application workflows:
-- **Scenario 4.1**: Full user browsing flow: Homepage loadout card $\rightarrow$ inspecting AK-47 $\rightarrow$ clicking `[VIEW ALL SKINS]` $\rightarrow$ navigating to `/inventory` $\rightarrow$ filtering by `[Rifles]` $\rightarrow$ searching "Ice Coaled" $\rightarrow$ inspecting 3D model $\rightarrow$ opening inspect link.
-- **Scenario 4.2**: Loadout tab switching: CT Rifle (M4A1-S FT 0.3438) $\rightarrow$ Sniper (AWP FN 0.0631) $\rightarrow$ Sidearm (USP-S FN 0.0560) $\rightarrow$ Knife (Combat Knife) with dynamic metric & model updates.
-- **Scenario 4.3**: Collectibles inspection: Filter `[Collectibles]` $\rightarrow$ select 2026 Service Medal $\rightarrow$ verify certificate hash $\rightarrow$ verify null float/seed and GLB placeholder.
-- **Scenario 4.4**: Rate-limit resilience: Steam Community 429 rate limit triggers authentic fallback $\rightarrow$ filter `[Pistols]` $\rightarrow$ inspect USP-S Royal Guard.
-- **Scenario 4.5**: Command Deck quick launcher: Trigger Command Deck $\rightarrow$ invoke `/inventory` action $\rightarrow$ filter `[SMGs & Heavy]` $\rightarrow$ inspect UMP-45 Late Night Transit (Battle-Scarred, float 0.8642, seed 248).
+### Tier 4 — Real-World Application Scenarios (5 Scenarios)
+- **Scenario 4.1**: Full primary loadout inspection journey (AK-47 -> M4A1-S -> AWP -> USP-S) verifying PBR parameters, clearcoat values, and memory reclamation.
+- **Scenario 4.2**: Inventory Explorer search, category filtering, 3D inspect stage, 2D artwork viewing, and `steam://` in-game launch URL generation.
+- **Scenario 4.3**: Low-wear vs high-wear side-by-side comparison (Factory New MAC-10 Candy Apple vs Battle-Scarred UMP-45 Late Night Transit).
+- **Scenario 4.4**: Complete CDN outage & offline recovery simulating 100% remote R2 failure with immediate synchronous fallback colors and procedural generation.
+- **Scenario 4.5**: Repository-wide privacy and anonymity verification invariant ensuring zero personal names, emails, or physical paths across the entire codebase.
 
 ---
 
-## 5. Summary Matrix & Thresholds
+## 5. Coverage Matrix & Results Summary
 
-| Tier | Suite Name | Test Count | Pass Rate | Target Time | Observed Time | Status |
-|:---:|:---|:---:|:---:|:---:|:---:|:---:|
-| **Tier 1** | Feature Coverage (Isolation F1–F19) | 95 | 100% (95/95) | < 2000ms | ~327ms | **PASS** |
-| **Tier 2** | Boundary & Corner Cases | 10 | 100% (10/10) | < 1000ms | ~1ms | **PASS** |
-| **Tier 3** | Cross-Feature Combinations | 6 | 100% (6/6) | < 10000ms | ~8762ms | **PASS** |
-| **Tier 4** | Real-World Application Scenarios | 5 | 100% (5/5) | < 1000ms | ~1ms | **PASS** |
-| **TOTAL** | **All 4 Tiers** | **116** | **100% (116/116)** | **< 15000ms** | **~9106ms** | **PASS** |
+| Suite Name | Total Tests | Passed | Failed | Status |
+|---|:---:|:---:|:---:|:---:|
+| **CS2 R2 Texture & PBR Upgrade (F1–F26)** | **166** | **166** | **0** | **100% PASS** |
+| - Tier 1: Isolation Tests (F1–F26) | 130 | 130 | 0 | PASS |
+| - Tier 2: Boundary & Corner Cases | 25 | 25 | 0 | PASS |
+| - Tier 3: Cross-Feature Interactions | 6 | 6 | 0 | PASS |
+| - Tier 4: Real-World Scenarios | 5 | 5 | 0 | PASS |
+| **CS2 Steam Pipeline & 3D Engine Regression** | **116** | **116** | **0** | **100% PASS** |
+| - Tier 1: Isolation Tests (F1–F19) | 95 | 95 | 0 | PASS |
+| - Tier 2: Boundary & Corner Cases | 10 | 10 | 0 | PASS |
+| - Tier 3: Cross-Feature Interactions | 6 | 6 | 0 | PASS |
+| - Tier 4: Real-World Scenarios | 5 | 5 | 0 | PASS |
+| **TOTAL COMBINED SUITE** | **282** | **282** | **0** | **100% PASS** |

@@ -456,8 +456,14 @@ export async function runTier1() {
         harness.assert(!trapFired, 'No window or document access occurred');
         harness.assert(html.length > 0, 'Render succeeded under hostile traps');
       } finally {
-        if (origWindow !== undefined) globalThis.window = origWindow; else delete globalThis.window;
-        if (origDoc !== undefined) globalThis.document = origDoc; else delete globalThis.document;
+        delete globalThis.window;
+        delete globalThis.document;
+        if (origWindow !== undefined) {
+          Object.defineProperty(globalThis, 'window', { value: origWindow, writable: true, configurable: true });
+        }
+        if (origDoc !== undefined) {
+          Object.defineProperty(globalThis, 'document', { value: origDoc, writable: true, configurable: true });
+        }
       }
     });
 

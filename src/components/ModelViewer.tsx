@@ -5,6 +5,8 @@ import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { OBJLoader } from 'three-stdlib';
 import * as THREE from 'three';
 import { getWeaponModelPath, isObjModelUrl, WEAPON_MODEL_MAP } from '../utils/weaponModels';
+import { getR2WeaponTextures, loadR2Texture } from '../utils/r2Textures';
+import { compositeSkinFinish, getSkinFallbackColor } from '../utils/skinCompositor';
 
 export interface ModelViewerProps {
   /** Public URL or path to the .glb or .obj model file */
@@ -37,38 +39,111 @@ export interface ModelViewerProps {
   onLoaded?: () => void;
   /** Optional callback fired if model loading or parsing fails */
   onError?: (err: Error) => void;
+  /** Wear rating float value (0.0000 to 1.0000) from Steam inventory */
+  float?: number | null;
+  /** Paint seed / pattern template integer (0 to 1000) */
+  seed?: number | null;
+  /** Rarity hex color (e.g. #eb4b4b Covert, #d32ce6 Classified) */
+  rarityColor?: string;
+  /** Specific skin pattern name (e.g. "Ice Coaled", "Liquidation", "Royal Guard") */
+  skinName?: string;
 }
 
 /**
  * Utility to recursively dispose Three.js meshes, geometries, materials, and textures.
  */
 export function disposeThreeObject(object: THREE.Object3D): void {
+  if (!object || typeof object.traverse !== 'function') return;
+  const disposedGeometries = new Set<THREE.BufferGeometry>();
+  const disposedMaterials = new Set<THREE.Material>();
+  const disposedTextures = new Set<THREE.Texture>();
+
   object.traverse((child) => {
+    if (!child) return;
     if ((child as THREE.Mesh).isMesh) {
       const mesh = child as THREE.Mesh;
-      if (mesh.geometry) {
-        mesh.geometry.dispose();
+      if (mesh.geometry && !disposedGeometries.has(mesh.geometry)) {
+        disposedGeometries.add(mesh.geometry);
+        if (typeof mesh.geometry.dispose === 'function') {
+          try {
+            mesh.geometry.dispose();
+          } catch {
+            // Safe fallback
+          }
+        }
       }
       if (mesh.material) {
         if (Array.isArray(mesh.material)) {
-          mesh.material.forEach(disposeMaterial);
+          mesh.material.forEach((m) => disposeMaterial(m, disposedMaterials, disposedTextures));
         } else {
-          disposeMaterial(mesh.material);
+          disposeMaterial(mesh.material, disposedMaterials, disposedTextures);
         }
       }
     }
   });
 }
 
-function disposeMaterial(mat: THREE.Material): void {
+function disposeMaterial(
+  mat: THREE.Material,
+  disposedMaterials = new Set<THREE.Material>(),
+  disposedTextures = new Set<THREE.Texture>()
+): void {
+  if (!mat || disposedMaterials.has(mat)) return;
+  disposedMaterials.add(mat);
+
+  const disposeTex = (tex: unknown) => {
+    if (
+      tex &&
+      typeof tex === 'object' &&
+      'isTexture' in tex &&
+      (tex as { isTexture: boolean }).isTexture &&
+      typeof (tex as { dispose?: unknown }).dispose === 'function'
+    ) {
+      const textureObj = tex as THREE.Texture;
+      if (!disposedTextures.has(textureObj)) {
+        disposedTextures.add(textureObj);
+        try {
+          textureObj.dispose();
+        } catch {
+          // Safe fallback
+        }
+      }
+    }
+  };
+
+  const knownTextureKeys = [
+    'map',
+    'aoMap',
+    'roughnessMap',
+    'metalnessMap',
+    'normalMap',
+    'bumpMap',
+    'displacementMap',
+    'emissiveMap',
+    'alphaMap',
+    'clearcoatMap',
+    'clearcoatRoughnessMap',
+    'clearcoatNormalMap',
+    'envMap',
+    'lightMap',
+  ];
+
+  for (const key of knownTextureKeys) {
+    disposeTex((mat as unknown as Record<string, unknown>)[key]);
+  }
+
   const record = mat as unknown as Record<string, unknown>;
   for (const key of Object.keys(record)) {
-    const value = record[key];
-    if (value && typeof value === 'object' && 'isTexture' in value && (value as { isTexture: boolean }).isTexture) {
-      (value as THREE.Texture).dispose();
+    disposeTex(record[key]);
+  }
+
+  if (typeof mat.dispose === 'function') {
+    try {
+      mat.dispose();
+    } catch {
+      // Safe fallback
     }
   }
-  mat.dispose();
 }
 
 /**
@@ -221,20 +296,32 @@ export function WeaponScene({
   );
 }
 
+export interface ObjWeaponSceneProps {
+  modelUrl: string;
+  weaponName?: string;
+  skinName?: string;
+  float?: number | null;
+  seed?: number | null;
+  rarityColor?: string;
+  onLoaded?: () => void;
+}
+
 /**
  * Wavefront OBJ Scene loader for CS2 weapon models.
  * Calculates pristine vertex normals, centers geometry, normalizes scale to targetSize 2.4,
- * applies studio CS2 PBR material (metalness 0.65, roughness 0.35, #c8d1dc),
- * renders with horizontal profile rotation [0, Math.PI / 2, 0],
- * and disposes GPU resources on unmount.
+ * upgrades material to THREE.MeshPhysicalMaterial, binds dual UV mapping (uv2),
+ * immediately initializes fallback skin base color, asynchronously applies R2 AO and roughness
+ * maps alongside diffuse skin composite textures, and cleanly disposes GPU resources on unmount.
  */
 export function ObjWeaponScene({
   modelUrl,
+  weaponName,
+  skinName,
+  float,
+  seed,
+  rarityColor,
   onLoaded,
-}: {
-  modelUrl: string;
-  onLoaded?: () => void;
-}) {
+}: ObjWeaponSceneProps) {
   const rawObj = useLoader(OBJLoader, modelUrl);
   const loadedNotified = useRef(false);
 
@@ -249,14 +336,22 @@ export function ObjWeaponScene({
     }
   }, [onLoaded, modelUrl]);
 
+  const effectiveWeaponName = weaponName || modelUrl;
+
   const processedScene = useMemo(() => {
     const clone = rawObj.clone(true);
 
-    // Studio CS2 Weapon PBR Material
-    const weaponMaterial = new THREE.MeshStandardMaterial({
-      color: new THREE.Color('#c8d1dc'), // subtle slate finish tint
+    // Synchronous Fallback Base Color:
+    // Compute immediate base color via getSkinFallbackColor so weapon is never unstyled or grey
+    const fallbackColor = getSkinFallbackColor(skinName, effectiveWeaponName, rarityColor);
+
+    // Studio CS2 Weapon PBR Material upgraded to MeshPhysicalMaterial
+    const weaponMaterial = new THREE.MeshPhysicalMaterial({
+      color: new THREE.Color(fallbackColor),
       metalness: 0.65,
       roughness: 0.35,
+      clearcoat: 0.0,
+      clearcoatRoughness: 0.15,
       side: THREE.FrontSide,
     });
 
@@ -268,6 +363,10 @@ export function ObjWeaponScene({
           mesh.geometry.computeVertexNormals();
           // Center the geometry vertices locally around (0, 0, 0)
           mesh.geometry.center();
+          // Dual UV mapping: assign uv2 from uv for universal aoMap shader support
+          if (mesh.geometry.attributes.uv && !mesh.geometry.attributes.uv2) {
+            mesh.geometry.setAttribute('uv2', mesh.geometry.attributes.uv);
+          }
         }
         mesh.material = weaponMaterial;
         mesh.castShadow = true;
@@ -286,7 +385,77 @@ export function ObjWeaponScene({
     }
 
     return { group: clone, material: weaponMaterial };
-  }, [rawObj]);
+  }, [rawObj, modelUrl, effectiveWeaponName, skinName, rarityColor]);
+
+  // Asynchronous Texture & Skin Loading
+  useEffect(() => {
+    let isCancelled = false;
+    const material = processedScene.material;
+
+    // 1. Load diffuse skin texture via compositeSkinFinish
+    try {
+      const skinResult = compositeSkinFinish({
+        weaponName: effectiveWeaponName,
+        skinName,
+        float,
+        seed,
+        rarityColor,
+      });
+
+      if (isCancelled) {
+        skinResult.texture.dispose();
+        return;
+      }
+
+      // Dispose existing diffuse map if replacing
+      if (material.map && material.map !== skinResult.texture) {
+        try {
+          material.map.dispose();
+        } catch {
+          // Safe fallback
+        }
+      }
+
+      // Apply diffuse skin finish and live float wear PBR parameters
+      material.map = skinResult.texture;
+      material.color.set('#ffffff'); // Reset to white so skin texture colors are not tinted
+      material.roughness = skinResult.effectiveRoughness;
+      material.metalness = skinResult.effectiveMetalness;
+      material.clearcoat = skinResult.effectiveClearcoat;
+      material.clearcoatRoughness = 0.15;
+      material.needsUpdate = true;
+    } catch (err) {
+      console.warn('[ModelViewer] Error compositing skin finish:', err);
+    }
+
+    // 2. Fetch base weapon AO and surface maps from Cloudflare R2
+    const r2Maps = getR2WeaponTextures(effectiveWeaponName);
+    if (r2Maps) {
+      Promise.all([
+        loadR2Texture(r2Maps.aoUrl),
+        loadR2Texture(r2Maps.surfaceUrl),
+      ])
+        .then(([aoTexture, surfaceTexture]) => {
+          if (isCancelled) return;
+
+          if (aoTexture) {
+            material.aoMap = aoTexture;
+            material.aoMapIntensity = 1.2;
+          }
+          if (surfaceTexture) {
+            material.roughnessMap = surfaceTexture;
+          }
+          material.needsUpdate = true;
+        })
+        .catch((err) => {
+          console.warn('[ModelViewer] Non-blocking R2 texture load notice:', err);
+        });
+    }
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [processedScene, effectiveWeaponName, skinName, float, seed, rarityColor]);
 
   // Clean up cloned geometries, materials, and textures on unmount or URL transition
   useEffect(() => {
@@ -499,6 +668,10 @@ export default function ModelViewer({
   showControlsHint = true,
   onLoaded,
   onError,
+  float,
+  seed,
+  rarityColor,
+  skinName,
 }: ModelViewerProps) {
   // Two-stage SSR Hydration Guard: Avoid WebGL execution during build / server rendering
   const [isMounted, setIsMounted] = useState(false);
@@ -550,7 +723,15 @@ export default function ModelViewer({
           <Suspense fallback={<CanvasSpinner weaponName={weaponName} />}>
             {effectiveUrl ? (
               isObj ? (
-                <ObjWeaponScene modelUrl={effectiveUrl} onLoaded={onLoaded} />
+                <ObjWeaponScene
+                  modelUrl={effectiveUrl}
+                  weaponName={weaponName}
+                  skinName={skinName}
+                  float={float}
+                  seed={seed}
+                  rarityColor={rarityColor}
+                  onLoaded={onLoaded}
+                />
               ) : (
                 <WeaponScene modelUrl={effectiveUrl} onLoaded={onLoaded} />
               )
