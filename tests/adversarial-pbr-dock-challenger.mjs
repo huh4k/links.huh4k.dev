@@ -47,16 +47,11 @@ import { OBJLoader } from 'three-stdlib';
 
 // Import target modules
 const {
-  default: ModelViewer,
-  ModelViewerSkeleton,
   FallbackWeaponMesh,
   disposeThreeObject,
-  getWeaponModelPath,
-  isObjModelUrl,
 } = await import('../src/components/ModelViewer.tsx');
 
 const {
-  default: CS2LoadoutCard,
   DEFAULT_LOADOUT_WEAPONS,
   getWearBracket,
   getFloatPercentage,
@@ -64,8 +59,6 @@ const {
 } = await import('../src/components/steam/CS2LoadoutCard.tsx');
 
 const {
-  default: InventoryExplorer,
-  CATEGORIES,
   DOCK_MODES,
   getWearTier,
   matchesCategory,
@@ -76,13 +69,11 @@ const {
   compositeSkinFinish,
   getSkinFallbackColor,
   calculateEffectiveWear,
-  normalizeSkinIdentifier,
 } = await import('../src/utils/skinCompositor.ts');
 
 const {
   getR2WeaponTextures,
   getR2PaintFinishUrl,
-  BASE_WEAPON_MAPS,
 } = await import('../src/utils/r2Textures.ts');
 
 // ANSI formatting
@@ -91,7 +82,6 @@ const BOLD = '\x1b[1m';
 const GREEN = '\x1b[32m';
 const RED = '\x1b[31m';
 const CYAN = '\x1b[36m';
-const YELLOW = '\x1b[33m';
 const GRAY = '\x1b[90m';
 
 let totalTests = 0;
@@ -303,6 +293,70 @@ runTest('Area 1', '1.6: Adversarial stress test on getSkinFallbackColor with mal
   }
 });
 
+runTest('Area 1', '1.7: Adversarial float wear mathematics: calculateEffectiveWear boundary and out-of-range inputs', () => {
+  // Clearcoat strictly drops to 0.0 for float > 0.55
+  const at055 = calculateEffectiveWear(0.35, 0.65, 0.8, 0.55);
+  expect(at055.effectiveClearcoat >= 0, 'Clearcoat at 0.55 >= 0');
+
+  const at056 = calculateEffectiveWear(0.35, 0.65, 0.8, 0.56);
+  expect(at056.effectiveClearcoat === 0, 'Clearcoat at float 0.56 must be strictly 0.0');
+
+  const at100 = calculateEffectiveWear(0.35, 0.65, 0.8, 1.00);
+  expect(at100.effectiveClearcoat === 0, 'Clearcoat at float 1.00 must be strictly 0.0');
+  expect(at100.effectiveRoughness >= 0.85, 'Roughness at float 1.00 must be high (worn)');
+
+  // Clamping for extreme / invalid floats: negative, > 1.0, NaN, null, undefined
+  const negWear = calculateEffectiveWear(0.35, 0.65, 0.8, -0.5);
+  const zeroWear = calculateEffectiveWear(0.35, 0.65, 0.8, 0.0);
+  expect(negWear.effectiveRoughness === zeroWear.effectiveRoughness, 'Negative float must clamp to 0.0');
+
+  const overWear = calculateEffectiveWear(0.35, 0.65, 0.8, 2.5);
+  expect(overWear.effectiveRoughness === at100.effectiveRoughness, 'Over-1.0 float must clamp to 1.0');
+
+  const nanWear = calculateEffectiveWear(0.35, 0.65, 0.8, NaN);
+  expect(!Number.isNaN(nanWear.effectiveRoughness), 'NaN float must not produce NaN');
+  expect(!Number.isNaN(nanWear.effectiveMetalness), 'NaN float must not produce NaN');
+  expect(!Number.isNaN(nanWear.effectiveClearcoat), 'NaN float must not produce NaN');
+
+  const nullWear = calculateEffectiveWear(0.35, 0.65, 0.8, null);
+  expect(nullWear.effectiveRoughness === zeroWear.effectiveRoughness, 'null float must treat as 0.0');
+});
+
+runTest('Area 1', '1.8: Verify R2 weapon texture resolver maps all CS2 weapon models and handles knives/unknowns safely', () => {
+  const primaryWeapons = ['AK-47', 'M4A1-S', 'AWP', 'USP-S', 'Glock-18', 'Desert Eagle', 'MAC-10', 'UMP-45', 'Galil AR', 'Zeus x27'];
+  for (const w of primaryWeapons) {
+    const texs = getR2WeaponTextures(w);
+    expect(texs !== null, `Weapon ${w} must resolve R2 base textures`);
+    expect(typeof texs?.aoUrl === 'string' && texs.aoUrl.includes('assets.huh4k.dev'), `${w} aoUrl must point to R2 CDN`);
+    expect(typeof texs?.surfaceUrl === 'string' && texs.surfaceUrl.includes('assets.huh4k.dev'), `${w} surfaceUrl must point to R2 CDN`);
+    expect(typeof texs?.masksUrl === 'string' && texs.masksUrl.includes('assets.huh4k.dev'), `${w} masksUrl must point to R2 CDN`);
+  }
+
+  // Knives do not have firearm maps
+  expect(getR2WeaponTextures('★ Karambit | Doppler') === null, 'Karambit must return null');
+  expect(getR2WeaponTextures('Butterfly Knife') === null, 'Knife must return null');
+
+  // Unknown / malformed
+  expect(getR2WeaponTextures('') === null, 'Empty string must return null');
+  expect(getR2WeaponTextures(null) === null, 'null must return null');
+});
+
+runTest('Area 1', '1.9: Verify R2 paint finish URL resolver maps all 6 finish types and handles aliases', () => {
+  const finishes = ['anodized_air', 'anodized_multi', 'antiqued', 'custom', 'gunsmith', 'hydrographic'];
+  for (const f of finishes) {
+    const url = getR2PaintFinishUrl(f);
+    expect(url !== null, `Finish ${f} must resolve URL`);
+    expect(url?.includes(`/paints/${f}.png`), `URL must point to /paints/${f}.png`);
+  }
+
+  // Aliases
+  expect(getR2PaintFinishUrl('custom_paint') === 'https://assets.huh4k.dev/cs2-textures/paints/custom.png', 'custom_paint alias');
+  expect(getR2PaintFinishUrl('anodized') === 'https://assets.huh4k.dev/cs2-textures/paints/anodized_multi.png', 'anodized alias');
+  expect(getR2PaintFinishUrl('hydro') === 'https://assets.huh4k.dev/cs2-textures/paints/hydrographic.png', 'hydro alias');
+  expect(getR2PaintFinishUrl('antique') === 'https://assets.huh4k.dev/cs2-textures/paints/antiqued.png', 'antique alias');
+  expect(getR2PaintFinishUrl('invalid_finish') === null, 'invalid_finish must return null');
+});
+
 // =============================================================================
 // FOCUS AREA 2: WebGL Lifecycle & Memory Disposal Stress
 // =============================================================================
@@ -489,6 +543,50 @@ runTest('Area 2', '2.4: Verify ModelViewer ModelErrorBoundary & FallbackWeaponMe
   expect(typeof FallbackWeaponMesh === 'function', 'FallbackWeaponMesh must be an exported React component');
 });
 
+runTest('Area 2', '2.5: Resilient exception handling: disposeThreeObject catches throwing dispose callbacks without aborting unmount', () => {
+  const root = new THREE.Group();
+
+  const geomThrow = new THREE.BufferGeometry();
+  geomThrow.dispose = () => { throw new Error('Simulated WebGL buffer release fault'); };
+
+  const texThrow = new THREE.Texture();
+  texThrow.dispose = () => { throw new Error('Simulated GPU texture deallocation fault'); };
+
+  const matThrow = new THREE.MeshStandardMaterial({ map: texThrow });
+  matThrow.dispose = () => { throw new Error('Simulated shader program disposal fault'); };
+
+  const mesh = new THREE.Mesh(geomThrow, matThrow);
+  root.add(mesh);
+
+  // Must not throw or crash the caller
+  assert.doesNotThrow(() => {
+    disposeThreeObject(root);
+  }, 'disposeThreeObject must catch errors from individual dispose callbacks gracefully');
+});
+
+runTest('Area 2', '2.6: Deeply nested scene graph disposal (depth 8 with 30 meshes)', () => {
+  let parent = new THREE.Group();
+  const root = parent;
+  let totalMeshes = 0;
+  let totalDisposed = 0;
+
+  for (let depth = 0; depth < 8; depth++) {
+    const nextGroup = new THREE.Group();
+    for (let m = 0; m < 4; m++) {
+      totalMeshes++;
+      const g = new THREE.BoxGeometry(1, 1, 1);
+      g.dispose = () => { totalDisposed++; };
+      const mesh = new THREE.Mesh(g, new THREE.MeshBasicMaterial());
+      parent.add(mesh);
+    }
+    parent.add(nextGroup);
+    parent = nextGroup;
+  }
+
+  disposeThreeObject(root);
+  expect(totalDisposed === totalMeshes, `All ${totalMeshes} geometries in deep hierarchy must be disposed, got ${totalDisposed}`);
+});
+
 // =============================================================================
 // FOCUS AREA 3: UI Integration & Inspect Dock Contract
 // =============================================================================
@@ -590,6 +688,64 @@ runTest('Area 3', '3.4: Verify Wear Bracket Math and Float formatting edge cases
   expect(formatSeed(0) === 'Seed #0', 'formatSeed(0)');
 });
 
+runTest('Area 3', '3.5: Verify InventoryExplorer matchesCategory across all 6 categories and edge taxonomy', () => {
+  const sampleItems = [
+    { item: { name: 'AK-47 | Ice Coaled', type: 'Rifle' }, expectedCat: 'Rifles' },
+    { item: { name: 'M4A1-S | Liquidation', type: 'Rifle' }, expectedCat: 'Rifles' },
+    { item: { name: 'USP-S | Royal Guard', type: 'Pistol' }, expectedCat: 'Pistols' },
+    { item: { name: 'Desert Eagle | Night', type: 'Pistol' }, expectedCat: 'Pistols' },
+    { item: { name: 'AWP | Ice Coaled', type: 'Sniper Rifle' }, expectedCat: 'Snipers' },
+    { item: { name: 'SSG 08 | Fever Dream', type: 'Sniper' }, expectedCat: 'Snipers' },
+    { item: { name: 'MAC-10 | Candy Apple', type: 'SMG' }, expectedCat: 'SMGs & Heavy' },
+    { item: { name: 'UMP-45 | Late Night Transit', type: 'SMG' }, expectedCat: 'SMGs & Heavy' },
+    { item: { name: 'Zeus x27', type: 'Equipment' }, expectedCat: 'SMGs & Heavy' },
+    { item: { name: '2026 Service Medal', type: 'Collectible' }, expectedCat: 'Collectibles' },
+  ];
+
+  for (const { item, expectedCat } of sampleItems) {
+    expect(matchesCategory(item, 'All'), `${item.name} must match All`);
+    expect(matchesCategory(item, expectedCat), `${item.name} must match ${expectedCat}`);
+  }
+
+  // Cross-category negative assertions
+  expect(!matchesCategory({ name: 'AK-47', type: 'Rifle' }, 'Pistols'), 'AK-47 is not a Pistol');
+  expect(!matchesCategory({ name: 'USP-S', type: 'Pistol' }, 'Rifles'), 'USP-S is not a Rifle');
+  expect(!matchesCategory({ name: 'AWP', type: 'Sniper Rifle' }, 'Collectibles'), 'AWP is not a Collectible');
+});
+
+runTest('Area 3', '3.6: Verify InventoryExplorer matchesSearch across names, floats, seeds, and case-insensitivity', () => {
+  const testItem = {
+    id: '12345',
+    name: 'AK-47 | Ice Coaled (Minimal Wear)',
+    float: 0.0825,
+    seed: 367,
+    rarity: 'Classified',
+    type: 'Rifle',
+    certificate: 'CERT-HASH-999',
+  };
+
+  expect(matchesSearch(testItem, ''), 'Empty query matches');
+  expect(matchesSearch(testItem, '   '), 'Whitespace query matches');
+  expect(matchesSearch(testItem, 'ak-47'), 'Matches weapon name');
+  expect(matchesSearch(testItem, 'ICE COALED'), 'Matches skin name uppercase');
+  expect(matchesSearch(testItem, '0.0825'), 'Matches exact float wear substring');
+  expect(matchesSearch(testItem, '367'), 'Matches pattern seed');
+  expect(matchesSearch(testItem, 'classified'), 'Matches rarity');
+  expect(matchesSearch(testItem, 'cert-hash'), 'Matches certificate hash');
+  expect(!matchesSearch(testItem, 'dragon lore'), 'Non-matching query returns false');
+});
+
+runTest('Area 3', '3.7: Verify getWearTier returns authentic tags and colors or null on stock items', () => {
+  expect(getWearTier(0.05)?.tag === 'FN', '0.05 -> FN');
+  expect(getWearTier(0.08)?.tag === 'MW', '0.08 -> MW');
+  expect(getWearTier(0.25)?.tag === 'FT', '0.25 -> FT');
+  expect(getWearTier(0.40)?.tag === 'WW', '0.40 -> WW');
+  expect(getWearTier(0.85)?.tag === 'BS', '0.85 -> BS');
+  expect(getWearTier(null) === null, 'null float -> null tier');
+  expect(getWearTier(undefined) === null, 'undefined float -> null tier');
+  expect(getWearTier(NaN) === null, 'NaN float -> null tier');
+});
+
 // =============================================================================
 // FOCUS AREA 4: Astro SSR & Build Invariants
 // =============================================================================
@@ -633,6 +789,24 @@ runTest('Area 4', '4.2: Verify zero personal names or locations exist in any com
       expect(!match, `File ${relPath} must NOT contain forbidden private pattern: ${pattern}. Found match: "${match?.[0]}"`);
     }
   }
+});
+
+runTest('Area 4', '4.3: Verify OrbitControls camera pitch limits and zoom boundaries prevent flipped viewports', () => {
+  const mvSource = fs.readFileSync(path.resolve('src/components/ModelViewer.tsx'), 'utf8');
+
+  // Verify pitch clamp between Math.PI / 4 (45°) and Math.PI * 0.65 (117°)
+  expect(mvSource.includes('minPolarAngle={Math.PI / 4}'), 'Must clamp minPolarAngle to Math.PI / 4');
+  expect(mvSource.includes('maxPolarAngle={Math.PI * 0.65}'), 'Must clamp maxPolarAngle to Math.PI * 0.65');
+
+  // Verify zoom distance defaults
+  expect(mvSource.includes('minDistance = 1.2'), 'Default minDistance must be 1.2');
+  expect(mvSource.includes('maxDistance = 5.5'), 'Default maxDistance must be 5.5');
+});
+
+runTest('Area 4', '4.4: Verify loadR2Texture safely returns null in headless/SSR environments without throwing', async () => {
+  const { loadR2Texture } = await import('../src/utils/r2Textures.ts');
+  const result = await loadR2Texture('https://assets.huh4k.dev/cs2-textures/rif_ak47_ao_psd_3cdda94d.png');
+  expect(result === null, 'loadR2Texture must return null in headless Node environment without DOM');
 });
 
 // =============================================================================

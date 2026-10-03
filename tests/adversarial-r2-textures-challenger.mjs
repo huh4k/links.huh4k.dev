@@ -56,7 +56,6 @@ const FAILED = '\x1b[31m✗\x1b[0m';
 const BOLD = '\x1b[1m';
 const RESET = '\x1b[0m';
 const CYAN = '\x1b[36m';
-const YELLOW = '\x1b[33m';
 
 let totalTests = 0;
 let passedTests = 0;
@@ -213,6 +212,8 @@ runTest('1.5: Verify canonical aliases and model path normalization', () => {
 
   for (const [input, expectedKey] of aliases) {
     recordAssertion();
+    const resolvedKey = getWeaponKeyFromName(input);
+    assert.strictEqual(resolvedKey, expectedKey, `Expected key ${expectedKey} for ${input}, got ${resolvedKey}`);
     const textures = getR2WeaponTextures(input);
     const expectedTextures = BASE_WEAPON_MAPS[expectedKey];
     assert.ok(textures !== null, `Failed to resolve ${input}`);
@@ -306,6 +307,8 @@ runTest('2.1: Verify all 6 paint finishes resolve valid URLs under R2_PAINTS_BAS
     'hydrographic',
   ];
 
+  recordAssertion();
+  assert.strictEqual(R2_PAINTS_BASE_URL, 'https://assets.huh4k.dev/cs2-textures/paints/');
   recordAssertion();
   assert.strictEqual(PAINT_FINISH_TYPES.length, 6);
 
@@ -440,17 +443,17 @@ await runAsyncTest('3.3: Simulated Browser DOM: 404 response resilience & failed
   const target404Url = 'https://assets.huh4k.dev/cs2-textures/simulated_404_texture.png';
 
   try {
-    globalThis.window = {} as any;
+    globalThis.window = {};
     globalThis.document = {
       createElementNS: () => ({}),
-    } as any;
+    };
 
     // Simulate 404 network failure by triggering onError callback
     THREE.TextureLoader.prototype.load = function (
-      url: string,
-      _onLoad?: any,
-      _onProgress?: any,
-      onError?: any
+      url,
+      _onLoad,
+      _onProgress,
+      onError
     ) {
       loadCallCount++;
       setTimeout(() => {
@@ -477,9 +480,9 @@ await runAsyncTest('3.3: Simulated Browser DOM: 404 response resilience & failed
   } finally {
     THREE.TextureLoader.prototype.load = origLoaderLoad;
     if (origWindow !== undefined) globalThis.window = origWindow;
-    else delete (globalThis as any).window;
+    else delete globalThis.window;
     if (origDoc !== undefined) globalThis.document = origDoc;
-    else delete (globalThis as any).document;
+    else delete globalThis.document;
     clearTextureCache();
   }
 });
@@ -497,15 +500,15 @@ await runAsyncTest('3.4: Simulated Browser DOM: Concurrent in-flight request ded
   sharedTexture.name = 'SharedLoadedTexture';
 
   try {
-    globalThis.window = {} as any;
+    globalThis.window = {};
     globalThis.document = {
       createElementNS: () => ({}),
-    } as any;
+    };
 
     // Simulate 50ms latency
     THREE.TextureLoader.prototype.load = function (
-      _url: string,
-      onLoad?: any
+      _url,
+      onLoad
     ) {
       loadCallCount++;
       setTimeout(() => {
@@ -536,9 +539,9 @@ await runAsyncTest('3.4: Simulated Browser DOM: Concurrent in-flight request ded
   } finally {
     THREE.TextureLoader.prototype.load = origLoaderLoad;
     if (origWindow !== undefined) globalThis.window = origWindow;
-    else delete (globalThis as any).window;
+    else delete globalThis.window;
     if (origDoc !== undefined) globalThis.document = origDoc;
-    else delete (globalThis as any).document;
+    else delete globalThis.document;
     clearTextureCache();
   }
 });
@@ -551,10 +554,10 @@ await runAsyncTest('3.5: Simulated Browser DOM: Synchronous loader exception cau
   const origLoaderLoad = THREE.TextureLoader.prototype.load;
 
   try {
-    globalThis.window = {} as any;
+    globalThis.window = {};
     globalThis.document = {
       createElementNS: () => ({}),
-    } as any;
+    };
 
     // Simulate loader throwing synchronously (e.g. security error)
     THREE.TextureLoader.prototype.load = function () {
@@ -567,9 +570,9 @@ await runAsyncTest('3.5: Simulated Browser DOM: Synchronous loader exception cau
   } finally {
     THREE.TextureLoader.prototype.load = origLoaderLoad;
     if (origWindow !== undefined) globalThis.window = origWindow;
-    else delete (globalThis as any).window;
+    else delete globalThis.window;
     if (origDoc !== undefined) globalThis.document = origDoc;
-    else delete (globalThis as any).document;
+    else delete globalThis.document;
     clearTextureCache();
   }
 });
@@ -716,12 +719,12 @@ runTest('4.5: Hostile float inputs (null, undefined, negative, overflow, NaN, In
     { input: 100.0, expectedRoughness: bsBaseline.effectiveRoughness },
     { input: Infinity, expectedRoughness: bsBaseline.effectiveRoughness },
     // Type coercion bypass tests
-    { input: '0.5' as any, expectedRoughness: fnBaseline.effectiveRoughness },
-    { input: 'invalid' as any, expectedRoughness: fnBaseline.effectiveRoughness },
-    { input: true as any, expectedRoughness: fnBaseline.effectiveRoughness },
-    { input: false as any, expectedRoughness: fnBaseline.effectiveRoughness },
-    { input: {} as any, expectedRoughness: fnBaseline.effectiveRoughness },
-    { input: [] as any, expectedRoughness: fnBaseline.effectiveRoughness },
+    { input: '0.5', expectedRoughness: fnBaseline.effectiveRoughness },
+    { input: 'invalid', expectedRoughness: fnBaseline.effectiveRoughness },
+    { input: true, expectedRoughness: fnBaseline.effectiveRoughness },
+    { input: false, expectedRoughness: fnBaseline.effectiveRoughness },
+    { input: {}, expectedRoughness: fnBaseline.effectiveRoughness },
+    { input: [], expectedRoughness: fnBaseline.effectiveRoughness },
   ];
 
   for (const { input, expectedRoughness } of hostileInputs) {
@@ -755,8 +758,8 @@ runTest('5.1: Seed boundary and extreme values (0, 1000, negatives, NaN, huge in
     -500,
     -999999,
     NaN,
-    null as any,
-    undefined as any,
+    null,
+    undefined,
     2147483647, // Max 32-bit signed int
     Number.MAX_SAFE_INTEGER,
     1e9,
@@ -890,6 +893,9 @@ runTest('6.1: Verify all 9 signature skins generate valid THREE.CanvasTexture wi
 
   for (const item of REQUIRED_9_SKINS) {
     recordAssertion();
+    const normalized = normalizeSkinIdentifier(item.name, item.weapon);
+    assert.ok(normalized.normalizedPattern.length > 0, `Pattern not extracted for ${item.name}`);
+
     const res = compositeSkinFinish({
       skinName: item.name,
       weaponName: item.weapon,
@@ -1055,9 +1061,9 @@ runTest('7.2: Hostile DOM isolation: poison traps on window and document getters
     assert.strictEqual(docTrapHit, false, 'document trap was not triggered by resolvers/math');
   } finally {
     if (originalWindow !== undefined) globalThis.window = originalWindow;
-    else delete (globalThis as any).window;
+    else delete globalThis.window;
     if (originalDoc !== undefined) globalThis.document = originalDoc;
-    else delete (globalThis as any).document;
+    else delete globalThis.document;
   }
 });
 
