@@ -558,6 +558,265 @@ const inFlightRequests = new Map<string, Promise<THREE.Texture | null>>();
 const failedUrls = new Set<string>();
 
 /**
+ * Authoritative verified Cloudflare R2 asset paths for all CS2 weapons.
+ * Maps folder keys to their verified filenames in the cs2-textures bucket.
+ */
+export const R2_ACTUAL_WEAPON_FILES: Record<string, { ao: string; masks: string; surface: string }> = {
+  mach_m249para: {
+    ao: 'mach_m249para_ao_psd_2bfcb5e8.png',
+    masks: 'mach_m249para_masks_psd_da5a7179.png',
+    surface: 'mach_m249para_surface_psd_ad0c2f19.png',
+  },
+  mach_negev: {
+    ao: 'mach_negev_ao_psd_3a8bb222.png',
+    masks: 'mach_negev_masks_psd_ce55f770.png',
+    surface: 'mach_negev_surface_tga_1045b082.png',
+  },
+  pist_223: {
+    ao: 'pist_223_ao_psd_2d11c42c.png',
+    masks: 'pist_223_masks_psd_25c9e723.png',
+    surface: 'pist_223_surface_psd_4ba9ea8a.png',
+  },
+  pist_cz_75: {
+    ao: 'pist_cz_75_ao_psd_15dc5ed0.png',
+    masks: 'pist_cz_75_masks_psd_508e4d17.png',
+    surface: 'pist_cz_75_surface_psd_5db16329.png',
+  },
+  pist_deagle: {
+    ao: 'pist_deagle_ao_psd_d8bd07a9.png',
+    masks: 'pist_deagle_masks_psd_798a71da.png',
+    surface: 'pist_deagle_surface_psd_539e8975.png',
+  },
+  pist_elite: {
+    ao: 'pist_elite_ao_psd_f377bde.png',
+    masks: 'pist_elite_masks_psd_6f76b8d4.png',
+    surface: 'pist_elite_surface_psd_deecd8e6.png',
+  },
+  pist_fiveseven: {
+    ao: 'pist_fiveseven_ao_psd_d263ab10.png',
+    masks: 'pist_fiveseven_masks_psd_3ce2d3f3.png',
+    surface: 'pist_fiveseven_surface_psd_d16eb7a7.png',
+  },
+  pist_glock18: {
+    ao: 'pist_glock18_ao_tga_b31a63b8.png',
+    masks: 'pist_glock18_masks_tga_2a676e44.png',
+    surface: 'pist_glock18_surface_tga_deddd48a.png',
+  },
+  pist_hkp2000: {
+    ao: 'pist_hkp2000_ao_psd_dfe65789.png',
+    masks: 'pist_hkp2000_masks_psd_135e1a2f.png',
+    surface: 'pist_hkp2000_surface_psd_8b91a1c0.png',
+  },
+  pist_p250: {
+    ao: 'pist_p250_nopaint2_ao_psd_84d3ef4.png',
+    masks: 'pist_p250_masks_psd_b3ebdfc5.png',
+    surface: 'pist_p250_surface_psd_ec8de691.png',
+  },
+  pist_revolver: {
+    ao: 'pist_revolver_ao_psd_759dc95f.png',
+    masks: 'pist_revolver_masks_psd_daa88bf2.png',
+    surface: 'pist_revolver_surface_psd_142c2e4e.png',
+  },
+  pist_tec9: {
+    ao: 'pist_tec9_ao_psd_84c0421f.png',
+    masks: 'pist_tec9_masks_psd_68642f2a.png',
+    surface: 'pist_tec9_surface_psd_9cdd60e1.png',
+  },
+  rif_ak47: {
+    ao: 'rif_ak47_ao_psd_3cdda94d.png',
+    masks: 'rif_ak47_masks_psd_cc08789a.png',
+    surface: 'rif_ak47_surface_psd_1262e7bf.png',
+  },
+  rif_aug: {
+    ao: 'rif_aug_ao_tga_4955c1d7.png',
+    masks: 'rif_aug_masks_psd_9e6ecdbd.png',
+    surface: 'rif_aug_surface_tga_96e957f7.png',
+  },
+  rif_famas: {
+    ao: 'rif_famas_ao_psd_aef1628b.png',
+    masks: 'rif_famas_masks_psd_4a5996e7.png',
+    surface: 'rif_famas_surface_psd_7d22e43d.png',
+  },
+  rif_galilar: {
+    ao: 'rif_galilar_ao_psd_3e31ab3.png',
+    masks: 'rif_galilar_masks_psd_b25dafb7.png',
+    surface: 'rif_galilar_surface_psd_8317326c.png',
+  },
+  rif_m4a1: {
+    ao: 'rif_m4a1_ao_psd_271a23bd.png',
+    masks: 'rif_m4a1_masks_psd_b555aaf5.png',
+    surface: 'rif_m4a1_surface_psd_22c7d9d1.png',
+  },
+  rif_m4a1_s: {
+    ao: 'rif_m4a1_s_ao_psd_4fcef6bd.png',
+    masks: 'rif_m4a1_s_masks_psd_a83c1744.png',
+    surface: 'rif_m4a1_s_surface_psd_1514d837.png',
+  },
+  rif_sg556: {
+    ao: 'rif_sg556_ao_psd_c746db78.png',
+    masks: 'rif_sg556_masks_psd_1e3fe18d.png',
+    surface: 'rif_sg556_surface_psd_9e52d9f3.png',
+  },
+  shot_mag7: {
+    ao: 'shot_mag7_ao_psd_edde0e1.png',
+    masks: 'shot_mag7_masks_psd_34392cbc.png',
+    surface: 'shot_mag7_surface_psd_12c4f6b7.png',
+  },
+  shot_nova: {
+    ao: 'shot_nova_ao_psd_78cb575d.png',
+    masks: 'shot_nova_masks_psd_27bc86b.png',
+    surface: 'shot_nova_surface_psd_be0ced1f.png',
+  },
+  shot_sawedoff: {
+    ao: 'shot_sawedoff_ao_psd_d406c3d.png',
+    masks: 'shot_sawedoff_masks_psd_703ec12.png',
+    surface: 'shot_sawedoff_surface_psd_13053074.png',
+  },
+  shot_xm1014: {
+    ao: 'shot_xm1014_ao_psd_4b7a055e.png',
+    masks: 'shot_xm1014_masks_psd_31cd0e18.png',
+    surface: 'shot_xm1014_surface_psd_9969f91b.png',
+  },
+  smg_bizon: {
+    ao: 'smg_bizon_ao_psd_5cf2078a.png',
+    masks: 'smg_bizon_masks_psd_b3326b34.png',
+    surface: 'smg_bizon_surface_psd_3c8bb3e2.png',
+  },
+  smg_mac10: {
+    ao: 'smg_mac10_ao_psd_607359a0.png',
+    masks: 'smg_mac10_masks_psd_b5c1be46.png',
+    surface: 'smg_mac10_surface_psd_b99436d8.png',
+  },
+  smg_mp5sd: {
+    ao: 'smg_mp5sd_ao_psd_8ae0e623.png',
+    masks: 'smg_mp5sd_masks_psd_cf8dbc1b.png',
+    surface: 'smg_mp5sd_surface_psd_46619ae8.png',
+  },
+  smg_mp7: {
+    ao: 'smg_mp7_ao_psd_ed0a97ff.png',
+    masks: 'smg_mp7_masks_psd_497e71e9.png',
+    surface: 'smg_mp7_surface_psd_f3a4244d.png',
+  },
+  smg_mp9: {
+    ao: 'smg_mp9_ao_psd_6de68ade.png',
+    masks: 'smg_mp9_masks_psd_c1e92ba6.png',
+    surface: 'smg_mp9_surface_psd_6382a845.png',
+  },
+  smg_p90: {
+    ao: 'smg_p90_ao_tga_647dff3.png',
+    masks: 'smg_p90_masks_psd_78e2c8c8.png',
+    surface: 'smg_p90_surface_tga_be92be04.png',
+  },
+  smg_ump45: {
+    ao: 'smg_ump45_ao_tga_d15152e8.png',
+    masks: 'smg_ump45_masks_psd_14f89dd8.png',
+    surface: 'smg_ump45_surface_tga_edf6fbab.png',
+  },
+  snip_awp: {
+    ao: 'snip_awp_ao_psd_c4627094.png',
+    masks: 'snip_awp_masks_psd_10fcf89f.png',
+    surface: 'snip_awp_surface_tga_92c324e4.png',
+  },
+  snip_g3sg1: {
+    ao: 'snip_g3sg1_ao_psd_8a76cb4b.png',
+    masks: 'snip_g3sg1_masks_psd_a2e8ed76.png',
+    surface: 'snip_g3sg1_surface_tga_b8acd5c4.png',
+  },
+  snip_scar20: {
+    ao: 'snip_scar20_ao_psd_be073ac5.png',
+    masks: 'snip_scar20_masks_psd_ddbd6f6e.png',
+    surface: 'snip_scar20_surface_tga_b5ae99f3.png',
+  },
+  snip_ssg08: {
+    ao: 'snip_ssg08_scope_ao_tga_8cff0972.png',
+    masks: 'snip_ssg08_scope_masks_psd_9f73317e.png',
+    surface: 'snip_ssg08_surface_tga_1b8195eb.png',
+  },
+};
+
+R2_ACTUAL_WEAPON_FILES['mach_m249'] = R2_ACTUAL_WEAPON_FILES['mach_m249para'];
+R2_ACTUAL_WEAPON_FILES['rif_m4a4'] = R2_ACTUAL_WEAPON_FILES['rif_m4a1'];
+R2_ACTUAL_WEAPON_FILES['pist_cz75a'] = R2_ACTUAL_WEAPON_FILES['pist_cz_75'];
+R2_ACTUAL_WEAPON_FILES['pist_usp_silencer'] = R2_ACTUAL_WEAPON_FILES['pist_223'];
+R2_ACTUAL_WEAPON_FILES['rif_m4a1_silencer'] = R2_ACTUAL_WEAPON_FILES['rif_m4a1_s'];
+
+export const WEAPON_PREFIX_TO_FOLDER: Record<string, string> = {
+  mach_m249para: 'mach_m249para',
+  mach_m249: 'mach_m249para',
+  mach_negev: 'mach_negev',
+  pist_223: 'pist_223',
+  pist_usp_silencer: 'pist_223',
+  pist_cz_75: 'pist_cz_75',
+  pist_cz75a: 'pist_cz_75',
+  pist_deagle: 'pist_deagle',
+  pist_elite: 'pist_elite',
+  pist_fiveseven: 'pist_fiveseven',
+  pist_glock18: 'pist_glock18',
+  pist_hkp2000: 'pist_hkp2000',
+  pist_p250: 'pist_p250',
+  pist_revolver: 'pist_revolver',
+  pist_tec9: 'pist_tec9',
+  rif_ak47: 'rif_ak47',
+  rif_aug: 'rif_aug',
+  rif_famas: 'rif_famas',
+  rif_galilar: 'rif_galilar',
+  rif_m4a1_s: 'rif_m4a1_s',
+  rif_m4a1_silencer: 'rif_m4a1_s',
+  rif_m4a1: 'rif_m4a1',
+  rif_m4a4: 'rif_m4a1',
+  rif_sg556: 'rif_sg556',
+  shot_mag7: 'shot_mag7',
+  shot_nova: 'shot_nova',
+  shot_sawedoff: 'shot_sawedoff',
+  shot_xm1014: 'shot_xm1014',
+  smg_bizon: 'smg_bizon',
+  smg_mac10: 'smg_mac10',
+  smg_mp5sd: 'smg_mp5sd',
+  smg_mp7: 'smg_mp7',
+  smg_mp9: 'smg_mp9',
+  smg_p90: 'smg_p90',
+  smg_ump45: 'smg_ump45',
+  snip_awp: 'snip_awp',
+  snip_g3sg1: 'snip_g3sg1',
+  snip_scar20: 'snip_scar20',
+  snip_ssg08: 'snip_ssg08',
+};
+
+/**
+ * Normalizes an R2 texture asset URL to its actual CDN path under /cs2-textures/paints/<folder>/<filename>
+ */
+export function resolveActualR2TextureUrl(url: string): string {
+  if (!url || typeof url !== 'string') return '';
+  const trimmed = url.trim();
+  if (trimmed.includes('/cs2-textures/paints/')) {
+    return trimmed;
+  }
+  const prefix = 'https://assets.huh4k.dev/cs2-textures/';
+  if (trimmed.startsWith(prefix)) {
+    const rawFile = trimmed.slice(prefix.length);
+    const sortedPrefixes = Object.keys(WEAPON_PREFIX_TO_FOLDER).sort((a, b) => b.length - a.length);
+    for (const key of sortedPrefixes) {
+      if (rawFile.startsWith(key) || rawFile.includes(key)) {
+        const folder = WEAPON_PREFIX_TO_FOLDER[key];
+        const files = R2_ACTUAL_WEAPON_FILES[folder];
+        if (files) {
+          if (rawFile.includes('_ao')) {
+            return `${R2_PAINTS_BASE_URL}${folder}/${files.ao}`;
+          }
+          if (rawFile.includes('_surface')) {
+            return `${R2_PAINTS_BASE_URL}${folder}/${files.surface}`;
+          }
+          if (rawFile.includes('_masks')) {
+            return `${R2_PAINTS_BASE_URL}${folder}/${files.masks}`;
+          }
+        }
+      }
+    }
+  }
+  return trimmed;
+}
+
+/**
  * Asynchronously loads a texture from Cloudflare R2 using Three.js TextureLoader.
  *
  * Key guarantees:
@@ -566,6 +825,7 @@ const failedUrls = new Set<string>();
  * - Non-blocking error handling: catches 404s, CORS errors, and network failures without throwing,
  *   returning `null` so procedural canvas fallback materials engage seamlessly.
  * - SSR safety: only instantiates `THREE.TextureLoader` in browser DOM environments.
+ * - Resolves to authoritative CDN endpoints under /cs2-textures/paints/<weapon>/
  *
  * @param url Full URL of the texture to load
  * @returns Promise resolving to THREE.Texture or null on failure/SSR
@@ -580,13 +840,20 @@ export async function loadR2Texture(url: string): Promise<THREE.Texture | null> 
     return null;
   }
 
-  // 1. Cache hit
+  const actualFetchUrl = resolveActualR2TextureUrl(trimmedUrl);
+
+  // 1. Cache hit (check both original and resolved URLs)
   if (textureCache.has(trimmedUrl)) {
     return textureCache.get(trimmedUrl)!;
   }
+  if (textureCache.has(actualFetchUrl)) {
+    const cached = textureCache.get(actualFetchUrl)!;
+    textureCache.set(trimmedUrl, cached);
+    return cached;
+  }
 
   // 2. Known failed URL
-  if (failedUrls.has(trimmedUrl)) {
+  if (failedUrls.has(trimmedUrl) || failedUrls.has(actualFetchUrl)) {
     return null;
   }
 
@@ -603,6 +870,9 @@ export async function loadR2Texture(url: string): Promise<THREE.Texture | null> 
   if (inFlightRequests.has(trimmedUrl)) {
     return inFlightRequests.get(trimmedUrl)!;
   }
+  if (inFlightRequests.has(actualFetchUrl)) {
+    return inFlightRequests.get(actualFetchUrl)!;
+  }
 
   const loadPromise = new Promise<THREE.Texture | null>((resolve) => {
     try {
@@ -610,33 +880,44 @@ export async function loadR2Texture(url: string): Promise<THREE.Texture | null> 
       loader.setCrossOrigin('anonymous');
 
       loader.load(
-        trimmedUrl,
+        actualFetchUrl,
         (texture) => {
           texture.wrapS = THREE.RepeatWrapping;
           texture.wrapT = THREE.RepeatWrapping;
           texture.needsUpdate = true;
           textureCache.set(trimmedUrl, texture);
+          if (actualFetchUrl !== trimmedUrl) {
+            textureCache.set(actualFetchUrl, texture);
+          }
           inFlightRequests.delete(trimmedUrl);
+          inFlightRequests.delete(actualFetchUrl);
           resolve(texture);
         },
         undefined,
         (error) => {
           // Non-blocking: catch 404 / CORS failure without throwing
-          console.warn(`[r2Textures] Non-blocking fallback: unable to load texture from ${trimmedUrl}:`, error);
+          console.warn(`[r2Textures] Non-blocking fallback: unable to load texture from ${actualFetchUrl}:`, error);
           failedUrls.add(trimmedUrl);
+          failedUrls.add(actualFetchUrl);
           inFlightRequests.delete(trimmedUrl);
+          inFlightRequests.delete(actualFetchUrl);
           resolve(null);
         }
       );
     } catch (err) {
-      console.warn(`[r2Textures] Synchronous error loading texture ${trimmedUrl}:`, err);
+      console.warn(`[r2Textures] Synchronous error loading texture ${actualFetchUrl}:`, err);
       failedUrls.add(trimmedUrl);
+      failedUrls.add(actualFetchUrl);
       inFlightRequests.delete(trimmedUrl);
+      inFlightRequests.delete(actualFetchUrl);
       resolve(null);
     }
   });
 
   inFlightRequests.set(trimmedUrl, loadPromise);
+  if (actualFetchUrl !== trimmedUrl) {
+    inFlightRequests.set(actualFetchUrl, loadPromise);
+  }
   return loadPromise;
 }
 

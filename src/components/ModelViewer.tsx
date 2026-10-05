@@ -341,24 +341,44 @@ export function ObjWeaponScene({
   const processedScene = useMemo(() => {
     const clone = rawObj.clone(true);
 
-    // Synchronous Fallback Base Color:
-    // Compute immediate base color via getSkinFallbackColor so weapon is never unstyled or grey
+    // Synchronous Skin Composite Finish:
+    // Generate diffuse texture map with authentic wear simulation immediately so the model is never monochrome
+    let skinResult: ReturnType<typeof compositeSkinFinish> | null = null;
+    try {
+      skinResult = compositeSkinFinish({
+        weaponName: effectiveWeaponName,
+        skinName,
+        float,
+        seed,
+        rarityColor,
+      });
+      skinResult.texture.wrapS = THREE.RepeatWrapping;
+      skinResult.texture.wrapT = THREE.RepeatWrapping;
+      skinResult.texture.needsUpdate = true;
+    } catch (err) {
+      console.warn('[ModelViewer] Skin compositor error in useMemo:', err);
+    }
+
     const fallbackColor = getSkinFallbackColor(skinName, effectiveWeaponName, rarityColor);
 
     // Studio CS2 Weapon PBR Material upgraded to MeshPhysicalMaterial
     const weaponMaterial = new THREE.MeshPhysicalMaterial({
-      color: new THREE.Color(fallbackColor),
-      metalness: 0.65,
-      roughness: 0.35,
-      clearcoat: 0.0,
+      map: skinResult ? skinResult.texture : null,
+      color: new THREE.Color(skinResult ? '#ffffff' : fallbackColor),
+      metalness: skinResult ? skinResult.effectiveMetalness : 0.65,
+      roughness: skinResult ? skinResult.effectiveRoughness : 0.35,
+      clearcoat: skinResult ? skinResult.effectiveClearcoat : 0.0,
       clearcoatRoughness: 0.15,
       side: THREE.FrontSide,
     });
+    weaponMaterial.needsUpdate = true;
 
     clone.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
         const mesh = child as THREE.Mesh;
         if (mesh.geometry) {
+          // Clone geometry to ensure local centering and lifecycle disposal does not destroy cached rawObj
+          mesh.geometry = mesh.geometry.clone();
           // Compute pristine vertex normals for accurate specular highlights
           mesh.geometry.computeVertexNormals();
           // Center the geometry vertices locally around (0, 0, 0)
@@ -384,78 +404,44 @@ export function ObjWeaponScene({
       clone.scale.setScalar(targetSize / maxDim);
     }
 
-    return { group: clone, material: weaponMaterial };
-  }, [rawObj, modelUrl, effectiveWeaponName, skinName, rarityColor]);
+    return { group: clone, material: weaponMaterial, skinResult };
+  }, [rawObj, modelUrl, effectiveWeaponName, skinName, float, seed, rarityColor]);
 
-  // Asynchronous Texture & Skin Loading
+  // Skin texture application and R2 AO/Surface map binding
   useEffect(() => {
     let isCancelled = false;
     const material = processedScene.material;
 
-    // 1. Load diffuse skin texture via compositeSkinFinish
-    try {
-      const skinResult = compositeSkinFinish({
-        weaponName: effectiveWeaponName,
-        skinName,
-        float,
-        seed,
-        rarityColor,
-      });
-
-      if (isCancelled) {
-        skinResult.texture.dispose();
-        return;
-      }
-
-      // Dispose existing diffuse map if replacing
-      if (material.map && material.map !== skinResult.texture) {
-        try {
-          material.map.dispose();
-        } catch {
-          // Safe fallback
-        }
-      }
-
-      // Apply diffuse skin finish and live float wear PBR parameters
-      material.map = skinResult.texture;
-      material.color.set('#ffffff'); // Reset to white so skin texture colors are not tinted
-      material.roughness = skinResult.effectiveRoughness;
-      material.metalness = skinResult.effectiveMetalness;
-      material.clearcoat = skinResult.effectiveClearcoat;
-      material.clearcoatRoughness = 0.15;
-      material.needsUpdate = true;
-    } catch (err) {
-      console.warn('[ModelViewer] Error compositing skin finish:', err);
-    }
-
-    // 2. Fetch base weapon AO and surface maps from Cloudflare R2
+    // Load AO & Surface maps from R2 (non-blocking, only for weapons with verified textures)
     const r2Maps = getR2WeaponTextures(effectiveWeaponName);
     if (r2Maps) {
       Promise.all([
-        loadR2Texture(r2Maps.aoUrl),
-        loadR2Texture(r2Maps.surfaceUrl),
+        r2Maps.aoUrl ? loadR2Texture(r2Maps.aoUrl) : Promise.resolve(null),
+        r2Maps.surfaceUrl ? loadR2Texture(r2Maps.surfaceUrl) : Promise.resolve(null),
       ])
         .then(([aoTexture, surfaceTexture]) => {
           if (isCancelled) return;
 
           if (aoTexture) {
             material.aoMap = aoTexture;
+            material.aoMap.wrapS = THREE.RepeatWrapping;
+            material.aoMap.wrapT = THREE.RepeatWrapping;
             material.aoMapIntensity = 1.2;
           }
           if (surfaceTexture) {
             material.roughnessMap = surfaceTexture;
+            material.roughnessMap.wrapS = THREE.RepeatWrapping;
+            material.roughnessMap.wrapT = THREE.RepeatWrapping;
           }
           material.needsUpdate = true;
         })
-        .catch((err) => {
-          console.warn('[ModelViewer] Non-blocking R2 texture load notice:', err);
-        });
+        .catch(() => { /* non-blocking */ });
     }
 
     return () => {
       isCancelled = true;
     };
-  }, [processedScene, effectiveWeaponName, skinName, float, seed, rarityColor]);
+  }, [processedScene, effectiveWeaponName]);
 
   // Clean up cloned geometries, materials, and textures on unmount or URL transition
   useEffect(() => {
