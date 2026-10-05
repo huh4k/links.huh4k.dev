@@ -116,6 +116,7 @@ function disposeMaterial(
     'aoMap',
     'roughnessMap',
     'metalnessMap',
+    'masksMap',
     'normalMap',
     'bumpMap',
     'displacementMap',
@@ -130,6 +131,12 @@ function disposeMaterial(
 
   for (const key of knownTextureKeys) {
     disposeTex((mat as unknown as Record<string, unknown>)[key]);
+  }
+
+  if (mat.userData && typeof mat.userData === 'object') {
+    for (const key of Object.keys(mat.userData)) {
+      disposeTex((mat.userData as Record<string, unknown>)[key]);
+    }
   }
 
   const record = mat as unknown as Record<string, unknown>;
@@ -307,11 +314,132 @@ export interface ObjWeaponSceneProps {
 }
 
 /**
+ * Channel swizzling contract for Source 2 surface maps:
+ * Red = Roughness, Green = Metalness.
+ */
+export const SOURCE2_SURFACE_SWIZZLE = {
+  roughnessChannel: 'R',
+  metalnessChannel: 'G',
+  redRoughness: true,
+  greenMetalness: true,
+} as const;
+
+/**
+ * Injects custom GLSL swizzle operations into MeshPhysicalMaterial to route
+ * Source 2 packed surface channels correctly:
+ * - Red channel -> roughnessFactor (instead of Three.js default Green)
+ * - Green channel -> metalnessFactor (instead of Three.js default Blue)
+ */
+export function applySource2SurfaceSwizzle(material: THREE.MeshPhysicalMaterial): void {
+  material.onBeforeCompile = (shader) => {
+    shader.fragmentShader = shader.fragmentShader.replace(
+      '#include <roughnessmap_fragment>',
+      `
+      float roughnessFactor = roughness;
+      #ifdef USE_ROUGHNESSMAP
+        vec4 texelRoughness = texture2D( roughnessMap, vRoughnessMapUv );
+        // Source 2 surface swizzle: Red channel maps to roughness
+        roughnessFactor *= texelRoughness.r;
+      #endif
+      `
+    );
+    shader.fragmentShader = shader.fragmentShader.replace(
+      '#include <metalnessmap_fragment>',
+      `
+      float metalnessFactor = metalness;
+      #ifdef USE_METALNESSMAP
+        vec4 texelMetalness = texture2D( metalnessMap, vMetalnessMapUv );
+        // Source 2 surface swizzle: Green channel maps to metalness
+        metalnessFactor *= texelMetalness.g;
+      #endif
+      `
+    );
+  };
+  material.needsUpdate = true;
+}
+
+/**
+ * Creates separate roughness and metalness textures from a Source 2 packed surface map
+ * by swizzling channels (Red -> roughness, Green -> metalness).
+ */
+export function swizzleSurfaceMapChannels(surfaceTexture: THREE.Texture): {
+  roughnessMap: THREE.Texture;
+  metalnessMap: THREE.Texture;
+} {
+  if (
+    typeof document !== 'undefined' &&
+    surfaceTexture.image &&
+    (surfaceTexture.image as HTMLImageElement).width > 0 &&
+    (surfaceTexture.image as HTMLImageElement).height > 0
+  ) {
+    try {
+      const img = surfaceTexture.image as HTMLImageElement;
+      const w = img.width;
+      const h = img.height;
+
+      const rCanvas = document.createElement('canvas');
+      rCanvas.width = w;
+      rCanvas.height = h;
+      const rCtx = rCanvas.getContext('2d');
+
+      const mCanvas = document.createElement('canvas');
+      mCanvas.width = w;
+      mCanvas.height = h;
+      const mCtx = mCanvas.getContext('2d');
+
+      if (rCtx && mCtx) {
+        rCtx.drawImage(img, 0, 0);
+        const rImgData = rCtx.getImageData(0, 0, w, h);
+        const rData = rImgData.data;
+
+        mCtx.drawImage(img, 0, 0);
+        const mImgData = mCtx.getImageData(0, 0, w, h);
+        const mData = mImgData.data;
+
+        for (let i = 0; i < rData.length; i += 4) {
+          const redVal = rData[i];       // Red = Roughness
+          const greenVal = rData[i + 1]; // Green = Metalness
+
+          rData[i] = redVal;
+          rData[i + 1] = redVal;
+          rData[i + 2] = redVal;
+
+          mData[i] = greenVal;
+          mData[i + 1] = greenVal;
+          mData[i + 2] = greenVal;
+        }
+
+        rCtx.putImageData(rImgData, 0, 0);
+        mCtx.putImageData(mImgData, 0, 0);
+
+        const roughnessTex = new THREE.CanvasTexture(rCanvas);
+        roughnessTex.wrapS = THREE.RepeatWrapping;
+        roughnessTex.wrapT = THREE.RepeatWrapping;
+        roughnessTex.needsUpdate = true;
+
+        const metalnessTex = new THREE.CanvasTexture(mCanvas);
+        metalnessTex.wrapS = THREE.RepeatWrapping;
+        metalnessTex.wrapT = THREE.RepeatWrapping;
+        metalnessTex.needsUpdate = true;
+
+        return { roughnessMap: roughnessTex, metalnessMap: metalnessTex };
+      }
+    } catch {
+      // Fallback if canvas extraction fails
+    }
+  }
+
+  surfaceTexture.wrapS = THREE.RepeatWrapping;
+  surfaceTexture.wrapT = THREE.RepeatWrapping;
+  return { roughnessMap: surfaceTexture, metalnessMap: surfaceTexture };
+}
+
+/**
  * Wavefront OBJ Scene loader for CS2 weapon models.
  * Calculates pristine vertex normals, centers geometry, normalizes scale to targetSize 2.4,
  * upgrades material to THREE.MeshPhysicalMaterial, binds dual UV mapping (uv2),
- * immediately initializes fallback skin base color, asynchronously applies R2 AO and roughness
- * maps alongside diffuse skin composite textures, and cleanly disposes GPU resources on unmount.
+ * immediately initializes fallback skin base color, asynchronously applies R2 AO, surface (with channel swizzle),
+ * and mask maps alongside diffuse skin composite textures, and cleanly disposes GPU resources on unmount.
  */
 export function ObjWeaponScene({
   modelUrl,
@@ -371,6 +499,7 @@ export function ObjWeaponScene({
       clearcoatRoughness: 0.15,
       side: THREE.FrontSide,
     });
+    applySource2SurfaceSwizzle(weaponMaterial);
     weaponMaterial.needsUpdate = true;
 
     clone.traverse((child) => {
@@ -407,32 +536,79 @@ export function ObjWeaponScene({
     return { group: clone, material: weaponMaterial, skinResult };
   }, [rawObj, modelUrl, effectiveWeaponName, skinName, float, seed, rarityColor]);
 
-  // Skin texture application and R2 AO/Surface map binding
+  // Skin texture application and R2 AO/Surface/Masks map binding
   useEffect(() => {
     let isCancelled = false;
     const material = processedScene.material;
 
-    // Load AO & Surface maps from R2 (non-blocking, only for weapons with verified textures)
+    // Load AO, Surface & Masks maps from R2 (non-blocking, only for weapons with verified textures)
     const r2Maps = getR2WeaponTextures(effectiveWeaponName);
     if (r2Maps) {
       Promise.all([
         r2Maps.aoUrl ? loadR2Texture(r2Maps.aoUrl) : Promise.resolve(null),
         r2Maps.surfaceUrl ? loadR2Texture(r2Maps.surfaceUrl) : Promise.resolve(null),
+        r2Maps.masksUrl ? loadR2Texture(r2Maps.masksUrl) : Promise.resolve(null),
       ])
-        .then(([aoTexture, surfaceTexture]) => {
+        .then(([aoTexture, surfaceTexture, masksTexture]) => {
           if (isCancelled) return;
 
+          // 1. Source 2 Ambient Occlusion Map (Crevice depth & contact shadows)
           if (aoTexture) {
+            aoTexture.wrapS = THREE.RepeatWrapping;
+            aoTexture.wrapT = THREE.RepeatWrapping;
             material.aoMap = aoTexture;
-            material.aoMap.wrapS = THREE.RepeatWrapping;
-            material.aoMap.wrapT = THREE.RepeatWrapping;
             material.aoMapIntensity = 1.2;
           }
+
+          // 2. Source 2 Surface Map (Packed: Red = Roughness, Green = Metalness)
           if (surfaceTexture) {
+            surfaceTexture.wrapS = THREE.RepeatWrapping;
+            surfaceTexture.wrapT = THREE.RepeatWrapping;
             material.roughnessMap = surfaceTexture;
-            material.roughnessMap.wrapS = THREE.RepeatWrapping;
-            material.roughnessMap.wrapT = THREE.RepeatWrapping;
+            material.metalnessMap = surfaceTexture;
+            applySource2SurfaceSwizzle(material);
           }
+
+          // 3. Source 2 Masks Map (Channel isolation: R=paint zone, G=finish, B=furniture, A=wear)
+          if (masksTexture) {
+            masksTexture.wrapS = THREE.RepeatWrapping;
+            masksTexture.wrapT = THREE.RepeatWrapping;
+            (material as unknown as Record<string, unknown>).masksMap = masksTexture;
+            material.userData.masksTexture = masksTexture;
+
+            // Re-composite skin finish with authentic masksTexture for channel-isolated diffuse
+            try {
+              const updatedSkin = compositeSkinFinish({
+                weaponName: effectiveWeaponName,
+                skinName,
+                float,
+                seed,
+                rarityColor,
+                masksTexture,
+              });
+              if (updatedSkin?.texture) {
+                // If previous canvas texture exists and differs, dispose it cleanly
+                if (material.map && material.map !== updatedSkin.texture) {
+                  try {
+                    material.map.dispose();
+                  } catch {
+                    // Safe fallback
+                  }
+                }
+                updatedSkin.texture.wrapS = THREE.RepeatWrapping;
+                updatedSkin.texture.wrapT = THREE.RepeatWrapping;
+                updatedSkin.texture.needsUpdate = true;
+                material.map = updatedSkin.texture;
+                material.roughness = updatedSkin.effectiveRoughness;
+                material.metalness = updatedSkin.effectiveMetalness;
+                material.clearcoat = updatedSkin.effectiveClearcoat;
+                material.clearcoatRoughness = 0.15;
+              }
+            } catch (err) {
+              console.warn('[ModelViewer] Non-blocking mask compositing error:', err);
+            }
+          }
+
           material.needsUpdate = true;
         })
         .catch(() => { /* non-blocking */ });
@@ -441,13 +617,23 @@ export function ObjWeaponScene({
     return () => {
       isCancelled = true;
     };
-  }, [processedScene, effectiveWeaponName]);
+  }, [processedScene, effectiveWeaponName, skinName, float, seed, rarityColor]);
 
   // Clean up cloned geometries, materials, and textures on unmount or URL transition
   useEffect(() => {
     return () => {
       disposeThreeObject(processedScene.group);
       processedScene.material.dispose();
+      if (
+        processedScene.skinResult?.texture &&
+        processedScene.skinResult.texture !== processedScene.material.map
+      ) {
+        try {
+          processedScene.skinResult.texture.dispose();
+        } catch {
+          // Safe fallback
+        }
+      }
       try {
         useLoader.clear(OBJLoader, modelUrl);
       } catch {

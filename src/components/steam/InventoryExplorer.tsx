@@ -373,7 +373,6 @@ export default function InventoryExplorer({ initialItems = [] }: InventoryExplor
                   </div>
                 ) : (
                   <ModelViewer
-                    key={selectedItem.id}
                     modelUrl={activeModelPath}
                     weaponName={selectedItem.name}
                     skinName={selectedParsed?.skinName}

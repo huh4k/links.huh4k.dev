@@ -548,6 +548,26 @@ export function getR2PaintFinishUrl(finishType: string): string | null {
   return null;
 }
 
+/**
+ * Weapon models that do not currently have remote Source 2 PBR texture assets
+ * hosted on Cloudflare R2 (e.g. Zeus x27 / pist_taser).
+ * These models are rendered exclusively via procedural canvas textures.
+ */
+export const KNOWN_UNHOSTED_WEAPON_KEYS = new Set<string>([
+  'pist_taser',
+]);
+
+/**
+ * Returns true if a given weapon possesses verified, live Source 2 PBR texture assets on R2.
+ */
+export function hasVerifiedRemoteTextures(weaponNameOrKey?: string): boolean {
+  if (!weaponNameOrKey) return false;
+  const key = getWeaponKeyFromName(weaponNameOrKey);
+  if (!key) return false;
+  if (KNOWN_UNHOSTED_WEAPON_KEYS.has(key)) return false;
+  return key in BASE_WEAPON_MAPS;
+}
+
 // In-memory texture cache to prevent redundant network fetches
 const textureCache = new Map<string, THREE.Texture>();
 
@@ -852,9 +872,16 @@ export async function loadR2Texture(url: string): Promise<THREE.Texture | null> 
     return cached;
   }
 
-  // 2. Known failed URL
+  // 2. Known failed URL or known unhosted weapon assets (e.g. pist_taser)
   if (failedUrls.has(trimmedUrl) || failedUrls.has(actualFetchUrl)) {
     return null;
+  }
+  for (const unhosted of KNOWN_UNHOSTED_WEAPON_KEYS) {
+    if (trimmedUrl.includes(unhosted) || actualFetchUrl.includes(unhosted)) {
+      failedUrls.add(trimmedUrl);
+      failedUrls.add(actualFetchUrl);
+      return null;
+    }
   }
 
   // 3. SSR Safety Guard: TextureLoader requires full browser DOM (window, document, and createElementNS)

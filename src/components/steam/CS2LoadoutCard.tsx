@@ -314,7 +314,6 @@ export default function CS2LoadoutCard({
       {/* 3D Inspect Viewport Stage */}
       <div className="relative z-10 w-full h-48 sm:h-56 rounded-xl overflow-hidden border border-[#1E2333] bg-[#0A0C12] shadow-inner">
         <ModelViewer
-          key={activeWeapon.id || activeWeapon.name}
           modelUrl={modelAssetUrl}
           weaponName={activeWeapon.name}
           skinName={activeWeapon.skin}
