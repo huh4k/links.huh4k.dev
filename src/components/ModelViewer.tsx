@@ -502,6 +502,14 @@ export function ObjWeaponScene({
     applySource2SurfaceSwizzle(weaponMaterial);
     weaponMaterial.needsUpdate = true;
 
+    // Neutral dark metallic PBR material for non-painted subcomponents (magazine, grip, stock, sights)
+    const neutralMetalMaterial = new THREE.MeshStandardMaterial({
+      color: 0x222222,
+      roughness: 0.6,
+      metalness: 0.8,
+      side: THREE.FrontSide,
+    });
+
     clone.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
         const mesh = child as THREE.Mesh;
@@ -517,7 +525,15 @@ export function ObjWeaponScene({
             mesh.geometry.setAttribute('uv2', mesh.geometry.attributes.uv);
           }
         }
-        mesh.material = weaponMaterial;
+
+        // Submesh inspection and logging for CS:GO Legacy vs CS2 Native multi-part models
+        console.log(`[ModelViewer] Submesh: "${mesh.name || '(unnamed)'}" | original material:`, mesh.material);
+
+        const submeshName = (mesh.name || '').toLowerCase();
+        const isNonPainted = /magazine|mag\b|grip|stock|wood|iron_sight|sight|barrel_sight|bullets|trigger/.test(submeshName);
+
+        // Assign paintable weapon finish to body/receiver; neutral dark metal to non-painted hardware
+        mesh.material = isNonPainted ? neutralMetalMaterial : weaponMaterial;
         mesh.castShadow = true;
         mesh.receiveShadow = true;
       }

@@ -911,6 +911,7 @@ export async function loadR2Texture(url: string): Promise<THREE.Texture | null> 
         (texture) => {
           texture.wrapS = THREE.RepeatWrapping;
           texture.wrapT = THREE.RepeatWrapping;
+          texture.colorSpace = THREE.SRGBColorSpace;
           texture.needsUpdate = true;
           textureCache.set(trimmedUrl, texture);
           if (actualFetchUrl !== trimmedUrl) {
