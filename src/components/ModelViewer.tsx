@@ -6,7 +6,7 @@ import { OBJLoader } from 'three-stdlib';
 import * as THREE from 'three';
 import { getWeaponModelPath, isObjModelUrl, WEAPON_MODEL_MAP } from '../utils/weaponModels';
 import { getR2WeaponTextures, loadR2Texture } from '../utils/r2Textures';
-import { compositeSkinFinish, getSkinFallbackColor } from '../utils/skinCompositor';
+import { resolveSkinTextureUrl } from '../utils/weaponTextures';
 
 export interface ModelViewerProps {
   /** Public URL or path to the .glb or .obj model file */
@@ -475,37 +475,13 @@ export function ObjWeaponScene({
   const processedScene = useMemo(() => {
     const clone = rawObj.clone(true);
 
-    // Synchronous Skin Composite Finish:
-    // Only used when no direct textureUrl is supplied. When textureUrl is given,
-    // the real texture is loaded asynchronously in the useEffect below.
-    let skinResult: ReturnType<typeof compositeSkinFinish> | null = null;
-    if (!textureUrl) {
-      try {
-        skinResult = compositeSkinFinish({
-          weaponName: effectiveWeaponName,
-          skinName,
-          float,
-          seed,
-          rarityColor,
-        });
-        skinResult.texture.wrapS = THREE.RepeatWrapping;
-        skinResult.texture.wrapT = THREE.RepeatWrapping;
-        skinResult.texture.needsUpdate = true;
-      } catch (err) {
-        console.warn('[ModelViewer] Skin compositor error in useMemo:', err);
-      }
-    }
-
-    const fallbackColor = getSkinFallbackColor(skinName, effectiveWeaponName, rarityColor);
-
-    // Studio CS2 Weapon PBR Material — unified across ALL submeshes (no regex filtering).
-    // These are monolithic .obj meshes (single group "renderMesh1").
+    // Default neutral weapon material: clean dark metal (#333333)
+    // Completely decouples skinCompositor.ts; no 2D canvas drawing primitives.
     const weaponMaterial = new THREE.MeshPhysicalMaterial({
-      map: skinResult ? skinResult.texture : null,
-      color: new THREE.Color(skinResult ? '#ffffff' : fallbackColor),
-      metalness: skinResult ? skinResult.effectiveMetalness : 0.15,
-      roughness: skinResult ? skinResult.effectiveRoughness : 0.35,
-      clearcoat: skinResult ? skinResult.effectiveClearcoat : 0.0,
+      color: new THREE.Color(0x333333),
+      metalness: 0.25,
+      roughness: 0.45,
+      clearcoat: 0.05,
       clearcoatRoughness: 0.15,
       side: THREE.FrontSide,
     });
@@ -558,50 +534,55 @@ export function ObjWeaponScene({
       clone.scale.setScalar(targetSize / maxDim);
     }
 
-    return { group: clone, material: weaponMaterial, skinResult };
-  }, [rawObj, modelUrl, textureUrl, effectiveWeaponName, skinName, float, seed, rarityColor]);
+    return { group: clone, material: weaponMaterial };
+  }, [rawObj, modelUrl]);
 
-  // Async: if a direct textureUrl is provided, load it as the diffuse map.
-  // Otherwise load weapon-specific R2 AO / surface / masks maps for PBR depth.
+  // Primary Texture Application Pipeline:
+  // Loads direct textureUrl (with flipY=false and SRGBColorSpace)
+  // along with optional R2 AO and Surface maps for PBR depth.
   useEffect(() => {
     let isCancelled = false;
     const material = processedScene.material;
 
-    // ── Direct texture URL path ──────────────────────────────────────────────
+    // ── Primary: Direct skin texture application ─────────────────────────────
     if (textureUrl) {
       const loader = new THREE.TextureLoader();
       loader.load(
         textureUrl,
         (tex) => {
           if (isCancelled) return;
-          // Source 2 / OpenGL convention — do NOT flip Y for Valve textures
+          // Enforce Source 2 UV orientation and sRGB color space
           tex.flipY = false;
           tex.colorSpace = THREE.SRGBColorSpace;
           tex.wrapS = THREE.RepeatWrapping;
           tex.wrapT = THREE.RepeatWrapping;
           tex.needsUpdate = true;
+
           if (material.map && material.map !== tex) {
             try { material.map.dispose(); } catch { /* safe */ }
           }
           material.map = tex;
-          material.color.set('#ffffff');
+          material.color.set(0xffffff);
           material.needsUpdate = true;
         },
         undefined,
-        (err) => console.warn('[ModelViewer] textureUrl load error:', err)
+        (err) => console.warn('[ModelViewer] Texture load error for:', textureUrl, err)
       );
-      return () => { isCancelled = true; };
+    } else {
+      // Clean neutral weapon material (#333333) when no texture is loaded
+      material.map = null;
+      material.color.set(0x333333);
+      material.needsUpdate = true;
     }
 
-    // ── R2 AO / Surface / Masks path ─────────────────────────────────────────
+    // ── Secondary: R2 PBR Surface & AO Depth (if available for weapon) ───────
     const r2Maps = getR2WeaponTextures(effectiveWeaponName);
     if (r2Maps) {
       Promise.all([
         r2Maps.aoUrl ? loadR2Texture(r2Maps.aoUrl) : Promise.resolve(null),
         r2Maps.surfaceUrl ? loadR2Texture(r2Maps.surfaceUrl) : Promise.resolve(null),
-        r2Maps.masksUrl ? loadR2Texture(r2Maps.masksUrl) : Promise.resolve(null),
       ])
-        .then(([aoTexture, surfaceTexture, masksTexture]) => {
+        .then(([aoTexture, surfaceTexture]) => {
           if (isCancelled) return;
 
           // 1. AO Map — flipY=false for Source 2 / Valve textures
@@ -623,42 +604,6 @@ export function ObjWeaponScene({
             applySource2SurfaceSwizzle(material);
           }
 
-          // 3. Masks Map (channel isolation: R=paint zone, G=finish, B=furniture, A=wear)
-          if (masksTexture) {
-            masksTexture.flipY = false;
-            masksTexture.wrapS = THREE.RepeatWrapping;
-            masksTexture.wrapT = THREE.RepeatWrapping;
-            (material as unknown as Record<string, unknown>).masksMap = masksTexture;
-            material.userData.masksTexture = masksTexture;
-
-            // Re-composite skin finish with authentic masksTexture for channel-isolated diffuse
-            try {
-              const updatedSkin = compositeSkinFinish({
-                weaponName: effectiveWeaponName,
-                skinName,
-                float,
-                seed,
-                rarityColor,
-                masksTexture,
-              });
-              if (updatedSkin?.texture) {
-                if (material.map && material.map !== updatedSkin.texture) {
-                  try { material.map.dispose(); } catch { /* safe */ }
-                }
-                updatedSkin.texture.wrapS = THREE.RepeatWrapping;
-                updatedSkin.texture.wrapT = THREE.RepeatWrapping;
-                updatedSkin.texture.needsUpdate = true;
-                material.map = updatedSkin.texture;
-                material.roughness = updatedSkin.effectiveRoughness;
-                material.metalness = updatedSkin.effectiveMetalness;
-                material.clearcoat = updatedSkin.effectiveClearcoat;
-                material.clearcoatRoughness = 0.15;
-              }
-            } catch (err) {
-              console.warn('[ModelViewer] Non-blocking mask compositing error:', err);
-            }
-          }
-
           material.needsUpdate = true;
         })
         .catch(() => { /* non-blocking */ });
@@ -667,23 +612,13 @@ export function ObjWeaponScene({
     return () => {
       isCancelled = true;
     };
-  }, [processedScene, textureUrl, effectiveWeaponName, skinName, float, seed, rarityColor]);
+  }, [processedScene, textureUrl, effectiveWeaponName]);
 
   // Clean up cloned geometries, materials, and textures on unmount or URL transition
   useEffect(() => {
     return () => {
       disposeThreeObject(processedScene.group);
       processedScene.material.dispose();
-      if (
-        processedScene.skinResult?.texture &&
-        processedScene.skinResult.texture !== processedScene.material.map
-      ) {
-        try {
-          processedScene.skinResult.texture.dispose();
-        } catch {
-          // Safe fallback
-        }
-      }
       try {
         useLoader.clear(OBJLoader, modelUrl);
       } catch {
@@ -910,6 +845,11 @@ export default function ModelViewer({
     return undefined;
   }, [modelUrl, weaponName]);
 
+  const effectiveTextureUrl = useMemo(() => {
+    if (textureUrl) return textureUrl;
+    return resolveSkinTextureUrl(weaponName, skinName);
+  }, [textureUrl, weaponName, skinName]);
+
   const isObj = effectiveUrl ? isObjModelUrl(effectiveUrl) : false;
 
   if (!isMounted) {
@@ -948,7 +888,7 @@ export default function ModelViewer({
               isObj ? (
                 <ObjWeaponScene
                   modelUrl={effectiveUrl}
-                  textureUrl={textureUrl}
+                  textureUrl={effectiveTextureUrl}
                   weaponName={weaponName}
                   skinName={skinName}
                   float={float}
@@ -989,7 +929,7 @@ export default function ModelViewer({
   );
 }
 
-export { ModelViewer, getWeaponModelPath, isObjModelUrl, WEAPON_MODEL_MAP };
+export { ModelViewer, getWeaponModelPath, isObjModelUrl, WEAPON_MODEL_MAP, resolveSkinTextureUrl };
 
 /**
  * Interactive test harness component for testing mounting, unmounting,
