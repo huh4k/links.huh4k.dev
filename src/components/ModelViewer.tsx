@@ -1,6 +1,6 @@
 import React, { Suspense, useState, useEffect, useRef, useMemo } from 'react';
 import { Canvas, useLoader } from '@react-three/fiber';
-import { OrbitControls, Center, useGLTF, useProgress, Html } from '@react-three/drei';
+import { OrbitControls, Center, useGLTF, useProgress, Html, Environment, Lightformer } from '@react-three/drei';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { OBJLoader } from 'three-stdlib';
 import * as THREE from 'three';
@@ -167,6 +167,14 @@ function disposeMaterial(
 export function StudioLighting() {
   return (
     <>
+      {/* 0. Procedural studio environment (no network): gives painted/metal surfaces something to reflect */}
+      <Environment resolution={256} frames={1}>
+        <Lightformer form="rect" intensity={3} position={[0, 4, 2]} scale={[10, 4, 1]} />
+        <Lightformer form="rect" intensity={1.5} position={[-5, 1, 3]} scale={[4, 4, 1]} />
+        <Lightformer form="rect" intensity={1.5} position={[5, 1, -2]} scale={[4, 4, 1]} />
+        <Lightformer form="rect" intensity={1} position={[0, -3, 0]} rotation={[Math.PI / 2, 0, 0]} scale={[10, 10, 1]} />
+      </Environment>
+
       {/* 1. Base Ambient: Prevents pitch-black shadows without flattening depth */}
       <ambientLight intensity={0.35} color="#f8fafc" />
 
@@ -460,11 +468,6 @@ export function ObjWeaponScene({
   const rawObj = useLoader(
     OBJLoader,
     modelUrl,
-    (loader) => {
-      loader.manager.onError = (url) => {
-        console.error('[ModelViewer OBJLoader Error]', 'Failed to fetch/parse 3D model:', url, 'modelUrl prop was:', modelUrl);
-      };
-    }
   );
   const loadedNotified = useRef(false);
 
@@ -591,20 +594,21 @@ export function ObjWeaponScene({
       const skinWrap = resolveSkinTextureUrl(effectiveWeaponName, skinName);
       if (skinWrap && isColorWrapUrl(skinWrap)) candidates.push(resolveActualR2TextureUrl(skinWrap));
     }
-    if (isLegacyModel) {
-      const uvSheet = resolveUVSheetTextureUrl(effectiveWeaponName);
-      if (uvSheet && isColorWrapUrl(uvSheet) && !candidates.includes(uvSheet)) candidates.push(uvSheet);
-    }
+    // NOTE: /textures/<weapon>.png are UV wireframe layout guides, never skins — they are not used as fallbacks.
 
     (async () => {
       for (const url of candidates) {
         const tex = await loadR2Texture(url);
         if (isCancelled) return;
         if (!tex) continue;
-        const isR2Asset = url.includes('assets.huh4k.dev') || url.includes('/cs2-textures/');
-        configure(tex, true, isR2Asset ? false : flipY);
+        // OBJ vt origin is bottom-left, so wraps (R2 included) need flipY=true to land correctly
+        configure(tex, true, flipY);
         material.map = tex;
         material.color.set(0xffffff);
+        // Painted finish: mostly dielectric so the wrap colours stay true instead of going dark
+        material.metalness = 0.15;
+        material.roughness = 0.5;
+        material.clearcoat = 0.25;
         material.needsUpdate = true;
         syncMeshes();
         return;
@@ -627,12 +631,12 @@ export function ObjWeaponScene({
           .then(([aoTexture, surfaceTexture, masksTexture]) => {
             if (isCancelled) return;
             if (aoTexture) {
-              configure(aoTexture, false, false);
+              configure(aoTexture, false, flipY);
               material.aoMap = aoTexture;
               material.aoMapIntensity = 1.0;
             }
             if (surfaceTexture) {
-              configure(surfaceTexture, false, false);
+              configure(surfaceTexture, false, flipY);
               material.roughnessMap = surfaceTexture;
               material.metalnessMap = surfaceTexture;
               // Map values are the full range; the scalar factors would otherwise darken them
@@ -640,7 +644,7 @@ export function ObjWeaponScene({
               material.metalness = 1;
             }
             if (masksTexture) {
-              configure(masksTexture, false, false);
+              configure(masksTexture, false, flipY);
               material.userData.masksMap = masksTexture;
             }
             material.needsUpdate = true;
@@ -931,7 +935,7 @@ export default function ModelViewer({
         frameloop={inView ? 'always' : 'never'}
         dpr={[1, 1.75]}
         camera={{ position: cameraPosition, fov, near: 0.1, far: 100 }}
-        gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
+        gl={{ antialias: true, alpha: true, powerPreference: 'high-performance', toneMapping: THREE.NoToneMapping }}
         className="w-full h-full cursor-grab active:cursor-grabbing"
       >
         <StudioLighting />

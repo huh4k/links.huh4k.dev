@@ -924,6 +924,14 @@ export function resolveActualR2TextureUrl(url: string): string {
 }
 
 /**
+ * R2 serves no CORS headers, which blocks WebGL texture uploads in the browser.
+ * Route R2 textures through the same-origin /api/tex proxy instead.
+ */
+function toSameOriginUrl(url: string): string {
+  return url.startsWith(R2_BASE_URL) ? '/api/tex/' + url.slice(R2_BASE_URL.length) : url;
+}
+
+/**
  * Asynchronously loads a texture from Cloudflare R2 using Three.js TextureLoader.
  *
  * Key guarantees:
@@ -994,7 +1002,7 @@ export async function loadR2Texture(url: string): Promise<THREE.Texture | null> 
       loader.setCrossOrigin('anonymous');
 
       loader.load(
-        actualFetchUrl,
+        toSameOriginUrl(actualFetchUrl),
         (texture) => {
           texture.wrapS = THREE.RepeatWrapping;
           texture.wrapT = THREE.RepeatWrapping;

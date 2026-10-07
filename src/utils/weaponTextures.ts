@@ -193,11 +193,6 @@ export function resolveSkinTextureUrl(weaponName?: string, skinName?: string): s
     }
   }
 
-  // Fallback to the authentic weapon UV sheet texture
-  const uvSheet = resolveUVSheetTextureUrl(effectiveWeapon || weaponName);
-  if (uvSheet && isColorWrapUrl(uvSheet)) {
-    return uvSheet;
-  }
-
+  // No skin wrap known: caller renders neutral gunmetal (UV sheets are wireframe guides, not skins)
   return undefined;
 }
