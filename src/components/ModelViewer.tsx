@@ -4,7 +4,7 @@ import { OrbitControls, Center, useGLTF, useProgress, Html, Environment, Lightfo
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { OBJLoader } from 'three-stdlib';
 import * as THREE from 'three';
-import { getWeaponModelPath, getObjsWeaponModelPath, getLegacyWeaponModelPath, isObjModelUrl, WEAPON_MODEL_MAP, OBJS_MODEL_MAP, CSGO_LEGACY_MODEL_MAP } from '../utils/weaponModels';
+import { getWeaponModelPath, getObjsWeaponModelPath, getSkinCompatibleModelPath, getLegacyWeaponModelPath, isObjModelUrl, WEAPON_MODEL_MAP, OBJS_MODEL_MAP, CSGO_LEGACY_MODEL_MAP } from '../utils/weaponModels';
 import { getR2WeaponTextures, loadR2Texture, resolveActualR2TextureUrl } from '../utils/r2Textures';
 import { resolveSkinTextureUrl, resolveUVSheetTextureUrl, isDataMapUrl, isColorWrapUrl } from '../utils/weaponTextures';
 
@@ -906,14 +906,10 @@ export default function ModelViewer({
   const effectiveUrl = useMemo(() => {
     if (modelUrl) return modelUrl;
     if (weaponName) {
-      if (useLegacyModel) {
-        const objsPath = getObjsWeaponModelPath(weaponName);
-        if (objsPath) return objsPath;
-      }
-      return getWeaponModelPath(weaponName) || getObjsWeaponModelPath(weaponName);
+      return getSkinCompatibleModelPath(weaponName) || undefined;
     }
     return undefined;
-  }, [modelUrl, weaponName, useLegacyModel]);
+  }, [modelUrl, weaponName]);
 
   const isObj = effectiveUrl ? isObjModelUrl(effectiveUrl) : false;
 

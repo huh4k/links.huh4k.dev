@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef } from 'react';
 import ModelViewer from '../ModelViewer';
-import { getWeaponModelPath, getObjsWeaponModelPath } from '../../utils/weaponModels';
+import { getSkinCompatibleModelPath } from '../../utils/weaponModels';
 import { resolveSkinTextureUrl } from '../../utils/weaponTextures';
 import type { EnrichedInventoryItem } from '../../types/inventory';
 
@@ -254,7 +254,7 @@ export default function InventoryExplorer({ initialItems = [] }: InventoryExplor
 
   const activeModelPath = useMemo(() => {
     if (!selectedItem) return '/models/placeholder-weapon.glb';
-    return getWeaponModelPath(selectedItem.name) || getObjsWeaponModelPath(selectedItem.name);
+    return getSkinCompatibleModelPath(selectedItem.name);
   }, [selectedItem]);
 
   const selectedParsed = useMemo(() => {
