@@ -195,3 +195,104 @@ export function isObjModelUrl(url?: string): boolean {
   if (!url) return false;
   return /\.obj(\?.*)?$/i.test(url);
 }
+
+/**
+ * Authoritative mapping to official Valve Workshop CS:GO / CS2 Legacy UV OBJ models
+ * with exact matching vt UV coordinates for authentic workshop finishes and UV sheets.
+ */
+export const CSGO_LEGACY_MODEL_MAP: Record<string, string> = {
+  'ak-47': '/models/csgo_legacy/ak-47.obj',
+  'ak47': '/models/csgo_legacy/ak-47.obj',
+  'ak': '/models/csgo_legacy/ak-47.obj',
+  'm4a1-s': '/models/csgo_legacy/m4a1_s.obj',
+  'm4a1_silencer': '/models/csgo_legacy/m4a1_s.obj',
+  'm4a1': '/models/csgo_legacy/m4a1_s.obj',
+  'm4a4': '/models/csgo_legacy/m4a4.obj',
+  'galil ar': '/models/csgo_legacy/galil_ar.obj',
+  'galilar': '/models/csgo_legacy/galil_ar.obj',
+  'galil': '/models/csgo_legacy/galil_ar.obj',
+  'famas': '/models/csgo_legacy/famas.obj',
+  'aug': '/models/csgo_legacy/aug.obj',
+  'sg 553': '/models/csgo_legacy/sg_553.obj',
+  'sg553': '/models/csgo_legacy/sg_553.obj',
+  'sg 556': '/models/csgo_legacy/sg_553.obj',
+  'sg556': '/models/csgo_legacy/sg_553.obj',
+  'awp': '/models/csgo_legacy/awp.obj',
+  'ssg 08': '/models/csgo_legacy/ssg_08.obj',
+  'ssg08': '/models/csgo_legacy/ssg_08.obj',
+  'scout': '/models/csgo_legacy/ssg_08.obj',
+  'g3sg1': '/models/csgo_legacy/g3sg1.obj',
+  'scar-20': '/models/csgo_legacy/scar-20.obj',
+  'scar20': '/models/csgo_legacy/scar-20.obj',
+  'usp-s': '/models/csgo_legacy/usp-s.obj',
+  'usp_silencer': '/models/csgo_legacy/usp-s.obj',
+  'usp': '/models/csgo_legacy/usp-s.obj',
+  'glock-18': '/models/csgo_legacy/glock-18.obj',
+  'glock 18': '/models/csgo_legacy/glock-18.obj',
+  'glock18': '/models/csgo_legacy/glock-18.obj',
+  'glock': '/models/csgo_legacy/glock-18.obj',
+  'desert eagle': '/models/csgo_legacy/desert_eagle.obj',
+  'deagle': '/models/csgo_legacy/desert_eagle.obj',
+  'p250': '/models/csgo_legacy/p250.obj',
+  'p2000': '/models/csgo_legacy/p2000.obj',
+  'hkp2000': '/models/csgo_legacy/p2000.obj',
+  'five-seven': '/models/csgo_legacy/five-seven.obj',
+  'fiveseven': '/models/csgo_legacy/five-seven.obj',
+  'cz75-auto': '/models/csgo_legacy/cz_75.obj',
+  'cz75a': '/models/csgo_legacy/cz_75.obj',
+  'cz75': '/models/csgo_legacy/cz_75.obj',
+  'tec-9': '/models/csgo_legacy/tec-9.obj',
+  'tec9': '/models/csgo_legacy/tec-9.obj',
+  'dual berettas': '/models/csgo_legacy/dual_berettas.obj',
+  'dualies': '/models/csgo_legacy/dual_berettas.obj',
+  'r8 revolver': '/models/csgo_legacy/revolver.obj',
+  'revolver': '/models/csgo_legacy/revolver.obj',
+  'mac-10': '/models/csgo_legacy/mac-10.obj',
+  'mac10': '/models/csgo_legacy/mac-10.obj',
+  'mp9': '/models/csgo_legacy/mp9.obj',
+  'mp7': '/models/csgo_legacy/mp7.obj',
+  'mp5-sd': '/models/csgo_legacy/mp5sd.obj',
+  'mp5sd': '/models/csgo_legacy/mp5sd.obj',
+  'ump-45': '/models/csgo_legacy/ump-45.obj',
+  'ump45': '/models/csgo_legacy/ump-45.obj',
+  'p90': '/models/csgo_legacy/p90.obj',
+  'pp-bizon': '/models/csgo_legacy/bizon.obj',
+  'bizon': '/models/csgo_legacy/bizon.obj',
+  'nova': '/models/csgo_legacy/nova.obj',
+  'xm1014': '/models/csgo_legacy/xm1014.obj',
+  'mag-7': '/models/csgo_legacy/mag-7.obj',
+  'mag7': '/models/csgo_legacy/mag-7.obj',
+  'sawed-off': '/models/csgo_legacy/sawed-off.obj',
+  'sawedoff': '/models/csgo_legacy/sawed-off.obj',
+  'm249': '/models/csgo_legacy/m249.obj',
+  'negev': '/models/csgo_legacy/negev.obj',
+};
+
+/**
+ * Resolves a CS2 weapon name to its legacy UV layout OBJ model asset path.
+ */
+export function getLegacyWeaponModelPath(weaponName?: string): string | undefined {
+  if (!weaponName || typeof weaponName !== 'string') return undefined;
+
+  let clean = weaponName.trim();
+  clean = clean.replace(/^[★\s]+/, '');
+  clean = clean.replace(/^StatTrak™\s+/i, '');
+  clean = clean.replace(/^Souvenir\s+/i, '');
+  if (clean.includes('|')) {
+    clean = clean.split('|')[0].trim();
+  }
+  clean = clean.replace(/\s*\([^)]*\)\s*$/, '').trim().toLowerCase();
+
+  if (CSGO_LEGACY_MODEL_MAP[clean]) {
+    return CSGO_LEGACY_MODEL_MAP[clean];
+  }
+
+  const normalized = clean.replace(/[\s\-_]/g, '');
+  for (const [key, path] of Object.entries(CSGO_LEGACY_MODEL_MAP)) {
+    if (key.replace(/[\s\-_]/g, '') === normalized) {
+      return path;
+    }
+  }
+
+  return undefined;
+}

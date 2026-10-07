@@ -68,70 +68,101 @@ export function normalizeSkinKey(skinName?: string): string {
  */
 export const R2_KNOWN_COLOR_WRAPS: Record<string, string> = {
   // AK-47
-  ak47_asiimov: `${R2_BASE_URL}paints/custom/workshop/ak47_asiimov_tga_a212f12a.png`,
-  ak47_bloodsport: `${R2_BASE_URL}paints/gunsmith/workshop/ak47_bloodsport_tga_814c7428.png`,
-  ak47_neon_rider: `${R2_BASE_URL}paints/custom/workshop/ak_neon_rider_tga_c77a29db.png`,
-  ak47_anubis: `${R2_BASE_URL}paints/custom/workshop/ak47_anubis_tga_fdec5ded.png`,
-  ak47_nightwish: `${R2_BASE_URL}paints/custom/workshop/ak47_nightwish_tga_44363f88.png`,
-  ak47_point_disarray: `${R2_BASE_URL}paints/custom/workshop/ak47_point_disarray_tga_94f6d095.png`,
-  ak47_empress: `${R2_BASE_URL}paints/gunsmith/workshop/ak47_empress_tga_fd58d708.png`,
-  ak47_cartel: `${R2_BASE_URL}paints/antiqued/workshop/ak47_cartel_tga_b09e52d0.png`,
-  ak47_head_shot: `${R2_BASE_URL}paints/custom/workshop/ak_head_shot_holo_tga_e7ce68e7.png`,
+  ak47_asiimov: `${R2_BASE_URL}paints/paints/custom/workshop/ak47_asiimov_tga_a212f12a.png`,
+  ak47_bloodsport: `${R2_BASE_URL}paints/paints/gunsmith/workshop/ak47_bloodsport_tga_814c7428.png`,
+  ak47_neon_rider: `${R2_BASE_URL}paints/paints/custom/workshop/ak_neon_rider_tga_c77a29db.png`,
+  ak47_anubis: `${R2_BASE_URL}paints/paints/custom/workshop/ak47_anubis_tga_fdec5ded.png`,
+  ak47_nightwish: `${R2_BASE_URL}paints/paints/custom/workshop/ak47_nightwish_tga_44363f88.png`,
+  ak47_point_disarray: `${R2_BASE_URL}paints/paints/custom/workshop/ak47_point_disarray_tga_94f6d095.png`,
+  ak47_empress: `${R2_BASE_URL}paints/paints/gunsmith/workshop/ak47_empress_tga_fd58d708.png`,
+  ak47_cartel: `${R2_BASE_URL}paints/paints/antiqued/workshop/ak47_cartel_tga_b09e52d0.png`,
+  ak47_head_shot: `${R2_BASE_URL}paints/paints/custom/workshop/ak_head_shot_holo_tga_e7ce68e7.png`,
 
   // M4A1-S & M4A4
-  m4a1s_decimator: `${R2_BASE_URL}paints/gunsmith/workshop/m4a1_decimator_psd_e5a970e4.png`,
-  m4a1s_cyrex: `${R2_BASE_URL}paints/custom/workshop/m4a1_cyrex_psd_c07bf908.png`,
-  m4a1s_flashback: `${R2_BASE_URL}paints/custom/workshop/m4a1_flashback_tga_d24cc0a4.png`,
-  m4a1s_shatter: `${R2_BASE_URL}paints/gunsmith/workshop/m4a1_shatter_tga_9866df38.png`,
-  m4a4_temukau: `${R2_BASE_URL}paints/custom/workshop/m4a4_temukau_tga_ba3a649d.png`,
-  m4a4_emperor: `${R2_BASE_URL}paints/gunsmith/workshop/m4a4_emperor_psd_726547a.png`,
-  m4a4_desolate_space: `${R2_BASE_URL}paints/custom/workshop/m4a4_desolatespace2_tga_eb1445d6.png`,
-  m4a4_hellfire: `${R2_BASE_URL}paints/custom/workshop/m4a4_hellfire_psd_c9c7672.png`,
-  m4a4_neo_noir: `${R2_BASE_URL}paints/custom/workshop/m4a4_neo_noir_psd_6fe1b8ce.png`,
+  m4a1s_decimator: `${R2_BASE_URL}paints/paints/gunsmith/workshop/m4a1_decimator_psd_e5a970e4.png`,
+  m4a1s_cyrex: `${R2_BASE_URL}paints/paints/custom/workshop/m4a1_cyrex_psd_c07bf908.png`,
+  m4a1s_flashback: `${R2_BASE_URL}paints/paints/custom/workshop/m4a1_flashback_tga_d24cc0a4.png`,
+  m4a1s_shatter: `${R2_BASE_URL}paints/paints/gunsmith/workshop/m4a1_shatter_tga_9866df38.png`,
+  m4a4_temukau: `${R2_BASE_URL}paints/paints/custom/workshop/m4a4_temukau_tga_ba3a649d.png`,
+  m4a4_emperor: `${R2_BASE_URL}paints/paints/gunsmith/workshop/m4a4_emperor_psd_726547a.png`,
+  m4a4_desolate_space: `${R2_BASE_URL}paints/paints/custom/workshop/m4a4_desolatespace2_tga_eb1445d6.png`,
+  m4a4_hellfire: `${R2_BASE_URL}paints/paints/custom/workshop/m4a4_hellfire_psd_c9c7672.png`,
+  m4a4_neo_noir: `${R2_BASE_URL}paints/paints/custom/workshop/m4a4_neo_noir_psd_6fe1b8ce.png`,
 
   // AWP
-  awp_hyper_beast: `${R2_BASE_URL}paints/custom/workshop/awp_hyper_beast_tga_ab5fb9eb.png`,
-  awp_neo_noir: `${R2_BASE_URL}paints/custom/workshop/awp_neonoir_tga_a60fa4.png`,
-  awp_wildfire: `${R2_BASE_URL}paints/custom/workshop/awp_wildfire_tga_caffb6f7.png`,
-  awp_chroma_pink: `${R2_BASE_URL}paints/custom/workshop/awp_chroma_pink_tga_aa96878e.png`,
-  awp_phobos: `${R2_BASE_URL}paints/gunsmith/workshop/awp-phobos_tga_c3a45d5b.png`,
-  awp_exoskeleton: `${R2_BASE_URL}paints/gunsmith/workshop/awp_exoskeleton_tga_4a2d9989.png`,
+  awp_hyper_beast: `${R2_BASE_URL}paints/paints/custom/workshop/awp_hyper_beast_tga_ab5fb9eb.png`,
+  awp_neo_noir: `${R2_BASE_URL}paints/paints/custom/workshop/awp_neonoir_tga_a60fa4.png`,
+  awp_wildfire: `${R2_BASE_URL}paints/paints/custom/workshop/awp_wildfire_tga_caffb6f7.png`,
+  awp_chroma_pink: `${R2_BASE_URL}paints/paints/custom/workshop/awp_chroma_pink_tga_aa96878e.png`,
+  awp_phobos: `${R2_BASE_URL}paints/paints/gunsmith/workshop/awp-phobos_tga_c3a45d5b.png`,
+  awp_exoskeleton: `${R2_BASE_URL}paints/paints/gunsmith/workshop/awp_exoskeleton_tga_4a2d9989.png`,
 
   // USP-S
-  usps_printstream: `${R2_BASE_URL}paints/custom/workshop/usp_printstream_tga_2d067cd8.png`,
-  usps_kill_confirmed: `${R2_BASE_URL}paints/custom/workshop/usp_kill_confirmed_tga_d5d60230.png`,
-  usps_cyrex: `${R2_BASE_URL}paints/custom/workshop/usp_cyrex_tga_78bbeb9a.png`,
-  usps_black_lotus: `${R2_BASE_URL}paints/custom/workshop/usp_black_lotus_tga_5e85ea82.png`,
-  usps_flashback: `${R2_BASE_URL}paints/custom/workshop/usp_flashback_tga_87982ed0.png`,
-  usps_to_hell: `${R2_BASE_URL}paints/custom/workshop/usp_to_hell_tga_439978c3.png`,
-  usps_voltage: `${R2_BASE_URL}paints/gunsmith/workshop/usp_voltage_tga_dc37fa8.png`,
+  usps_printstream: `${R2_BASE_URL}paints/paints/custom/workshop/usp_printstream_tga_2d067cd8.png`,
+  usps_kill_confirmed: `${R2_BASE_URL}paints/paints/custom/workshop/usp_kill_confirmed_tga_d5d60230.png`,
+  usps_cyrex: `${R2_BASE_URL}paints/paints/custom/workshop/usp_cyrex_tga_78bbeb9a.png`,
+  usps_black_lotus: `${R2_BASE_URL}paints/paints/custom/workshop/usp_black_lotus_tga_5e85ea82.png`,
+  usps_flashback: `${R2_BASE_URL}paints/paints/custom/workshop/usp_flashback_tga_87982ed0.png`,
+  usps_to_hell: `${R2_BASE_URL}paints/paints/custom/workshop/usp_to_hell_tga_439978c3.png`,
+  usps_voltage: `${R2_BASE_URL}paints/paints/gunsmith/workshop/usp_voltage_tga_dc37fa8.png`,
 
   // Active User Inventory Skins
   ak47_ice_coaled: `${R2_BASE_URL}paints/custom/workshop/ak47_ice_coaled.png`,
-  m4a1s_liquidation: `${R2_BASE_URL}paints/custom/workshop/mp5sd_quick_liquidation_tga_e39e1dfe.png`,
+  m4a1s_liquidation: `${R2_BASE_URL}paints/paints/custom/workshop/mp5sd_quick_liquidation_tga_e39e1dfe.png`,
   usps_royal_guard: `${R2_BASE_URL}paints/custom/workshop/usp_royal_guard.png`,
-  ump45_late_night_transit: `${R2_BASE_URL}paints/anodized_air/workshop/ump45_moonrise_tga_e844ccb.png`,
-  galilar_control: `${R2_BASE_URL}paints/custom/workshop/galil_ar_camo_tga_3b33133c.png`,
-  glock18_catacombs: `${R2_BASE_URL}paints/anodized_air/workshop/glock_18_urban_moon_fever_tga_f06e020b.png`,
+  ump45_late_night_transit: `${R2_BASE_URL}paints/paints/anodized_air/workshop/ump45_moonrise_tga_e844ccb.png`,
+  galilar_control: `${R2_BASE_URL}paints/paints/custom/workshop/galil_ar_camo_tga_3b33133c.png`,
+  glock18_catacombs: `${R2_BASE_URL}paints/paints/anodized_air/workshop/glock_18_urban_moon_fever_tga_f06e020b.png`,
 
   // Glock-18
-  glock18_urban_moon_fever: `${R2_BASE_URL}paints/anodized_air/workshop/glock_18_urban_moon_fever_tga_f06e020b.png`,
+  glock18_urban_moon_fever: `${R2_BASE_URL}paints/paints/anodized_air/workshop/glock_18_urban_moon_fever_tga_f06e020b.png`,
 
   // MAC-10
-  mac10_the_last_dive: `${R2_BASE_URL}paints/anodized_air/workshop/mac10_the_last_dive_tga_a6aa16fc.png`,
-  mac10_neon_rider: `${R2_BASE_URL}paints/custom/workshop/mac10_neonrider_psd_ec089576.png`,
+  mac10_the_last_dive: `${R2_BASE_URL}paints/paints/anodized_air/workshop/mac10_the_last_dive_tga_a6aa16fc.png`,
+  mac10_neon_rider: `${R2_BASE_URL}paints/paints/custom/workshop/mac10_neonrider_psd_ec089576.png`,
 
   // UMP-45
-  ump45_moonrise: `${R2_BASE_URL}paints/anodized_air/workshop/ump45_moonrise_tga_e844ccb.png`,
+  ump45_moonrise: `${R2_BASE_URL}paints/paints/anodized_air/workshop/ump45_moonrise_tga_e844ccb.png`,
 
   // MP9
-  mp9_fuji: `${R2_BASE_URL}paints/anodized_air/workshop/mp9_fuji_tga_44da368d.png`,
+  mp9_fuji: `${R2_BASE_URL}paints/paints/anodized_air/workshop/mp9_fuji_tga_44da368d.png`,
 };
 
 /**
+ * Resolves the official UV sheet texture URL for a given CS2 weapon model.
+ * These are the authentic 2048x2048 UV mapping sheets matching the OBJ geometry.
+ */
+export function resolveUVSheetTextureUrl(weaponName?: string): string | undefined {
+  if (!weaponName || typeof weaponName !== 'string') return undefined;
+
+  let clean = weaponName.trim();
+  clean = clean.replace(/^[★\s]+/, '');
+  clean = clean.replace(/^StatTrak™\s+/i, '');
+  clean = clean.replace(/^Souvenir\s+/i, '');
+  if (clean.includes('|')) {
+    clean = clean.split('|')[0].trim();
+  }
+  clean = clean.replace(/\s*\([^)]*\)\s*$/, '').trim().toLowerCase();
+
+  const dash = clean.replace(/[\s_]+/g, '-');
+  const underscore = clean.replace(/[\s\-]+/g, '_');
+  const compact = clean.replace(/[\s\-_]+/g, '');
+
+  const candidates = [
+    `/textures/${dash}.png`,
+    `/textures/${underscore}.png`,
+    `/textures/${compact}.png`,
+    `/textures/${clean}.png`,
+  ];
+
+  // Return the canonical dash or underscore candidate
+  return candidates[0];
+}
+
+/**
  * Automatically resolves the texture URL for a given weapon and skin.
- * Checks authoritative R2 skin catalog first, then falls back to public /textures/ path.
- * In both cases, filters out any data maps.
+ * Checks authoritative R2 skin catalog first, then falls back to public /textures/ path,
+ * and finally to the official weapon UV sheet so weapon geometry is textured with authentic UV mapping.
  */
 export function resolveSkinTextureUrl(weaponName?: string, skinName?: string): string | undefined {
   if (!weaponName && !skinName) return undefined;
@@ -148,18 +179,24 @@ export function resolveSkinTextureUrl(weaponName?: string, skinName?: string): s
   const wKey = normalizeWeaponKey(effectiveWeapon);
   const sKey = normalizeSkinKey(effectiveSkin);
 
-  if (!wKey || !sKey) return undefined;
+  if (wKey && sKey) {
+    // Lookup key e.g. "ak47_asiimov", "m4a1s_decimator"
+    const lookupKey = `${wKey.replace(/[\s\-_]/g, '')}_${sKey}`;
+    if (R2_KNOWN_COLOR_WRAPS[lookupKey]) {
+      return R2_KNOWN_COLOR_WRAPS[lookupKey];
+    }
 
-  // Lookup key e.g. "ak47_asiimov", "m4a1s_decimator"
-  const lookupKey = `${wKey.replace(/[\s\-_]/g, '')}_${sKey}`;
-  if (R2_KNOWN_COLOR_WRAPS[lookupKey]) {
-    return R2_KNOWN_COLOR_WRAPS[lookupKey];
+    // Fallback to local static /textures/ format
+    const localUrl = `/textures/${wKey}_${sKey}.png`;
+    if (isColorWrapUrl(localUrl)) {
+      return localUrl;
+    }
   }
 
-  // Fallback to local static /textures/ format
-  const localUrl = `/textures/${wKey}_${sKey}.png`;
-  if (isColorWrapUrl(localUrl)) {
-    return localUrl;
+  // Fallback to the authentic weapon UV sheet texture
+  const uvSheet = resolveUVSheetTextureUrl(effectiveWeapon || weaponName);
+  if (uvSheet && isColorWrapUrl(uvSheet)) {
+    return uvSheet;
   }
 
   return undefined;

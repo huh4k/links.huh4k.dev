@@ -4,9 +4,9 @@ import { OrbitControls, Center, useGLTF, useProgress, Html } from '@react-three/
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { OBJLoader } from 'three-stdlib';
 import * as THREE from 'three';
-import { getWeaponModelPath, isObjModelUrl, WEAPON_MODEL_MAP } from '../utils/weaponModels';
+import { getWeaponModelPath, getLegacyWeaponModelPath, isObjModelUrl, WEAPON_MODEL_MAP, CSGO_LEGACY_MODEL_MAP } from '../utils/weaponModels';
 import { getR2WeaponTextures, loadR2Texture } from '../utils/r2Textures';
-import { resolveSkinTextureUrl, isDataMapUrl, isColorWrapUrl } from '../utils/weaponTextures';
+import { resolveSkinTextureUrl, resolveUVSheetTextureUrl, isDataMapUrl, isColorWrapUrl } from '../utils/weaponTextures';
 
 export interface ModelViewerProps {
   /** Public URL or path to the .glb or .obj model file */
@@ -47,9 +47,13 @@ export interface ModelViewerProps {
   rarityColor?: string;
   /** Specific skin pattern name (e.g. "Ice Coaled", "Liquidation", "Royal Guard") */
   skinName?: string;
-  /** Direct texture URL (e.g. R2 CDN AO/diffuse map). Loaded with flipY=false and sRGB color space.
+  /** Direct texture URL (e.g. R2 CDN AO/diffuse map or local UV sheet). Loaded with sRGB color space.
    *  When provided, bypasses the procedural canvas compositor and loads the real texture file. */
   textureUrl?: string;
+  /** Vertical UV orientation control (default: false for direct WebGL mapping, can be set to true) */
+  flipY?: boolean;
+  /** Force loading the CS:GO Legacy UV OBJ model with authentic vt coordinates (default: auto) */
+  useLegacyModel?: boolean;
 }
 
 /**
@@ -308,7 +312,7 @@ export function WeaponScene({
 
 export interface ObjWeaponSceneProps {
   modelUrl: string;
-  /** Direct texture URL (e.g. from R2 CDN) — loaded with flipY=false and sRGB color space */
+  /** Direct texture URL (e.g. from R2 CDN or local UV sheet) — loaded with sRGB color space */
   textureUrl?: string;
   weaponName?: string;
   skinName?: string;
@@ -316,6 +320,8 @@ export interface ObjWeaponSceneProps {
   seed?: number | null;
   rarityColor?: string;
   onLoaded?: () => void;
+  /** Vertical UV orientation control (default: false) */
+  flipY?: boolean;
 }
 
 /**
@@ -455,6 +461,7 @@ export function ObjWeaponScene({
   seed,
   rarityColor,
   onLoaded,
+  flipY = false,
 }: ObjWeaponSceneProps) {
   const rawObj = useLoader(
     OBJLoader,
@@ -563,7 +570,7 @@ export function ObjWeaponScene({
         (tex) => {
           if (isCancelled) return;
           // Diffuse map configuration:
-          tex.flipY = false;
+          tex.flipY = flipY;
           tex.colorSpace = THREE.SRGBColorSpace;
           tex.wrapS = THREE.RepeatWrapping;
           tex.wrapT = THREE.RepeatWrapping;
@@ -641,7 +648,7 @@ export function ObjWeaponScene({
     return () => {
       isCancelled = true;
     };
-  }, [processedScene, textureUrl, effectiveWeaponName]);
+  }, [processedScene, textureUrl, effectiveWeaponName, flipY]);
 
   // Clean up cloned geometries, materials, and textures on unmount or URL transition
   useEffect(() => {
@@ -861,6 +868,8 @@ export default function ModelViewer({
   rarityColor,
   skinName,
   textureUrl,
+  flipY = false,
+  useLegacyModel,
 }: ModelViewerProps) {
   // Two-stage SSR Hydration Guard: Avoid WebGL execution during build / server rendering
   const [isMounted, setIsMounted] = useState(false);
@@ -870,12 +879,6 @@ export default function ModelViewer({
     setIsMounted(true);
   }, []);
 
-  const effectiveUrl = useMemo(() => {
-    if (modelUrl) return modelUrl;
-    if (weaponName) return getWeaponModelPath(weaponName);
-    return undefined;
-  }, [modelUrl, weaponName]);
-
   const effectiveTextureUrl = useMemo(() => {
     // If a direct textureUrl prop is given, verify it is an actual color wrap (not a data map)
     if (textureUrl) {
@@ -884,6 +887,18 @@ export default function ModelViewer({
     const resolved = resolveSkinTextureUrl(weaponName, skinName);
     return resolved && isColorWrapUrl(resolved) ? resolved : undefined;
   }, [textureUrl, weaponName, skinName]);
+
+  const effectiveUrl = useMemo(() => {
+    if (modelUrl) return modelUrl;
+    // When useLegacyModel is true, or when an authentic legacy UV sheet/workshop texture is loaded,
+    // prefer the legacy model with matching vt coordinates
+    if (weaponName && (useLegacyModel || (effectiveTextureUrl && (effectiveTextureUrl.includes('/textures/') || effectiveTextureUrl.includes('workshop'))))) {
+      const legacyPath = getLegacyWeaponModelPath(weaponName);
+      if (legacyPath) return legacyPath;
+    }
+    if (weaponName) return getWeaponModelPath(weaponName);
+    return undefined;
+  }, [modelUrl, weaponName, useLegacyModel, effectiveTextureUrl]);
 
   const isObj = effectiveUrl ? isObjModelUrl(effectiveUrl) : false;
 
@@ -931,6 +946,7 @@ export default function ModelViewer({
                   seed={seed}
                   rarityColor={rarityColor}
                   onLoaded={onLoaded}
+                  flipY={flipY}
                 />
               ) : (
                 <WeaponScene modelUrl={effectiveUrl} onLoaded={onLoaded} />
@@ -968,9 +984,12 @@ export default function ModelViewer({
 export {
   ModelViewer,
   getWeaponModelPath,
+  getLegacyWeaponModelPath,
   isObjModelUrl,
   WEAPON_MODEL_MAP,
+  CSGO_LEGACY_MODEL_MAP,
   resolveSkinTextureUrl,
+  resolveUVSheetTextureUrl,
   isDataMapUrl,
   isColorWrapUrl,
 };
