@@ -13,3 +13,10 @@
 # Cache static icons and manifests
 /favicon.svg
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+# Static 3D assets rarely change
+/models/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=2592000
+
+/textures/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=2592000
