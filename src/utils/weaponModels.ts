@@ -302,3 +302,12 @@ export function getObjsWeaponModelPath(weaponName?: string): string | undefined 
 
 // Backwards compatibility alias
 export const getLegacyWeaponModelPath = getObjsWeaponModelPath;
+
+/**
+ * Model path whose UV layout matches the R2 skin wraps (the CS:GO workshop OBJs in /models/objs/).
+ * The CS2 meshes in /models/ use a different UV layout, so they are only a fallback for
+ * weapons that have no legacy model.
+ */
+export function getSkinCompatibleModelPath(weaponName?: string): string {
+  return getObjsWeaponModelPath(weaponName) || getWeaponModelPath(weaponName);
+}

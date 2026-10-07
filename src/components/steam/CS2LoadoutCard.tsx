@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import ModelViewer from '../ModelViewer';
-import { getWeaponModelPath, getObjsWeaponModelPath } from '../../utils/weaponModels';
+import { getSkinCompatibleModelPath } from '../../utils/weaponModels';
 import { resolveSkinTextureUrl } from '../../utils/weaponTextures';
 
 export interface LoadoutWeapon {
@@ -246,8 +246,7 @@ export default function CS2LoadoutCard({
   const activeWeapon = weapons[activeIndex] || weapons[0];
   const modelAssetUrl =
     activeWeapon.modelUrl ||
-    getWeaponModelPath(activeWeapon.name) ||
-    getObjsWeaponModelPath(activeWeapon.name);
+    getSkinCompatibleModelPath(activeWeapon.name);
   const textureUrl = useMemo(
     () => resolveSkinTextureUrl(activeWeapon.name, activeWeapon.skin),
     [activeWeapon.name, activeWeapon.skin]

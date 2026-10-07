@@ -107,7 +107,7 @@ export const R2_KNOWN_COLOR_WRAPS: Record<string, string> = {
   usps_voltage: `${R2_BASE_URL}paints/paints/gunsmith/workshop/usp_voltage_tga_dc37fa8.png`,
 
   // Active User Inventory Skins
-  ak47_ice_coaled: `${R2_BASE_URL}paints/custom/workshop/ak47_ice_coaled.png`,
+  ak47_ice_coaled: `${R2_BASE_URL}paints/paints/custom/workshop/ak47_cogthings_tga_c09541d.png`,
   m4a1s_liquidation: `${R2_BASE_URL}paints/paints/custom/workshop/mp5sd_quick_liquidation_tga_e39e1dfe.png`,
   usps_royal_guard: `${R2_BASE_URL}paints/custom/workshop/usp_royal_guard.png`,
   ump45_late_night_transit: `${R2_BASE_URL}paints/paints/anodized_air/workshop/ump45_moonrise_tga_e844ccb.png`,
