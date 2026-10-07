@@ -5,7 +5,7 @@ import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { OBJLoader } from 'three-stdlib';
 import * as THREE from 'three';
 import { getWeaponModelPath, getObjsWeaponModelPath, getLegacyWeaponModelPath, isObjModelUrl, WEAPON_MODEL_MAP, OBJS_MODEL_MAP, CSGO_LEGACY_MODEL_MAP } from '../utils/weaponModels';
-import { getR2WeaponTextures, loadR2Texture } from '../utils/r2Textures';
+import { getR2WeaponTextures, loadR2Texture, resolveActualR2TextureUrl } from '../utils/r2Textures';
 import { resolveSkinTextureUrl, resolveUVSheetTextureUrl, isDataMapUrl, isColorWrapUrl } from '../utils/weaponTextures';
 
 export interface ModelViewerProps {
@@ -558,19 +558,33 @@ export function ObjWeaponScene({
   useEffect(() => {
     let isCancelled = false;
     const material = processedScene.material;
+    const isLegacyModel = modelUrl ? (modelUrl.includes('/models/objs/') || modelUrl.includes('objs/')) : false;
+
+    // Resolve any incoming texture URL through the authoritative R2 tree resolver
+    const resolvedTexUrl = textureUrl ? resolveActualR2TextureUrl(textureUrl) : undefined;
+    const isAoDataMap = resolvedTexUrl ? /_(ao)(_|\.|\?|$)/i.test(resolvedTexUrl) : false;
+    const isSurfaceDataMap = resolvedTexUrl ? /_(surface|rough)(_|\.|\?|$)/i.test(resolvedTexUrl) : false;
+    const isMasksDataMap = resolvedTexUrl ? /_(masks|tmasks)(_|\.|\?|$)/i.test(resolvedTexUrl) : false;
+    const isAnyDataMap = isAoDataMap || isSurfaceDataMap || isMasksDataMap || (resolvedTexUrl ? isDataMapUrl(resolvedTexUrl) : false);
 
     // ── Primary: Direct skin color wrap application ──────────────────────────
-    // Guard against data maps (_surface, _masks, _rough, _ao, _normal) being bound to diffuse map
-    const isValidColorWrap = textureUrl && isColorWrapUrl(textureUrl);
+    // Direct color wrap or skin finish diffuse map
+    const colorWrapToLoad = (!isAnyDataMap && resolvedTexUrl && isColorWrapUrl(resolvedTexUrl))
+      ? resolvedTexUrl
+      : (() => {
+          const skinWrap = resolveSkinTextureUrl(effectiveWeaponName, skinName);
+          return skinWrap && isColorWrapUrl(skinWrap) ? resolveActualR2TextureUrl(skinWrap) : undefined;
+        })();
 
-    if (isValidColorWrap && textureUrl) {
+    if (colorWrapToLoad) {
       const loader = new THREE.TextureLoader();
+      const isR2Asset = colorWrapToLoad.includes('assets.huh4k.dev') || colorWrapToLoad.includes('/cs2-textures/');
       loader.load(
-        textureUrl,
+        colorWrapToLoad,
         (tex) => {
           if (isCancelled) return;
-          // Diffuse map configuration:
-          tex.flipY = flipY;
+          // Diffuse map configuration: R2 assets use flipY=false; local legacy UV sheets use flipY prop
+          tex.flipY = isR2Asset ? false : flipY;
           tex.colorSpace = THREE.SRGBColorSpace;
           tex.wrapS = THREE.RepeatWrapping;
           tex.wrapT = THREE.RepeatWrapping;
@@ -592,98 +606,114 @@ export function ObjWeaponScene({
         },
         undefined,
         (err) => {
-          console.warn('[ModelViewer] Color wrap load error for:', textureUrl, err);
+          console.warn('[ModelViewer] Color wrap load error for:', colorWrapToLoad, err);
           if (!isCancelled) {
-            // Attempt fallback to local authentic UV sheet if textureUrl was an external R2 URL
-            const uvSheet = resolveUVSheetTextureUrl(effectiveWeaponName);
-            if (uvSheet && uvSheet !== textureUrl && isColorWrapUrl(uvSheet)) {
-              loader.load(
-                uvSheet,
-                (fallbackTex) => {
-                  if (isCancelled) return;
-                  fallbackTex.flipY = flipY;
-                  fallbackTex.colorSpace = THREE.SRGBColorSpace;
-                  fallbackTex.wrapS = THREE.RepeatWrapping;
-                  fallbackTex.wrapT = THREE.RepeatWrapping;
-                  fallbackTex.needsUpdate = true;
+            // Only legacy models fall back to local UV sheet; Source 2 models keep clean neutral gunmetal
+            if (isLegacyModel) {
+              const uvSheet = resolveUVSheetTextureUrl(effectiveWeaponName);
+              if (uvSheet && uvSheet !== colorWrapToLoad && isColorWrapUrl(uvSheet)) {
+                loader.load(
+                  uvSheet,
+                  (fallbackTex) => {
+                    if (isCancelled) return;
+                    fallbackTex.flipY = flipY;
+                    fallbackTex.colorSpace = THREE.SRGBColorSpace;
+                    fallbackTex.wrapS = THREE.RepeatWrapping;
+                    fallbackTex.wrapT = THREE.RepeatWrapping;
+                    fallbackTex.needsUpdate = true;
 
-                  if (material.map && material.map !== fallbackTex) {
-                    try { material.map.dispose(); } catch { /* safe */ }
-                  }
-                  material.map = fallbackTex;
-                  material.color.set(0xffffff);
-                  material.needsUpdate = true;
-
-                  processedScene.group.traverse((child) => {
-                    if ((child as THREE.Mesh).isMesh) {
-                      (child as THREE.Mesh).material = material;
+                    if (material.map && material.map !== fallbackTex) {
+                      try { material.map.dispose(); } catch { /* safe */ }
                     }
-                  });
-                },
-                undefined,
-                () => {
-                  if (!isCancelled) {
-                    material.map = null;
-                    material.color.set(0x334155);
-                    material.metalness = 0.7;
-                    material.roughness = 0.35;
+                    material.map = fallbackTex;
+                    material.color.set(0xffffff);
                     material.needsUpdate = true;
+
+                    processedScene.group.traverse((child) => {
+                      if ((child as THREE.Mesh).isMesh) {
+                        (child as THREE.Mesh).material = material;
+                      }
+                    });
+                  },
+                  undefined,
+                  () => {
+                    if (!isCancelled) {
+                      material.map = null;
+                      material.color.set(0x334155);
+                      material.metalness = 0.7;
+                      material.roughness = 0.35;
+                      material.needsUpdate = true;
+                    }
                   }
-                }
-              );
-            } else {
-              material.map = null;
-              material.color.set(0x334155);
-              material.metalness = 0.7;
-              material.roughness = 0.35;
-              material.needsUpdate = true;
+                );
+                return;
+              }
             }
+
+            material.map = null;
+            material.color.set(0x334155);
+            material.metalness = 0.7;
+            material.roughness = 0.35;
+            material.needsUpdate = true;
           }
         }
       );
     } else {
-      // If no valid color wrap is found, attempt fallback to authentic UV sheet for the weapon
-      const uvSheet = resolveUVSheetTextureUrl(effectiveWeaponName);
-      if (uvSheet && isColorWrapUrl(uvSheet)) {
-        const loader = new THREE.TextureLoader();
-        loader.load(
-          uvSheet,
-          (fallbackTex) => {
-            if (isCancelled) return;
-            fallbackTex.flipY = flipY;
-            fallbackTex.colorSpace = THREE.SRGBColorSpace;
-            fallbackTex.wrapS = THREE.RepeatWrapping;
-            fallbackTex.wrapT = THREE.RepeatWrapping;
-            fallbackTex.needsUpdate = true;
+      // If no valid color wrap is found:
+      // For legacy models: attempt fallback to authentic UV sheet for the weapon
+      if (isLegacyModel) {
+        const uvSheet = resolveUVSheetTextureUrl(effectiveWeaponName);
+        if (uvSheet && isColorWrapUrl(uvSheet)) {
+          const loader = new THREE.TextureLoader();
+          loader.load(
+            uvSheet,
+            (fallbackTex) => {
+              if (isCancelled) return;
+              fallbackTex.flipY = flipY;
+              fallbackTex.colorSpace = THREE.SRGBColorSpace;
+              fallbackTex.wrapS = THREE.RepeatWrapping;
+              fallbackTex.wrapT = THREE.RepeatWrapping;
+              fallbackTex.needsUpdate = true;
 
-            if (material.map && material.map !== fallbackTex) {
-              try { material.map.dispose(); } catch { /* safe */ }
-            }
-            material.map = fallbackTex;
-            material.color.set(0xffffff);
-            material.needsUpdate = true;
-
-            processedScene.group.traverse((child) => {
-              if ((child as THREE.Mesh).isMesh) {
-                (child as THREE.Mesh).material = material;
-              }
-            });
-          },
-          undefined,
-          () => {
-            if (!isCancelled) {
-              if (material.map) {
+              if (material.map && material.map !== fallbackTex) {
                 try { material.map.dispose(); } catch { /* safe */ }
-                material.map = null;
               }
-              material.color.set(0x334155);
-              material.metalness = 0.7;
-              material.roughness = 0.35;
+              material.map = fallbackTex;
+              material.color.set(0xffffff);
               material.needsUpdate = true;
+
+              processedScene.group.traverse((child) => {
+                if ((child as THREE.Mesh).isMesh) {
+                  (child as THREE.Mesh).material = material;
+                }
+              });
+            },
+            undefined,
+            () => {
+              if (!isCancelled) {
+                if (material.map) {
+                  try { material.map.dispose(); } catch { /* safe */ }
+                  material.map = null;
+                }
+                material.color.set(0x334155);
+                material.metalness = 0.7;
+                material.roughness = 0.35;
+                material.needsUpdate = true;
+              }
             }
+          );
+        } else {
+          if (material.map) {
+            try { material.map.dispose(); } catch { /* safe */ }
+            material.map = null;
           }
-        );
+          material.color.set(0x334155);
+          material.metalness = 0.7;
+          material.roughness = 0.35;
+          material.needsUpdate = true;
+        }
       } else {
+        // Source 2 models: clean neutral gunmetal finish with PBR data maps
         if (material.map) {
           try { material.map.dispose(); } catch { /* safe */ }
           material.map = null;
@@ -695,15 +725,20 @@ export function ObjWeaponScene({
       }
     }
 
-    // ── Secondary: Source 2 PBR Data Maps (Roughness, Metalness, AO) ─────────
+    // ── Secondary: Source 2 PBR Data Maps (Roughness, Metalness, AO, Masks) ─
     // Strictly routed to roughnessMap, metalnessMap, and aoMap — NEVER material.map.
     const r2Maps = getR2WeaponTextures(effectiveWeaponName);
-    if (r2Maps) {
+    const aoToLoad = isAoDataMap ? resolvedTexUrl : r2Maps?.aoUrl;
+    const surfaceToLoad = isSurfaceDataMap ? resolvedTexUrl : r2Maps?.surfaceUrl;
+    const masksToLoad = isMasksDataMap ? resolvedTexUrl : r2Maps?.masksUrl;
+
+    if (aoToLoad || surfaceToLoad || masksToLoad) {
       Promise.all([
-        r2Maps.aoUrl ? loadR2Texture(r2Maps.aoUrl) : Promise.resolve(null),
-        r2Maps.surfaceUrl ? loadR2Texture(r2Maps.surfaceUrl) : Promise.resolve(null),
+        aoToLoad ? loadR2Texture(aoToLoad) : Promise.resolve(null),
+        surfaceToLoad ? loadR2Texture(surfaceToLoad) : Promise.resolve(null),
+        masksToLoad ? loadR2Texture(masksToLoad) : Promise.resolve(null),
       ])
-        .then(([aoTexture, surfaceTexture]) => {
+        .then(([aoTexture, surfaceTexture, masksTexture]) => {
           if (isCancelled) return;
 
           // 1. Ambient Occlusion Map (Data map: NoColorSpace, flipY=false, RepeatWrapping)
@@ -728,7 +763,23 @@ export function ObjWeaponScene({
             applySource2SurfaceSwizzle(material);
           }
 
+          // 3. Source 2 Masks Map (Data map: NoColorSpace, flipY=false, RepeatWrapping)
+          if (masksTexture) {
+            masksTexture.flipY = false;
+            masksTexture.colorSpace = THREE.NoColorSpace;
+            masksTexture.wrapS = THREE.RepeatWrapping;
+            masksTexture.wrapT = THREE.RepeatWrapping;
+            material.userData.masksMap = masksTexture;
+          }
+
           material.needsUpdate = true;
+
+          // Explicitly ensure all submeshes in cloned scene receive updated material
+          processedScene.group.traverse((child) => {
+            if ((child as THREE.Mesh).isMesh) {
+              (child as THREE.Mesh).material = material;
+            }
+          });
         })
         .catch(() => { /* non-blocking */ });
     }
@@ -736,7 +787,7 @@ export function ObjWeaponScene({
     return () => {
       isCancelled = true;
     };
-  }, [processedScene, textureUrl, effectiveWeaponName, flipY]);
+  }, [processedScene, textureUrl, effectiveWeaponName, skinName, modelUrl, flipY]);
 
   // Clean up cloned geometries, materials, and textures on unmount or URL transition
   useEffect(() => {
@@ -968,9 +1019,9 @@ export default function ModelViewer({
   }, []);
 
   const effectiveTextureUrl = useMemo(() => {
-    // If a direct textureUrl prop is given, verify it is an actual color wrap (not a data map)
+    // If a direct textureUrl prop is given, pass it through so ObjWeaponScene can handle color wraps and data maps
     if (textureUrl) {
-      return isColorWrapUrl(textureUrl) ? textureUrl : undefined;
+      return textureUrl;
     }
     const resolved = resolveSkinTextureUrl(weaponName, skinName);
     return resolved && isColorWrapUrl(resolved) ? resolved : undefined;
@@ -978,14 +1029,15 @@ export default function ModelViewer({
 
   const effectiveUrl = useMemo(() => {
     if (modelUrl) return modelUrl;
-    // Prefer the authentic /models/objs/ OBJ model with matching vt coordinates
     if (weaponName) {
-      const objsPath = getObjsWeaponModelPath(weaponName);
-      if (objsPath) return objsPath;
-      return getWeaponModelPath(weaponName);
+      if (useLegacyModel) {
+        const objsPath = getObjsWeaponModelPath(weaponName);
+        if (objsPath) return objsPath;
+      }
+      return getWeaponModelPath(weaponName) || getObjsWeaponModelPath(weaponName);
     }
     return undefined;
-  }, [modelUrl, weaponName]);
+  }, [modelUrl, weaponName, useLegacyModel]);
 
   const isObj = effectiveUrl ? isObjModelUrl(effectiveUrl) : false;
 

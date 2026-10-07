@@ -803,18 +803,104 @@ export const WEAPON_PREFIX_TO_FOLDER: Record<string, string> = {
 };
 
 /**
+ * Resolves a raw folder name to its canonical Source 2 paints folder on CDN.
+ * Handles exact folder keys, weapon aliases, and common/friendly weapon names.
+ */
+export function getCanonicalPaintsFolder(rawFolder: string): string {
+  if (!rawFolder) return '';
+  const lower = rawFolder.toLowerCase().trim();
+  if (WEAPON_PREFIX_TO_FOLDER[lower]) {
+    return WEAPON_PREFIX_TO_FOLDER[lower];
+  }
+  const key = getWeaponKeyFromName(lower);
+  if (key && WEAPON_PREFIX_TO_FOLDER[key]) {
+    return WEAPON_PREFIX_TO_FOLDER[key];
+  }
+  if (key && R2_ACTUAL_WEAPON_FILES[key]) {
+    return key;
+  }
+  return rawFolder;
+}
+
+/**
  * Normalizes an R2 texture asset URL to its actual CDN path under /cs2-textures/paints/<folder>/<filename>
+ * Handles duplicated tree paths (e.g. /cs2-textures/cs2-textures/), weapon aliases, friendly weapon names,
+ * /shared, and /boost paths.
  */
 export function resolveActualR2TextureUrl(url: string): string {
   if (!url || typeof url !== 'string') return '';
-  const trimmed = url.trim();
-  if (trimmed.includes('/cs2-textures/paints/')) {
+  let trimmed = url.trim();
+  if (!trimmed) return '';
+
+  // 1. Normalize protocol-relative, http, and scheme-less domain references
+  if (trimmed.startsWith('//')) {
+    trimmed = 'https:' + trimmed;
+  } else if (trimmed.startsWith('assets.huh4k.dev/')) {
+    trimmed = 'https://' + trimmed;
+  } else if (trimmed.startsWith('http://assets.huh4k.dev/')) {
+    trimmed = 'https://' + trimmed.slice('http://'.length);
+  } else if (trimmed.startsWith('/cs2-textures/')) {
+    trimmed = 'https://assets.huh4k.dev' + trimmed;
+  }
+
+  // 2. De-duplicate doubled bucket tree path segments: /cs2-textures/cs2-textures/ -> /cs2-textures/
+  trimmed = trimmed.replace(/\/cs2-textures\/cs2-textures\//g, '/cs2-textures/');
+
+  // 3. De-duplicate doubled paints/paints/ segments unless part of workshop finishes
+  if (trimmed.includes('/paints/paints/') && !trimmed.includes('/workshop/')) {
+    trimmed = trimmed.replace(/\/paints\/paints\//g, '/paints/');
+  }
+
+  const sortedPrefixes = Object.keys(WEAPON_PREFIX_TO_FOLDER).sort((a, b) => b.length - a.length);
+
+  // 4. If already under /cs2-textures/paints/<folder>/...
+  const paintsMatch = trimmed.match(/\/cs2-textures\/paints\/([^/]+)(\/.*)?$/);
+  if (paintsMatch) {
+    const rawFolder = paintsMatch[1];
+    const subpath = paintsMatch[2] || '';
+    const isBoostPath = subpath.includes('/boost') || subpath.startsWith('/boost') || rawFolder === 'boost';
+
+    // Pass through special top-level directories like shared, boost, or paints (workshop)
+    if (rawFolder === 'shared' || rawFolder === 'boost' || rawFolder === 'paints') {
+      return trimmed;
+    }
+
+    const canonicalFolder = getCanonicalPaintsFolder(rawFolder);
+    const files = R2_ACTUAL_WEAPON_FILES[canonicalFolder];
+
+    // Preserve /boost subpaths under weapon folders (e.g. /paints/rif_ak47/boost/...)
+    if (isBoostPath) {
+      if (canonicalFolder !== rawFolder) {
+        return `${R2_PAINTS_BASE_URL}${canonicalFolder}${subpath}`;
+      }
+      return trimmed;
+    }
+
+    if (files) {
+      if (subpath.includes('_ao')) {
+        return `${R2_PAINTS_BASE_URL}${canonicalFolder}/${files.ao}`;
+      }
+      if (subpath.includes('_surface')) {
+        return `${R2_PAINTS_BASE_URL}${canonicalFolder}/${files.surface}`;
+      }
+      if (subpath.includes('_masks')) {
+        return `${R2_PAINTS_BASE_URL}${canonicalFolder}/${files.masks}`;
+      }
+    }
+
+    if (canonicalFolder !== rawFolder) {
+      return `${R2_PAINTS_BASE_URL}${canonicalFolder}${subpath}`;
+    }
     return trimmed;
   }
+
+  // 5. Path under /cs2-textures/<filename> (without paints/)
   const prefix = 'https://assets.huh4k.dev/cs2-textures/';
   if (trimmed.startsWith(prefix)) {
     const rawFile = trimmed.slice(prefix.length);
-    const sortedPrefixes = Object.keys(WEAPON_PREFIX_TO_FOLDER).sort((a, b) => b.length - a.length);
+    if (rawFile.startsWith('boost/') || rawFile.startsWith('shared/')) {
+      return `${R2_PAINTS_BASE_URL}${rawFile}`;
+    }
     for (const key of sortedPrefixes) {
       if (rawFile.startsWith(key) || rawFile.includes(key)) {
         const folder = WEAPON_PREFIX_TO_FOLDER[key];
@@ -833,6 +919,7 @@ export function resolveActualR2TextureUrl(url: string): string {
       }
     }
   }
+
   return trimmed;
 }
 

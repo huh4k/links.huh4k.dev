@@ -254,7 +254,7 @@ export default function InventoryExplorer({ initialItems = [] }: InventoryExplor
 
   const activeModelPath = useMemo(() => {
     if (!selectedItem) return '/models/placeholder-weapon.glb';
-    return getObjsWeaponModelPath(selectedItem.name) || getWeaponModelPath(selectedItem.name);
+    return getWeaponModelPath(selectedItem.name) || getObjsWeaponModelPath(selectedItem.name);
   }, [selectedItem]);
 
   const selectedParsed = useMemo(() => {

@@ -22,7 +22,6 @@ The E2E test infrastructure implements an **opaque-box, requirement-driven testi
 ---
 
 ## 2. Directory Layout & Test Suite Architecture
-
 ```
 links.huh4k.dev
 ├── tests/
