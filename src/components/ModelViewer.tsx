@@ -460,11 +460,6 @@ export function ObjWeaponScene({
   const rawObj = useLoader(
     OBJLoader,
     modelUrl,
-    (loader) => {
-      loader.manager.onError = (url) => {
-        console.error('[ModelViewer OBJLoader Error]', 'Failed to fetch/parse 3D model:', url, 'modelUrl prop was:', modelUrl);
-      };
-    }
   );
   const loadedNotified = useRef(false);
 
@@ -591,10 +586,7 @@ export function ObjWeaponScene({
       const skinWrap = resolveSkinTextureUrl(effectiveWeaponName, skinName);
       if (skinWrap && isColorWrapUrl(skinWrap)) candidates.push(resolveActualR2TextureUrl(skinWrap));
     }
-    if (isLegacyModel) {
-      const uvSheet = resolveUVSheetTextureUrl(effectiveWeaponName);
-      if (uvSheet && isColorWrapUrl(uvSheet) && !candidates.includes(uvSheet)) candidates.push(uvSheet);
-    }
+    // NOTE: /textures/<weapon>.png are UV wireframe layout guides, never skins — they are not used as fallbacks.
 
     (async () => {
       for (const url of candidates) {
