@@ -1,10 +1,38 @@
 /**
  * Weapon Texture Resolver
  *
- * Resolves static skin texture PNG/WebP files from the public /textures/ directory
- * based on weaponName and skinName, adhering to the naming convention:
- * /textures/${weaponName.toLowerCase()}_${skinName.toLowerCase().replace(/\s+/g, '_')}.png
+ * Resolves authentic CS2 weapon skin color wrap PNG/WebP files
+ * hosted on Cloudflare R2 CDN or locally in /textures/.
+ *
+ * Strict invariants:
+ * - NEVER passes _surface, _masks, _rough, _ao, or _normal maps into material.map.
+ * - Only matches actual color wrap textures.
+ * - If no valid color wrap is matched, returns undefined so ModelViewer
+ *   renders clean neutral dark gunmetal (#222222).
  */
+
+import { R2_BASE_URL } from './r2Textures';
+
+/**
+ * Checks whether a texture URL or path represents a non-color data map
+ * (Source 2 surface packed roughness/metalness, ambient occlusion, normal, masks, or position).
+ */
+export function isDataMapUrl(url?: string): boolean {
+  if (!url || typeof url !== 'string') return false;
+  return /_(surface|masks|tmasks|rough|ao|normal|tnormal|pos|pos_pfm)(_|\.|\?|$)/i.test(url);
+}
+
+/**
+ * Checks whether a texture URL is a valid skin finish color wrap.
+ */
+export function isColorWrapUrl(url?: string): boolean {
+  if (!url || typeof url !== 'string') return false;
+  const trimmed = url.trim();
+  if (!trimmed) return false;
+  // Disallow any data maps
+  if (isDataMapUrl(trimmed)) return false;
+  return true;
+}
 
 /**
  * Normalizes a weapon name string (e.g. "StatTrak™ AK-47 | Ice Coaled" -> "ak-47")
@@ -34,27 +62,97 @@ export function normalizeSkinKey(skinName?: string): string {
 }
 
 /**
+ * Known authoritative R2 skin color wrap catalog.
+ * Maps normalized "weapon_skin" keys directly to their authentic Cloudflare R2 CDN color wrap PNGs.
+ * None of these contain _surface, _masks, _rough, _ao, or _normal.
+ */
+export const R2_KNOWN_COLOR_WRAPS: Record<string, string> = {
+  // AK-47
+  ak47_asiimov: `${R2_BASE_URL}paints/custom/workshop/ak47_asiimov_tga_a212f12a.png`,
+  ak47_bloodsport: `${R2_BASE_URL}paints/gunsmith/workshop/ak47_bloodsport_tga_814c7428.png`,
+  ak47_neon_rider: `${R2_BASE_URL}paints/custom/workshop/ak_neon_rider_tga_c77a29db.png`,
+  ak47_anubis: `${R2_BASE_URL}paints/custom/workshop/ak47_anubis_tga_fdec5ded.png`,
+  ak47_nightwish: `${R2_BASE_URL}paints/custom/workshop/ak47_nightwish_tga_44363f88.png`,
+  ak47_point_disarray: `${R2_BASE_URL}paints/custom/workshop/ak47_point_disarray_tga_94f6d095.png`,
+  ak47_empress: `${R2_BASE_URL}paints/gunsmith/workshop/ak47_empress_tga_fd58d708.png`,
+  ak47_cartel: `${R2_BASE_URL}paints/antiqued/workshop/ak47_cartel_tga_b09e52d0.png`,
+  ak47_head_shot: `${R2_BASE_URL}paints/custom/workshop/ak_head_shot_holo_tga_e7ce68e7.png`,
+
+  // M4A1-S & M4A4
+  m4a1s_decimator: `${R2_BASE_URL}paints/gunsmith/workshop/m4a1_decimator_psd_e5a970e4.png`,
+  m4a1s_cyrex: `${R2_BASE_URL}paints/custom/workshop/m4a1_cyrex_psd_c07bf908.png`,
+  m4a1s_flashback: `${R2_BASE_URL}paints/custom/workshop/m4a1_flashback_tga_d24cc0a4.png`,
+  m4a1s_shatter: `${R2_BASE_URL}paints/gunsmith/workshop/m4a1_shatter_tga_9866df38.png`,
+  m4a4_temukau: `${R2_BASE_URL}paints/custom/workshop/m4a4_temukau_tga_ba3a649d.png`,
+  m4a4_emperor: `${R2_BASE_URL}paints/gunsmith/workshop/m4a4_emperor_psd_726547a.png`,
+  m4a4_desolate_space: `${R2_BASE_URL}paints/custom/workshop/m4a4_desolatespace2_tga_eb1445d6.png`,
+  m4a4_hellfire: `${R2_BASE_URL}paints/custom/workshop/m4a4_hellfire_psd_c9c7672.png`,
+  m4a4_neo_noir: `${R2_BASE_URL}paints/custom/workshop/m4a4_neo_noir_psd_6fe1b8ce.png`,
+
+  // AWP
+  awp_hyper_beast: `${R2_BASE_URL}paints/custom/workshop/awp_hyper_beast_tga_ab5fb9eb.png`,
+  awp_neo_noir: `${R2_BASE_URL}paints/custom/workshop/awp_neonoir_tga_a60fa4.png`,
+  awp_wildfire: `${R2_BASE_URL}paints/custom/workshop/awp_wildfire_tga_caffb6f7.png`,
+  awp_chroma_pink: `${R2_BASE_URL}paints/custom/workshop/awp_chroma_pink_tga_aa96878e.png`,
+  awp_phobos: `${R2_BASE_URL}paints/gunsmith/workshop/awp-phobos_tga_c3a45d5b.png`,
+  awp_exoskeleton: `${R2_BASE_URL}paints/gunsmith/workshop/awp_exoskeleton_tga_4a2d9989.png`,
+
+  // USP-S
+  usps_printstream: `${R2_BASE_URL}paints/custom/workshop/usp_printstream_tga_2d067cd8.png`,
+  usps_kill_confirmed: `${R2_BASE_URL}paints/custom/workshop/usp_kill_confirmed_tga_d5d60230.png`,
+  usps_cyrex: `${R2_BASE_URL}paints/custom/workshop/usp_cyrex_tga_78bbeb9a.png`,
+  usps_black_lotus: `${R2_BASE_URL}paints/custom/workshop/usp_black_lotus_tga_5e85ea82.png`,
+  usps_flashback: `${R2_BASE_URL}paints/custom/workshop/usp_flashback_tga_87982ed0.png`,
+  usps_to_hell: `${R2_BASE_URL}paints/custom/workshop/usp_to_hell_tga_439978c3.png`,
+  usps_voltage: `${R2_BASE_URL}paints/gunsmith/workshop/usp_voltage_tga_dc37fa8.png`,
+
+  // Glock-18
+  glock18_urban_moon_fever: `${R2_BASE_URL}paints/anodized_air/workshop/glock_18_urban_moon_fever_tga_f06e020b.png`,
+
+  // MAC-10
+  mac10_the_last_dive: `${R2_BASE_URL}paints/anodized_air/workshop/mac10_the_last_dive_tga_a6aa16fc.png`,
+  mac10_neon_rider: `${R2_BASE_URL}paints/custom/workshop/mac10_neonrider_psd_ec089576.png`,
+
+  // UMP-45
+  ump45_moonrise: `${R2_BASE_URL}paints/anodized_air/workshop/ump45_moonrise_tga_e844ccb.png`,
+
+  // MP9
+  mp9_fuji: `${R2_BASE_URL}paints/anodized_air/workshop/mp9_fuji_tga_44da368d.png`,
+};
+
+/**
  * Automatically resolves the texture URL for a given weapon and skin.
- * Returns the public path e.g. /textures/ak-47_ice_coaled.png
+ * Checks authoritative R2 skin catalog first, then falls back to public /textures/ path.
+ * In both cases, filters out any data maps.
  */
 export function resolveSkinTextureUrl(weaponName?: string, skinName?: string): string | undefined {
   if (!weaponName && !skinName) return undefined;
-  
-  // If weaponName contains a pipe, parse skinName out of it if not supplied
+
   let effectiveWeapon = weaponName;
   let effectiveSkin = skinName;
-  
+
   if (weaponName && weaponName.includes('|') && !skinName) {
     const parts = weaponName.split('|');
     effectiveWeapon = parts[0].trim();
     effectiveSkin = parts[1].trim();
   }
-  
+
   const wKey = normalizeWeaponKey(effectiveWeapon);
   const sKey = normalizeSkinKey(effectiveSkin);
-  
-  if (!wKey) return undefined;
-  if (!sKey) return undefined;
-  
-  return `/textures/${wKey}_${sKey}.png`;
+
+  if (!wKey || !sKey) return undefined;
+
+  // Lookup key e.g. "ak47_asiimov", "m4a1s_decimator"
+  const lookupKey = `${wKey.replace(/[\s\-_]/g, '')}_${sKey}`;
+  if (R2_KNOWN_COLOR_WRAPS[lookupKey]) {
+    return R2_KNOWN_COLOR_WRAPS[lookupKey];
+  }
+
+  // Fallback to local static /textures/ format
+  const localUrl = `/textures/${wKey}_${sKey}.png`;
+  if (isColorWrapUrl(localUrl)) {
+    return localUrl;
+  }
+
+  return undefined;
 }

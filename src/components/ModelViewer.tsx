@@ -6,7 +6,7 @@ import { OBJLoader } from 'three-stdlib';
 import * as THREE from 'three';
 import { getWeaponModelPath, isObjModelUrl, WEAPON_MODEL_MAP } from '../utils/weaponModels';
 import { getR2WeaponTextures, loadR2Texture } from '../utils/r2Textures';
-import { resolveSkinTextureUrl } from '../utils/weaponTextures';
+import { resolveSkinTextureUrl, isDataMapUrl, isColorWrapUrl } from '../utils/weaponTextures';
 
 export interface ModelViewerProps {
   /** Public URL or path to the .glb or .obj model file */
@@ -475,12 +475,12 @@ export function ObjWeaponScene({
   const processedScene = useMemo(() => {
     const clone = rawObj.clone(true);
 
-    // Default neutral weapon material: clean dark metal (#333333)
+    // Default neutral weapon material: clean dark gunmetal (#222222)
     // Completely decouples skinCompositor.ts; no 2D canvas drawing primitives.
     const weaponMaterial = new THREE.MeshPhysicalMaterial({
-      color: new THREE.Color(0x333333),
-      metalness: 0.25,
-      roughness: 0.45,
+      color: new THREE.Color(0x222222),
+      metalness: 0.35,
+      roughness: 0.55,
       clearcoat: 0.05,
       clearcoatRoughness: 0.15,
       side: THREE.FrontSide,
@@ -538,20 +538,23 @@ export function ObjWeaponScene({
   }, [rawObj, modelUrl]);
 
   // Primary Texture Application Pipeline:
-  // Loads direct textureUrl (with flipY=false and SRGBColorSpace)
-  // along with optional R2 AO and Surface maps for PBR depth.
+  // Loads direct skin color wrap (with flipY=false, SRGBColorSpace, RepeatWrapping).
+  // Strictly separates color wrap from PBR data maps (surface, ao, normal, rough).
   useEffect(() => {
     let isCancelled = false;
     const material = processedScene.material;
 
-    // ── Primary: Direct skin texture application ─────────────────────────────
-    if (textureUrl) {
+    // ── Primary: Direct skin color wrap application ──────────────────────────
+    // Guard against data maps (_surface, _masks, _rough, _ao, _normal) being bound to diffuse map
+    const isValidColorWrap = textureUrl && isColorWrapUrl(textureUrl);
+
+    if (isValidColorWrap && textureUrl) {
       const loader = new THREE.TextureLoader();
       loader.load(
         textureUrl,
         (tex) => {
           if (isCancelled) return;
-          // Enforce Source 2 UV orientation and sRGB color space
+          // Diffuse map configuration:
           tex.flipY = false;
           tex.colorSpace = THREE.SRGBColorSpace;
           tex.wrapS = THREE.RepeatWrapping;
@@ -566,16 +569,27 @@ export function ObjWeaponScene({
           material.needsUpdate = true;
         },
         undefined,
-        (err) => console.warn('[ModelViewer] Texture load error for:', textureUrl, err)
+        (err) => {
+          console.warn('[ModelViewer] Color wrap load error for:', textureUrl, err);
+          if (!isCancelled) {
+            material.map = null;
+            material.color.set(0x222222);
+            material.needsUpdate = true;
+          }
+        }
       );
     } else {
-      // Clean neutral weapon material (#333333) when no texture is loaded
-      material.map = null;
-      material.color.set(0x333333);
+      // If no valid color wrap is found, leave material.map = null and tint neutral dark gunmetal (#222222)
+      if (material.map) {
+        try { material.map.dispose(); } catch { /* safe */ }
+        material.map = null;
+      }
+      material.color.set(0x222222);
       material.needsUpdate = true;
     }
 
-    // ── Secondary: R2 PBR Surface & AO Depth (if available for weapon) ───────
+    // ── Secondary: Source 2 PBR Data Maps (Roughness, Metalness, AO) ─────────
+    // Strictly routed to roughnessMap, metalnessMap, and aoMap — NEVER material.map.
     const r2Maps = getR2WeaponTextures(effectiveWeaponName);
     if (r2Maps) {
       Promise.all([
@@ -585,18 +599,21 @@ export function ObjWeaponScene({
         .then(([aoTexture, surfaceTexture]) => {
           if (isCancelled) return;
 
-          // 1. AO Map — flipY=false for Source 2 / Valve textures
+          // 1. Ambient Occlusion Map (Data map: NoColorSpace, flipY=false, RepeatWrapping)
           if (aoTexture) {
             aoTexture.flipY = false;
+            aoTexture.colorSpace = THREE.NoColorSpace;
             aoTexture.wrapS = THREE.RepeatWrapping;
             aoTexture.wrapT = THREE.RepeatWrapping;
             material.aoMap = aoTexture;
             material.aoMapIntensity = 1.0;
           }
 
-          // 2. Surface Map (Red=Roughness, Green=Metalness via GLSL swizzle)
+          // 2. Source 2 Surface Map (Data map: NoColorSpace, flipY=false, RepeatWrapping)
+          // Strictly assigned to roughnessMap & metalnessMap with custom GLSL swizzle
           if (surfaceTexture) {
             surfaceTexture.flipY = false;
+            surfaceTexture.colorSpace = THREE.NoColorSpace;
             surfaceTexture.wrapS = THREE.RepeatWrapping;
             surfaceTexture.wrapT = THREE.RepeatWrapping;
             material.roughnessMap = surfaceTexture;
@@ -846,8 +863,12 @@ export default function ModelViewer({
   }, [modelUrl, weaponName]);
 
   const effectiveTextureUrl = useMemo(() => {
-    if (textureUrl) return textureUrl;
-    return resolveSkinTextureUrl(weaponName, skinName);
+    // If a direct textureUrl prop is given, verify it is an actual color wrap (not a data map)
+    if (textureUrl) {
+      return isColorWrapUrl(textureUrl) ? textureUrl : undefined;
+    }
+    const resolved = resolveSkinTextureUrl(weaponName, skinName);
+    return resolved && isColorWrapUrl(resolved) ? resolved : undefined;
   }, [textureUrl, weaponName, skinName]);
 
   const isObj = effectiveUrl ? isObjModelUrl(effectiveUrl) : false;
@@ -929,7 +950,15 @@ export default function ModelViewer({
   );
 }
 
-export { ModelViewer, getWeaponModelPath, isObjModelUrl, WEAPON_MODEL_MAP, resolveSkinTextureUrl };
+export {
+  ModelViewer,
+  getWeaponModelPath,
+  isObjModelUrl,
+  WEAPON_MODEL_MAP,
+  resolveSkinTextureUrl,
+  isDataMapUrl,
+  isColorWrapUrl,
+};
 
 /**
  * Interactive test harness component for testing mounting, unmounting,
