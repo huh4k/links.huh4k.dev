@@ -4,7 +4,7 @@ import { OrbitControls, Center, useGLTF, useProgress, Html } from '@react-three/
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { OBJLoader } from 'three-stdlib';
 import * as THREE from 'three';
-import { getWeaponModelPath, getLegacyWeaponModelPath, isObjModelUrl, WEAPON_MODEL_MAP, CSGO_LEGACY_MODEL_MAP } from '../utils/weaponModels';
+import { getWeaponModelPath, getObjsWeaponModelPath, getLegacyWeaponModelPath, isObjModelUrl, WEAPON_MODEL_MAP, OBJS_MODEL_MAP, CSGO_LEGACY_MODEL_MAP } from '../utils/weaponModels';
 import { getR2WeaponTextures, loadR2Texture } from '../utils/r2Textures';
 import { resolveSkinTextureUrl, resolveUVSheetTextureUrl, isDataMapUrl, isColorWrapUrl } from '../utils/weaponTextures';
 
@@ -461,7 +461,7 @@ export function ObjWeaponScene({
   seed,
   rarityColor,
   onLoaded,
-  flipY = false,
+  flipY = true,
 }: ObjWeaponSceneProps) {
   const rawObj = useLoader(
     OBJLoader,
@@ -582,29 +582,117 @@ export function ObjWeaponScene({
           material.map = tex;
           material.color.set(0xffffff);
           material.needsUpdate = true;
+
+          // Ensure all submeshes in cloned scene explicitly receive the textured material
+          processedScene.group.traverse((child) => {
+            if ((child as THREE.Mesh).isMesh) {
+              (child as THREE.Mesh).material = material;
+            }
+          });
         },
         undefined,
         (err) => {
           console.warn('[ModelViewer] Color wrap load error for:', textureUrl, err);
           if (!isCancelled) {
-            material.map = null;
-            material.color.set(0x334155);
-            material.metalness = 0.7;
-            material.roughness = 0.35;
-            material.needsUpdate = true;
+            // Attempt fallback to local authentic UV sheet if textureUrl was an external R2 URL
+            const uvSheet = resolveUVSheetTextureUrl(effectiveWeaponName);
+            if (uvSheet && uvSheet !== textureUrl && isColorWrapUrl(uvSheet)) {
+              loader.load(
+                uvSheet,
+                (fallbackTex) => {
+                  if (isCancelled) return;
+                  fallbackTex.flipY = flipY;
+                  fallbackTex.colorSpace = THREE.SRGBColorSpace;
+                  fallbackTex.wrapS = THREE.RepeatWrapping;
+                  fallbackTex.wrapT = THREE.RepeatWrapping;
+                  fallbackTex.needsUpdate = true;
+
+                  if (material.map && material.map !== fallbackTex) {
+                    try { material.map.dispose(); } catch { /* safe */ }
+                  }
+                  material.map = fallbackTex;
+                  material.color.set(0xffffff);
+                  material.needsUpdate = true;
+
+                  processedScene.group.traverse((child) => {
+                    if ((child as THREE.Mesh).isMesh) {
+                      (child as THREE.Mesh).material = material;
+                    }
+                  });
+                },
+                undefined,
+                () => {
+                  if (!isCancelled) {
+                    material.map = null;
+                    material.color.set(0x334155);
+                    material.metalness = 0.7;
+                    material.roughness = 0.35;
+                    material.needsUpdate = true;
+                  }
+                }
+              );
+            } else {
+              material.map = null;
+              material.color.set(0x334155);
+              material.metalness = 0.7;
+              material.roughness = 0.35;
+              material.needsUpdate = true;
+            }
           }
         }
       );
     } else {
-      // If no valid color wrap is found, leave material.map = null and tint neutral dark gunmetal PBR (0x334155)
-      if (material.map) {
-        try { material.map.dispose(); } catch { /* safe */ }
-        material.map = null;
+      // If no valid color wrap is found, attempt fallback to authentic UV sheet for the weapon
+      const uvSheet = resolveUVSheetTextureUrl(effectiveWeaponName);
+      if (uvSheet && isColorWrapUrl(uvSheet)) {
+        const loader = new THREE.TextureLoader();
+        loader.load(
+          uvSheet,
+          (fallbackTex) => {
+            if (isCancelled) return;
+            fallbackTex.flipY = flipY;
+            fallbackTex.colorSpace = THREE.SRGBColorSpace;
+            fallbackTex.wrapS = THREE.RepeatWrapping;
+            fallbackTex.wrapT = THREE.RepeatWrapping;
+            fallbackTex.needsUpdate = true;
+
+            if (material.map && material.map !== fallbackTex) {
+              try { material.map.dispose(); } catch { /* safe */ }
+            }
+            material.map = fallbackTex;
+            material.color.set(0xffffff);
+            material.needsUpdate = true;
+
+            processedScene.group.traverse((child) => {
+              if ((child as THREE.Mesh).isMesh) {
+                (child as THREE.Mesh).material = material;
+              }
+            });
+          },
+          undefined,
+          () => {
+            if (!isCancelled) {
+              if (material.map) {
+                try { material.map.dispose(); } catch { /* safe */ }
+                material.map = null;
+              }
+              material.color.set(0x334155);
+              material.metalness = 0.7;
+              material.roughness = 0.35;
+              material.needsUpdate = true;
+            }
+          }
+        );
+      } else {
+        if (material.map) {
+          try { material.map.dispose(); } catch { /* safe */ }
+          material.map = null;
+        }
+        material.color.set(0x334155);
+        material.metalness = 0.7;
+        material.roughness = 0.35;
+        material.needsUpdate = true;
       }
-      material.color.set(0x334155);
-      material.metalness = 0.7;
-      material.roughness = 0.35;
-      material.needsUpdate = true;
     }
 
     // ── Secondary: Source 2 PBR Data Maps (Roughness, Metalness, AO) ─────────
@@ -868,7 +956,7 @@ export default function ModelViewer({
   rarityColor,
   skinName,
   textureUrl,
-  flipY = false,
+  flipY = true,
   useLegacyModel,
 }: ModelViewerProps) {
   // Two-stage SSR Hydration Guard: Avoid WebGL execution during build / server rendering
@@ -890,15 +978,14 @@ export default function ModelViewer({
 
   const effectiveUrl = useMemo(() => {
     if (modelUrl) return modelUrl;
-    // When useLegacyModel is true, or when an authentic legacy UV sheet/workshop texture is loaded,
-    // prefer the legacy model with matching vt coordinates
-    if (weaponName && (useLegacyModel || (effectiveTextureUrl && (effectiveTextureUrl.includes('/textures/') || effectiveTextureUrl.includes('workshop'))))) {
-      const legacyPath = getLegacyWeaponModelPath(weaponName);
-      if (legacyPath) return legacyPath;
+    // Prefer the authentic /models/objs/ OBJ model with matching vt coordinates
+    if (weaponName) {
+      const objsPath = getObjsWeaponModelPath(weaponName);
+      if (objsPath) return objsPath;
+      return getWeaponModelPath(weaponName);
     }
-    if (weaponName) return getWeaponModelPath(weaponName);
     return undefined;
-  }, [modelUrl, weaponName, useLegacyModel, effectiveTextureUrl]);
+  }, [modelUrl, weaponName]);
 
   const isObj = effectiveUrl ? isObjModelUrl(effectiveUrl) : false;
 
@@ -984,9 +1071,11 @@ export default function ModelViewer({
 export {
   ModelViewer,
   getWeaponModelPath,
+  getObjsWeaponModelPath,
   getLegacyWeaponModelPath,
   isObjModelUrl,
   WEAPON_MODEL_MAP,
+  OBJS_MODEL_MAP,
   CSGO_LEGACY_MODEL_MAP,
   resolveSkinTextureUrl,
   resolveUVSheetTextureUrl,
