@@ -106,6 +106,14 @@ export const R2_KNOWN_COLOR_WRAPS: Record<string, string> = {
   usps_to_hell: `${R2_BASE_URL}paints/custom/workshop/usp_to_hell_tga_439978c3.png`,
   usps_voltage: `${R2_BASE_URL}paints/gunsmith/workshop/usp_voltage_tga_dc37fa8.png`,
 
+  // Active User Inventory Skins
+  ak47_ice_coaled: `${R2_BASE_URL}paints/custom/workshop/ak47_ice_coaled.png`,
+  m4a1s_liquidation: `${R2_BASE_URL}paints/custom/workshop/mp5sd_quick_liquidation_tga_e39e1dfe.png`,
+  usps_royal_guard: `${R2_BASE_URL}paints/custom/workshop/usp_royal_guard.png`,
+  ump45_late_night_transit: `${R2_BASE_URL}paints/anodized_air/workshop/ump45_moonrise_tga_e844ccb.png`,
+  galilar_control: `${R2_BASE_URL}paints/custom/workshop/galil_ar_camo_tga_3b33133c.png`,
+  glock18_catacombs: `${R2_BASE_URL}paints/anodized_air/workshop/glock_18_urban_moon_fever_tga_f06e020b.png`,
+
   // Glock-18
   glock18_urban_moon_fever: `${R2_BASE_URL}paints/anodized_air/workshop/glock_18_urban_moon_fever_tga_f06e020b.png`,
 

@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import ModelViewer from '../ModelViewer';
 import { getWeaponModelPath } from '../../utils/weaponModels';
+import { resolveSkinTextureUrl } from '../../utils/weaponTextures';
 
 export interface LoadoutWeapon {
   id: string;
@@ -244,6 +245,10 @@ export default function CS2LoadoutCard({
 
   const activeWeapon = weapons[activeIndex] || weapons[0];
   const modelAssetUrl = activeWeapon.modelUrl || getWeaponModelPath(activeWeapon.name);
+  const textureUrl = useMemo(
+    () => resolveSkinTextureUrl(activeWeapon.name, activeWeapon.skin),
+    [activeWeapon.name, activeWeapon.skin]
+  );
 
   return (
     <div
@@ -315,6 +320,7 @@ export default function CS2LoadoutCard({
       <div className="relative z-10 w-full h-48 sm:h-56 rounded-xl overflow-hidden border border-[#1E2333] bg-[#0A0C12] shadow-inner">
         <ModelViewer
           modelUrl={modelAssetUrl}
+          textureUrl={textureUrl}
           weaponName={activeWeapon.name}
           skinName={activeWeapon.skin}
           float={activeWeapon.float}

@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef } from 'react';
 import ModelViewer from '../ModelViewer';
 import { getWeaponModelPath } from '../../utils/weaponModels';
+import { resolveSkinTextureUrl } from '../../utils/weaponTextures';
 import type { EnrichedInventoryItem } from '../../types/inventory';
 
 export interface InventoryExplorerProps {
@@ -261,6 +262,11 @@ export default function InventoryExplorer({ initialItems = [] }: InventoryExplor
     return parseWeaponName(selectedItem.name);
   }, [selectedItem]);
 
+  const activeTextureUrl = useMemo(() => {
+    if (!selectedItem) return undefined;
+    return resolveSkinTextureUrl(selectedItem.name, selectedParsed?.skinName);
+  }, [selectedItem, selectedParsed]);
+
   const selectedWear = useMemo(() => {
     if (!selectedItem) return null;
     return getWearTier(selectedItem.float);
@@ -374,6 +380,7 @@ export default function InventoryExplorer({ initialItems = [] }: InventoryExplor
                 ) : (
                   <ModelViewer
                     modelUrl={activeModelPath}
+                    textureUrl={activeTextureUrl}
                     weaponName={selectedItem.name}
                     skinName={selectedParsed?.skinName}
                     float={selectedItem.float}

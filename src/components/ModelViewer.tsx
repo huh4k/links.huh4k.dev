@@ -456,7 +456,15 @@ export function ObjWeaponScene({
   rarityColor,
   onLoaded,
 }: ObjWeaponSceneProps) {
-  const rawObj = useLoader(OBJLoader, modelUrl);
+  const rawObj = useLoader(
+    OBJLoader,
+    modelUrl,
+    (loader) => {
+      loader.manager.onError = (url) => {
+        console.error('[ModelViewer OBJLoader Error]', 'Failed to fetch/parse 3D model:', url, 'modelUrl prop was:', modelUrl);
+      };
+    }
+  );
   const loadedNotified = useRef(false);
 
   useEffect(() => {
@@ -475,12 +483,12 @@ export function ObjWeaponScene({
   const processedScene = useMemo(() => {
     const clone = rawObj.clone(true);
 
-    // Default neutral weapon material: clean dark gunmetal (#222222)
+    // Default neutral weapon material: neutral dark gunmetal PBR finish (color: 0x334155, metalness: 0.7, roughness: 0.35)
     // Completely decouples skinCompositor.ts; no 2D canvas drawing primitives.
     const weaponMaterial = new THREE.MeshPhysicalMaterial({
-      color: new THREE.Color(0x222222),
-      metalness: 0.35,
-      roughness: 0.55,
+      color: new THREE.Color(0x334155),
+      metalness: 0.7,
+      roughness: 0.35,
       clearcoat: 0.05,
       clearcoatRoughness: 0.15,
       side: THREE.FrontSide,
@@ -573,18 +581,22 @@ export function ObjWeaponScene({
           console.warn('[ModelViewer] Color wrap load error for:', textureUrl, err);
           if (!isCancelled) {
             material.map = null;
-            material.color.set(0x222222);
+            material.color.set(0x334155);
+            material.metalness = 0.7;
+            material.roughness = 0.35;
             material.needsUpdate = true;
           }
         }
       );
     } else {
-      // If no valid color wrap is found, leave material.map = null and tint neutral dark gunmetal (#222222)
+      // If no valid color wrap is found, leave material.map = null and tint neutral dark gunmetal PBR (0x334155)
       if (material.map) {
         try { material.map.dispose(); } catch { /* safe */ }
         material.map = null;
       }
-      material.color.set(0x222222);
+      material.color.set(0x334155);
+      material.metalness = 0.7;
+      material.roughness = 0.35;
       material.needsUpdate = true;
     }
 
@@ -788,6 +800,7 @@ export function ModelViewerSkeleton({
  */
 interface ModelErrorBoundaryProps {
   children: React.ReactNode;
+  effectiveUrl?: string;
   onError?: (err: Error) => void;
   fallback: React.ReactNode;
 }
@@ -808,6 +821,7 @@ class ModelErrorBoundary extends React.Component<ModelErrorBoundaryProps, ModelE
   }
 
   componentDidCatch(error: Error) {
+    console.error('[ModelViewer Error Caught]', error, 'URL was:', this.props.effectiveUrl);
     this.props.onError?.(error);
   }
 
@@ -897,6 +911,7 @@ export default function ModelViewer({
 
         <ModelErrorBoundary
           key={effectiveUrl || 'fallback'}
+          effectiveUrl={effectiveUrl}
           onError={onError}
           fallback={
             <Center>
