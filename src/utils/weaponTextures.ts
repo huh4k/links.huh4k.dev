@@ -107,9 +107,17 @@ export const R2_KNOWN_COLOR_WRAPS: Record<string, string> = {
   usps_voltage: `${R2_BASE_URL}paints/paints/gunsmith/workshop/usp_voltage_tga_dc37fa8.png`,
 
   // Active User Inventory Skins
-  // AK-47 | Ice Coaled is cu_ak47_cogthings; the other inventory skins have no wrap on R2
-  // (see SKIN_FINISH_FALLBACKS below) and must not borrow a different skin's wrap.
+  // AK-47 | Ice Coaled is cu_ak47_cogthings (hosted under the mirrored customization/ tree).
   ak47_ice_coaled: `${R2_BASE_URL}paints/paints/custom/workshop/ak47_cogthings_tga_c09541d.png`,
+
+  // Newer gunsmith kits live in the game's items/assets/paintkits/ tree, which is NOT yet exported to R2.
+  // The URLs below are where the files must be uploaded (see scripts/r2-missing-textures.md). Until they
+  // exist the loader 404s quietly and the SKIN_FINISH_FALLBACKS colour is shown instead.
+  ump45_late_night_transit: `${R2_BASE_URL}paints/paintkits/set_train_2025/ump_transit_albedo_texture_tga_10ede841.png`,
+  galilar_control: `${R2_BASE_URL}paints/paintkits/community/community_35/galil_control_strike_albedo_texture_psd_a76baaee.png`,
+  ssg08_rapid_transit: `${R2_BASE_URL}paints/paintkits/community/community_34/ssg08_transit_white_albedo_texture_tga_e33133c7.png`,
+  m4a1s_liquidation: `${R2_BASE_URL}paints/paintkits/community/community_36/m4a1s_quick_liquidation_albedo_texture_adjusted_psd_ac64331f.png`,
+  awp_ice_coaled: `${R2_BASE_URL}paints/paintkits/community/community_36/awp_ice_coaled_albedo_texture_adjusted_psd_6500e4a0.png`,
 
   // Glock-18
   glock18_urban_moon_fever: `${R2_BASE_URL}paints/paints/anodized_air/workshop/glock_18_urban_moon_fever_tga_f06e020b.png`,
