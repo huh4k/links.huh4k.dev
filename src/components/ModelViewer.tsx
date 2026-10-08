@@ -911,10 +911,10 @@ export default function ModelViewer({
   const effectiveUrl = useMemo(() => {
     if (modelUrl) return modelUrl;
     if (weaponName) {
-      return getSkinCompatibleModelPath(weaponName) || undefined;
+      return getSkinCompatibleModelPath(weaponName, skinName) || undefined;
     }
     return undefined;
-  }, [modelUrl, weaponName]);
+  }, [modelUrl, weaponName, skinName]);
 
   const isObj = effectiveUrl ? isObjModelUrl(effectiveUrl) : false;
 

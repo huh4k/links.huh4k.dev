@@ -246,7 +246,7 @@ export default function CS2LoadoutCard({
   const activeWeapon = weapons[activeIndex] || weapons[0];
   const modelAssetUrl =
     activeWeapon.modelUrl ||
-    getSkinCompatibleModelPath(activeWeapon.name);
+    getSkinCompatibleModelPath(activeWeapon.name, activeWeapon.skin);
   const textureUrl = useMemo(
     () => resolveSkinTextureUrl(activeWeapon.name, activeWeapon.skin),
     [activeWeapon.name, activeWeapon.skin]

@@ -12,6 +12,7 @@
  */
 
 import { R2_BASE_URL } from './r2Textures';
+import paintkitWraps from '../data/paintkitWraps.json';
 
 /**
  * Checks whether a texture URL or path represents a non-color data map
@@ -110,15 +111,6 @@ export const R2_KNOWN_COLOR_WRAPS: Record<string, string> = {
   // AK-47 | Ice Coaled is cu_ak47_cogthings (hosted under the mirrored customization/ tree).
   ak47_ice_coaled: `${R2_BASE_URL}paints/paints/custom/workshop/ak47_cogthings_tga_c09541d.png`,
 
-  // Newer gunsmith kits live in the game's items/assets/paintkits/ tree, which is NOT yet exported to R2.
-  // The URLs below are where the files must be uploaded (see scripts/r2-missing-textures.md). Until they
-  // exist the loader 404s quietly and the SKIN_FINISH_FALLBACKS colour is shown instead.
-  ump45_late_night_transit: `${R2_BASE_URL}paints/paintkits/set_train_2025/ump_transit_albedo_texture_tga_10ede841.png`,
-  galilar_control: `${R2_BASE_URL}paints/paintkits/community/community_35/galil_control_strike_albedo_texture_psd_a76baaee.png`,
-  ssg08_rapid_transit: `${R2_BASE_URL}paints/paintkits/community/community_34/ssg08_transit_white_albedo_texture_tga_e33133c7.png`,
-  m4a1s_liquidation: `${R2_BASE_URL}paints/paintkits/community/community_36/m4a1s_quick_liquidation_albedo_texture_adjusted_psd_ac64331f.png`,
-  awp_ice_coaled: `${R2_BASE_URL}paints/paintkits/community/community_36/awp_ice_coaled_albedo_texture_adjusted_psd_6500e4a0.png`,
-
   // Glock-18
   glock18_urban_moon_fever: `${R2_BASE_URL}paints/paints/anodized_air/workshop/glock_18_urban_moon_fever_tga_f06e020b.png`,
 
@@ -165,6 +157,34 @@ export function resolveUVSheetTextureUrl(weaponName?: string): string | undefine
 }
 
 /**
+ * Generated from the game data (see scripts/export-paintkit-textures.sh): "<weapon>_<skin>" -> [R2 path, legacy mesh flag].
+ * Only custom/gunsmith kits (real colour wraps) are listed; solid/spray/anodized finishes have no wrap texture.
+ * Kits flagged legacy use the CS:GO workshop meshes in /models/objs/; the rest use the CS2 meshes in /models/.
+ */
+const PAINTKIT_WRAPS = paintkitWraps as unknown as Record<string, [string, number]>;
+
+function splitWeaponSkin(weaponName?: string, skinName?: string): { weapon?: string; skin?: string } {
+  if (weaponName && weaponName.includes('|') && !skinName) {
+    const parts = weaponName.split('|');
+    return { weapon: parts[0].trim(), skin: parts[1].trim() };
+  }
+  return { weapon: weaponName, skin: skinName };
+}
+
+function lookupPaintkitWrap(weaponName?: string, skinName?: string): [string, number] | undefined {
+  const { weapon, skin } = splitWeaponSkin(weaponName, skinName);
+  const wKey = normalizeWeaponKey(weapon).replace(/[\s\-_]/g, '');
+  const sKey = normalizeSkinKey(skin);
+  return wKey && sKey ? PAINTKIT_WRAPS[`${wKey}_${sKey}`] : undefined;
+}
+
+/** Which mesh family a skin's wrap was authored for, if known */
+export function getSkinMeshFamily(weaponName?: string, skinName?: string): 'legacy' | 'cs2' | undefined {
+  const entry = lookupPaintkitWrap(weaponName, skinName);
+  return entry ? (entry[1] ? 'legacy' : 'cs2') : undefined;
+}
+
+/**
  * Automatically resolves the texture URL for a given weapon and skin.
  * Checks authoritative R2 skin catalog first, then falls back to public /textures/ path,
  * and finally to the official weapon UV sheet so weapon geometry is textured with authentic UV mapping.
@@ -189,6 +209,11 @@ export function resolveSkinTextureUrl(weaponName?: string, skinName?: string): s
     const lookupKey = `${wKey.replace(/[\s\-_]/g, '')}_${sKey}`;
     if (R2_KNOWN_COLOR_WRAPS[lookupKey]) {
       return R2_KNOWN_COLOR_WRAPS[lookupKey];
+    }
+
+    const manifestEntry = PAINTKIT_WRAPS[lookupKey];
+    if (manifestEntry) {
+      return `${R2_BASE_URL}${manifestEntry[0]}`;
     }
 
     // Fallback to local static /textures/ format
