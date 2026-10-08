@@ -6,7 +6,7 @@ import { OBJLoader } from 'three-stdlib';
 import * as THREE from 'three';
 import { getWeaponModelPath, getObjsWeaponModelPath, getSkinCompatibleModelPath, getLegacyWeaponModelPath, isObjModelUrl, WEAPON_MODEL_MAP, OBJS_MODEL_MAP, CSGO_LEGACY_MODEL_MAP } from '../utils/weaponModels';
 import { getR2WeaponTextures, loadR2Texture, resolveActualR2TextureUrl } from '../utils/r2Textures';
-import { resolveSkinTextureUrl, resolveUVSheetTextureUrl, isDataMapUrl, isColorWrapUrl } from '../utils/weaponTextures';
+import { resolveSkinTextureUrl, resolveUVSheetTextureUrl, resolveSkinFinish, isDataMapUrl, isColorWrapUrl } from '../utils/weaponTextures';
 
 export interface ModelViewerProps {
   /** Public URL or path to the .glb or .obj model file */
@@ -549,17 +549,22 @@ export function ObjWeaponScene({
     const isLegacyModel = modelUrl.includes('objs/');
     const maxAniso = 8;
 
+    const finish = resolveSkinFinish(effectiveWeaponName, skinName);
+    const baseColor = finish?.color ?? 0x334155;
+    const baseMetalness = finish?.metalness ?? 0.7;
+    const baseRoughness = finish?.roughness ?? 0.35;
+
     const resetDataMaps = () => {
       material.aoMap = null;
       material.roughnessMap = null;
       material.metalnessMap = null;
       material.userData.masksMap = null;
-      material.roughness = 0.35;
-      material.metalness = 0.7;
+      material.roughness = baseRoughness;
+      material.metalness = baseMetalness;
     };
     const setNeutral = () => {
       material.map = null;
-      material.color.set(0x334155);
+      material.color.set(baseColor);
       material.needsUpdate = true;
     };
     const syncMeshes = () => {
