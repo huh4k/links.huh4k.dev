@@ -5,6 +5,8 @@
  * and knife variations to their corresponding static .obj or .glb model assets.
  */
 
+import { getSkinMeshFamily } from './weaponTextures';
+
 export const DEFAULT_WEAPON_MODEL = '/models/placeholder-weapon.glb';
 
 /**
@@ -304,10 +306,13 @@ export function getObjsWeaponModelPath(weaponName?: string): string | undefined 
 export const getLegacyWeaponModelPath = getObjsWeaponModelPath;
 
 /**
- * Model path whose UV layout matches the R2 skin wraps (the CS:GO workshop OBJs in /models/objs/).
- * The CS2 meshes in /models/ use a different UV layout, so they are only a fallback for
- * weapons that have no legacy model.
+ * Picks the mesh whose UV layout matches a skin's wrap. Wraps are authored either for the CS:GO workshop
+ * meshes (/models/objs/) or for the CS2 meshes (/models/); the paint-kit manifest records which. Skins that
+ * are not in the manifest default to the legacy mesh.
  */
-export function getSkinCompatibleModelPath(weaponName?: string): string {
-  return getObjsWeaponModelPath(weaponName) || getWeaponModelPath(weaponName);
+export function getSkinCompatibleModelPath(weaponName?: string, skinName?: string): string {
+  const legacy = getObjsWeaponModelPath(weaponName);
+  const cs2 = getWeaponModelPath(weaponName);
+  if (getSkinMeshFamily(weaponName, skinName) === 'cs2') return cs2 || legacy || '';
+  return legacy || cs2;
 }

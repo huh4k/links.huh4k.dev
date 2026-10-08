@@ -12,6 +12,7 @@
  */
 
 import { R2_BASE_URL } from './r2Textures';
+import paintkitWraps from '../data/paintkitWraps.json';
 
 /**
  * Checks whether a texture URL or path represents a non-color data map
@@ -107,12 +108,8 @@ export const R2_KNOWN_COLOR_WRAPS: Record<string, string> = {
   usps_voltage: `${R2_BASE_URL}paints/paints/gunsmith/workshop/usp_voltage_tga_dc37fa8.png`,
 
   // Active User Inventory Skins
+  // AK-47 | Ice Coaled is cu_ak47_cogthings (hosted under the mirrored customization/ tree).
   ak47_ice_coaled: `${R2_BASE_URL}paints/paints/custom/workshop/ak47_cogthings_tga_c09541d.png`,
-  m4a1s_liquidation: `${R2_BASE_URL}paints/paints/custom/workshop/mp5sd_quick_liquidation_tga_e39e1dfe.png`,
-  usps_royal_guard: `${R2_BASE_URL}paints/custom/workshop/usp_royal_guard.png`,
-  ump45_late_night_transit: `${R2_BASE_URL}paints/paints/anodized_air/workshop/ump45_moonrise_tga_e844ccb.png`,
-  galilar_control: `${R2_BASE_URL}paints/paints/custom/workshop/galil_ar_camo_tga_3b33133c.png`,
-  glock18_catacombs: `${R2_BASE_URL}paints/paints/anodized_air/workshop/glock_18_urban_moon_fever_tga_f06e020b.png`,
 
   // Glock-18
   glock18_urban_moon_fever: `${R2_BASE_URL}paints/paints/anodized_air/workshop/glock_18_urban_moon_fever_tga_f06e020b.png`,
@@ -160,6 +157,34 @@ export function resolveUVSheetTextureUrl(weaponName?: string): string | undefine
 }
 
 /**
+ * Generated from the game data (see scripts/export-paintkit-textures.sh): "<weapon>_<skin>" -> [R2 path, legacy mesh flag].
+ * Only custom/gunsmith kits (real colour wraps) are listed; solid/spray/anodized finishes have no wrap texture.
+ * Kits flagged legacy use the CS:GO workshop meshes in /models/objs/; the rest use the CS2 meshes in /models/.
+ */
+const PAINTKIT_WRAPS = paintkitWraps as unknown as Record<string, [string, number]>;
+
+function splitWeaponSkin(weaponName?: string, skinName?: string): { weapon?: string; skin?: string } {
+  if (weaponName && weaponName.includes('|') && !skinName) {
+    const parts = weaponName.split('|');
+    return { weapon: parts[0].trim(), skin: parts[1].trim() };
+  }
+  return { weapon: weaponName, skin: skinName };
+}
+
+function lookupPaintkitWrap(weaponName?: string, skinName?: string): [string, number] | undefined {
+  const { weapon, skin } = splitWeaponSkin(weaponName, skinName);
+  const wKey = normalizeWeaponKey(weapon).replace(/[\s\-_]/g, '');
+  const sKey = normalizeSkinKey(skin);
+  return wKey && sKey ? PAINTKIT_WRAPS[`${wKey}_${sKey}`] : undefined;
+}
+
+/** Which mesh family a skin's wrap was authored for, if known */
+export function getSkinMeshFamily(weaponName?: string, skinName?: string): 'legacy' | 'cs2' | undefined {
+  const entry = lookupPaintkitWrap(weaponName, skinName);
+  return entry ? (entry[1] ? 'legacy' : 'cs2') : undefined;
+}
+
+/**
  * Automatically resolves the texture URL for a given weapon and skin.
  * Checks authoritative R2 skin catalog first, then falls back to public /textures/ path,
  * and finally to the official weapon UV sheet so weapon geometry is textured with authentic UV mapping.
@@ -186,6 +211,11 @@ export function resolveSkinTextureUrl(weaponName?: string, skinName?: string): s
       return R2_KNOWN_COLOR_WRAPS[lookupKey];
     }
 
+    const manifestEntry = PAINTKIT_WRAPS[lookupKey];
+    if (manifestEntry) {
+      return `${R2_BASE_URL}${manifestEntry[0]}`;
+    }
+
     // Fallback to local static /textures/ format
     const localUrl = `/textures/${wKey}_${sKey}.png`;
     if (isColorWrapUrl(localUrl)) {
@@ -195,4 +225,42 @@ export function resolveSkinTextureUrl(weaponName?: string, skinName?: string): s
 
   // No skin wrap known: caller renders neutral gunmetal (UV sheets are wireframe guides, not skins)
   return undefined;
+}
+
+/** Approximate flat finish for skins with no hosted wrap */
+export interface SkinFinish {
+  color: number;
+  metalness: number;
+  roughness: number;
+}
+
+/**
+ * Approximate base finishes for skins whose wraps are not hosted on R2 (their albedo textures ship in
+ * newer game paintkits, or they are procedural solid/anodized finishes). Colours are the dominant hue of
+ * each skin's Steam artwork, so these are approximations, not the real pattern.
+ * Keys follow the "<weapon>_<skin>" format used by R2_KNOWN_COLOR_WRAPS.
+ */
+export const SKIN_FINISH_FALLBACKS: Record<string, SkinFinish> = {
+  mac10_candy_apple: { color: 0xc81e1e, metalness: 0.15, roughness: 0.4 },
+  zeusx27_electric_blue: { color: 0x1747c9, metalness: 0.1, roughness: 0.35 },
+  usps_royal_guard: { color: 0x1f3f7a, metalness: 0.35, roughness: 0.4 },
+  m4a1s_liquidation: { color: 0x2f4f9e, metalness: 0.35, roughness: 0.4 },
+  galilar_control: { color: 0xcfc7ad, metalness: 0.2, roughness: 0.5 },
+  ssg08_rapid_transit: { color: 0xd7dadf, metalness: 0.2, roughness: 0.45 },
+  glock18_catacombs: { color: 0x5b5e5a, metalness: 0.3, roughness: 0.5 },
+  mag7_irradiated_alert: { color: 0x6b4a2e, metalness: 0.2, roughness: 0.6 },
+};
+
+/** Looks up the approximate finish for a weapon/skin pair, if one is defined */
+export function resolveSkinFinish(weaponName?: string, skinName?: string): SkinFinish | undefined {
+  let effectiveWeapon = weaponName;
+  let effectiveSkin = skinName;
+  if (weaponName && weaponName.includes('|') && !skinName) {
+    const parts = weaponName.split('|');
+    effectiveWeapon = parts[0].trim();
+    effectiveSkin = parts[1].trim();
+  }
+  const wKey = normalizeWeaponKey(effectiveWeapon).replace(/[\s\-_]/g, '');
+  const sKey = normalizeSkinKey(effectiveSkin);
+  return wKey && sKey ? SKIN_FINISH_FALLBACKS[`${wKey}_${sKey}`] : undefined;
 }
