@@ -640,7 +640,9 @@ export function ObjWeaponScene({
               material.aoMap = aoTexture;
               material.aoMapIntensity = 1.0;
             }
-            if (surfaceTexture) {
+            // The base weapon's packed surface map describes bare metal; painted skins override it with their
+            // own paint, so only use it when there is no skin wrap (otherwise painted areas render near-black).
+            if (surfaceTexture && candidates.length === 0) {
               configure(surfaceTexture, false, flipY);
               material.roughnessMap = surfaceTexture;
               material.metalnessMap = surfaceTexture;
