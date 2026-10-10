@@ -73,6 +73,8 @@ export interface RawSteamAssetPropertiesEntry {
 export interface RawSteamInventoryResponse {
   success: number | boolean;
   total_inventory_count?: number;
+  more_items?: number;
+  last_assetid?: string;
   assets?: RawSteamAsset[];
   descriptions?: RawSteamDescription[];
   asset_properties?: RawSteamAssetPropertiesEntry[];

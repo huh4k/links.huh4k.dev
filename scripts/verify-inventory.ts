@@ -25,6 +25,7 @@ import {
   enrichWithCSFloat,
   enrichInventory,
   fetchCS2Inventory,
+  fetchCS2InventoryResult,
   FALLBACK_INVENTORY,
 } from '../src/utils/steam.ts';
 import { GET as inventoryApiHandler } from '../src/pages/api/inventory.json.ts';
@@ -535,6 +536,115 @@ async function runTestSuite() {
       Boolean(ak && ak.float !== null && ak.seed !== null),
       'API response includes AK-47 | Ice Coaled with float and seed'
     );
+  }
+
+  // --------------------------------------------------------------------------
+  // TEST 10: Live vs fallback reporting, pagination, and API source headers
+  // --------------------------------------------------------------------------
+  console.log('\n[Test 10] Live/fallback reporting, pagination, API source headers');
+  {
+    const originalFetch = globalThis.fetch;
+    const mkDesc = (id: string) => ({
+      appid: 730,
+      classid: id,
+      instanceid: '0',
+      name: `Test Item ${id}`,
+      market_name: `Test Item ${id}`,
+      type: 'Rifle',
+      icon_url: `icon_${id}`,
+      tradable: 1,
+      marketable: 1,
+      tags: [{ category: 'Type', internal_name: 'CSGO_Type_Rifle', localized_tag_name: 'Rifle' }],
+    });
+    const page = (ids: string[], more: boolean) =>
+      new Response(
+        JSON.stringify({
+          success: 1,
+          more_items: more ? 1 : 0,
+          last_assetid: ids[ids.length - 1],
+          assets: ids.map((id) => ({ appid: 730, contextid: '2', assetid: id, classid: id, instanceid: '0', amount: '1' })),
+          descriptions: ids.map(mkDesc),
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+
+    // 10a: two pages are merged and reported as live
+    const requested: string[] = [];
+    globalThis.fetch = (async (url: string | URL | Request) => {
+      const u = url.toString();
+      if (u.includes('steamcommunity.com/inventory')) {
+        requested.push(u);
+        return u.includes('start_assetid=') ? page(['3', '4'], false) : page(['1', '2'], true);
+      }
+      return originalFetch(url);
+    }) as typeof fetch;
+    try {
+      const live = await fetchCS2InventoryResult('76561198920486334');
+      assert(live.source === 'live', 'Successful Steam fetch is reported as source "live"');
+      assert(live.items.length === 4, `Paginated inventory merges all pages (${live.items.length} items)`);
+      assert(
+        requested.length === 2 && requested[1].includes('start_assetid=2'),
+        'Second page is requested with start_assetid = last_assetid of the first page'
+      );
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    // 10b: failure on a later page keeps the loaded items and flags partial
+    globalThis.fetch = (async (url: string | URL | Request) => {
+      const u = url.toString();
+      if (u.includes('steamcommunity.com/inventory')) {
+        return u.includes('start_assetid=') ? new Response('{}', { status: 429 }) : page(['1', '2'], true);
+      }
+      return originalFetch(url);
+    }) as typeof fetch;
+    try {
+      const partial = await fetchCS2InventoryResult('76561198920486334');
+      assert(partial.source === 'live' && partial.partial === true, 'Later-page failure is live + partial');
+      assert(partial.items.length === 2, 'Partial result keeps the items already loaded');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    // 10c: 429 is reported as fallback with a reason
+    globalThis.fetch = (async (url: string | URL | Request) => {
+      if (url.toString().includes('steamcommunity.com/inventory')) return new Response('{}', { status: 429 });
+      return originalFetch(url);
+    }) as typeof fetch;
+    try {
+      const fb = await fetchCS2InventoryResult('76561198920486334');
+      assert(fb.source === 'fallback' && Boolean(fb.reason?.includes('429')), 'Rate limit is reported as fallback with a reason');
+
+      const res = await inventoryApiHandler({
+        request: new Request('https://links.huh4k.dev/api/inventory.json'),
+        locals: {},
+        params: {},
+      } as any);
+      assert(res.headers.get('X-Inventory-Source') === 'fallback', 'API sets X-Inventory-Source: fallback when Steam fails');
+      assert(
+        Boolean(res.headers.get('Cache-Control')?.includes('max-age=15')),
+        'Fallback responses use a short cache so recovery is picked up quickly'
+      );
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    // 10d: live API response carries the live header
+    globalThis.fetch = (async (url: string | URL | Request) => {
+      if (url.toString().includes('steamcommunity.com/inventory')) return page(['1'], false);
+      return originalFetch(url);
+    }) as typeof fetch;
+    try {
+      const res = await inventoryApiHandler({
+        request: new Request('https://links.huh4k.dev/api/inventory.json'),
+        locals: {},
+        params: {},
+      } as any);
+      assert(res.headers.get('X-Inventory-Source') === 'live', 'API sets X-Inventory-Source: live for fresh Steam data');
+      assert(Boolean(res.headers.get('X-Inventory-Fetched-At')), 'API sets X-Inventory-Fetched-At for live data');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   }
 
   // --------------------------------------------------------------------------
