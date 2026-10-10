@@ -677,52 +677,97 @@ export async function enrichInventory(
   return result;
 }
 
+/** Where an inventory response came from */
+export type InventorySource = 'live' | 'stale' | 'fallback';
+
+export interface InventoryResult {
+  items: EnrichedInventoryItem[];
+  /** 'live' = fetched from Steam now, 'fallback' = the hardcoded example snapshot (Steam failed) */
+  source: Exclude<InventorySource, 'stale'>;
+  /** Why the fallback was used, or a note on a partial live result */
+  reason?: string;
+  /** True when a later page failed and only part of the inventory was loaded */
+  partial?: boolean;
+}
+
+const MAX_INVENTORY_PAGES = 10;
+const STEAM_REQUEST_HEADERS = {
+  Accept: 'application/json',
+  'User-Agent':
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+};
+
+function fallbackResult(reason: string): InventoryResult {
+  console.warn(`[Steam Inventory] ${reason}. Using fallback inventory.`);
+  return { items: FALLBACK_INVENTORY, source: 'fallback', reason };
+}
+
 /**
- * Fetches user CS2 inventory from Steam Community endpoint.
- * Gracefully falls back to FALLBACK_INVENTORY on private profiles, rate limits (HTTP 429), or network errors.
+ * Fetches user CS2 inventory from Steam Community endpoint (all pages) and reports whether the data
+ * is live or the hardcoded fallback. Never throws: private profiles, rate limits (HTTP 429) and
+ * network errors all resolve to the fallback with a reason.
  */
-export async function fetchCS2Inventory(
+export async function fetchCS2InventoryResult(
   steamId64: string,
   _apiKey?: string
-): Promise<EnrichedInventoryItem[]> {
+): Promise<InventoryResult> {
   // Validate steamId64 format
   if (!steamId64 || !/^\d{17,20}$/.test(steamId64)) {
-    console.warn(`[Steam Inventory] Invalid Steam ID format: "${steamId64}". Using fallback inventory.`);
-    return FALLBACK_INVENTORY;
+    return fallbackResult(`Invalid Steam ID format: "${steamId64}"`);
   }
 
   const endpoint = `https://steamcommunity.com/inventory/${steamId64}/730/2?l=english&count=100`;
 
   try {
     const res = await fetch(endpoint, {
-      headers: {
-        Accept: 'application/json',
-        'User-Agent':
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      },
+      headers: STEAM_REQUEST_HEADERS,
       signal: AbortSignal.timeout(8000),
     });
 
     if (res.status === 401 || res.status === 403) {
-      console.warn(`[Steam Inventory] Profile ${steamId64} is private (status ${res.status}). Using fallback inventory.`);
-      return FALLBACK_INVENTORY;
+      return fallbackResult(`Profile ${steamId64} is private or inventory hidden (status ${res.status})`);
     }
 
     if (res.status === 429) {
-      console.warn(`[Steam Inventory] Hit Steam Community rate limit (429). Using fallback inventory.`);
-      return FALLBACK_INVENTORY;
+      return fallbackResult('Steam Community rate limit hit (429)');
     }
 
     if (!res.ok) {
-      console.warn(`[Steam Inventory] Request failed with status ${res.status}. Using fallback inventory.`);
-      return FALLBACK_INVENTORY;
+      return fallbackResult(`Steam request failed with status ${res.status}`);
     }
 
     const data = (await res.json()) as RawSteamInventoryResponse;
 
     if (!data.assets || !data.descriptions || data.assets.length === 0) {
-      console.warn('[Steam Inventory] Response contains empty assets. Using fallback inventory.');
-      return FALLBACK_INVENTORY;
+      return fallbackResult('Steam returned an empty inventory');
+    }
+
+    // Follow pagination so inventories larger than one page are not truncated
+    let partial = false;
+    let pages = 1;
+    while (data.more_items && data.last_assetid && pages < MAX_INVENTORY_PAGES) {
+      try {
+        const nextRes = await fetch(`${endpoint}&start_assetid=${data.last_assetid}`, {
+          headers: STEAM_REQUEST_HEADERS,
+          signal: AbortSignal.timeout(8000),
+        });
+        if (!nextRes.ok) {
+          partial = true;
+          break;
+        }
+        const more = (await nextRes.json()) as RawSteamInventoryResponse;
+        data.assets.push(...(more.assets ?? []));
+        data.descriptions.push(...(more.descriptions ?? []));
+        if (Array.isArray(more.asset_properties)) {
+          data.asset_properties = [...(data.asset_properties ?? []), ...more.asset_properties];
+        }
+        data.more_items = more.more_items;
+        data.last_assetid = more.last_assetid;
+        pages++;
+      } catch {
+        partial = true;
+        break;
+      }
     }
 
     // Build description lookup map
@@ -823,23 +868,43 @@ export async function fetchCS2Inventory(
       });
     }
 
-    return items.length > 0 ? items : FALLBACK_INVENTORY;
+    if (items.length === 0) return fallbackResult('No items could be parsed from the Steam response');
+    return {
+      items,
+      source: 'live',
+      ...(partial ? { partial: true, reason: 'Steam stopped responding partway; showing the items loaded so far' } : {}),
+    };
   } catch (error) {
     console.error('[Steam Inventory] Failed to fetch inventory:', error);
-    return FALLBACK_INVENTORY;
+    return fallbackResult(`Failed to fetch inventory: ${error instanceof Error ? error.message : String(error)}`);
   }
+}
+
+/** Backward-compatible wrapper: items only (falls back to the hardcoded snapshot on failure) */
+export async function fetchCS2Inventory(steamId64: string, apiKey?: string): Promise<EnrichedInventoryItem[]> {
+  return (await fetchCS2InventoryResult(steamId64, apiKey)).items;
 }
 
 /**
  * Fetches CS2 inventory and performs throttled CSFloat enrichment.
  */
+export async function getInventoryResult(
+  steamId64: string,
+  apiKey?: string,
+  maxEnrich = 15
+): Promise<InventoryResult> {
+  const result = await fetchCS2InventoryResult(steamId64, apiKey);
+  // Only enrich live data; the fallback snapshot already carries floats and seeds
+  if (result.source !== 'live') return result;
+  return { ...result, items: await enrichInventory(result.items, maxEnrich) };
+}
+
 export async function getEnrichedInventory(
   steamId64: string,
   apiKey?: string,
   maxEnrich = 15
 ): Promise<EnrichedInventoryItem[]> {
-  const items = await fetchCS2Inventory(steamId64, apiKey);
-  return enrichInventory(items, maxEnrich);
+  return (await getInventoryResult(steamId64, apiKey, maxEnrich)).items;
 }
 
 // Backward-compatibility and spec-compliant aliases

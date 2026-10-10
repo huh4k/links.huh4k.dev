@@ -601,10 +601,11 @@ export function ObjWeaponScene({
     }
     // NOTE: /textures/<weapon>.png are UV wireframe layout guides, never skins — they are not used as fallbacks.
 
-    (async () => {
+    // Resolves true once a wrap actually loaded (candidates can include speculative URLs that 404)
+    const wrapPromise: Promise<boolean> = (async () => {
       for (const url of candidates) {
         const tex = await loadR2Texture(url);
-        if (isCancelled) return;
+        if (isCancelled) return false;
         if (!tex) continue;
         // OBJ vt origin is bottom-left, so wraps (R2 included) need flipY=true to land correctly
         configure(tex, true, flipY);
@@ -616,8 +617,9 @@ export function ObjWeaponScene({
         material.clearcoat = 0.25;
         material.needsUpdate = true;
         syncMeshes();
-        return;
+        return true;
       }
+      return false;
     })();
 
     // ── Source 2 PBR data maps ───────────────────────────────────────────────
@@ -632,8 +634,9 @@ export function ObjWeaponScene({
           aoToLoad ? loadR2Texture(aoToLoad) : null,
           surfaceToLoad ? loadR2Texture(surfaceToLoad) : null,
           masksToLoad ? loadR2Texture(masksToLoad) : null,
+          wrapPromise,
         ])
-          .then(([aoTexture, surfaceTexture, masksTexture]) => {
+          .then(([aoTexture, surfaceTexture, masksTexture, wrapLoaded]) => {
             if (isCancelled) return;
             if (aoTexture) {
               configure(aoTexture, false, flipY);
@@ -642,7 +645,8 @@ export function ObjWeaponScene({
             }
             // The base weapon's packed surface map describes bare metal; painted skins override it with their
             // own paint, so only use it when there is no skin wrap (otherwise painted areas render near-black).
-            if (surfaceTexture && candidates.length === 0) {
+            // Skins with a flat approximate finish keep that finish's own metalness/roughness.
+            if (surfaceTexture && !wrapLoaded && !finish) {
               configure(surfaceTexture, false, flipY);
               material.roughnessMap = surfaceTexture;
               material.metalnessMap = surfaceTexture;

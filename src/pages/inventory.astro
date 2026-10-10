@@ -1,12 +1,11 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import InventoryExplorer from '../components/steam/InventoryExplorer';
-import { fetchCS2Inventory } from '../utils/steam';
 import { SITE_CONFIG } from '../lib/config';
 
-// Server-side pre-fetch authentic CS2 inventory data
+// The inventory itself is fetched live in the browser from /api/inventory.json (see InventoryExplorer),
+// so it stays current without a rebuild and a Steam hiccup never gets baked into the static page.
 const steamId = SITE_CONFIG.author.steamId;
-const inventoryItems = await fetchCS2Inventory(steamId);
 const steamInventoryUrl = `https://steamcommunity.com/profiles/${steamId}/inventory/#730`;
 ---
 
@@ -65,12 +64,12 @@ const steamInventoryUrl = `https://steamcommunity.com/profiles/${steamId}/invent
         <!-- Telemetry Header Badge -->
         <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[#1E2333] bg-[#0F1118] text-xs font-mono text-zinc-300 shrink-0">
           <span class="w-1.5 h-1.5 rounded-full bg-telemetry-blue animate-pulse"></span>
-          <span>26 Enriched Items • Direct Asset Properties • Cloudflare Edge Synced</span>
+          <span>Live Steam Inventory • Direct Asset Properties • Cloudflare Edge Cached</span>
         </div>
       </div>
     </div>
 
     <!-- Client-Side Interactive Inventory Island -->
-    <InventoryExplorer client:load initialItems={inventoryItems} />
+    <InventoryExplorer client:load />
   </div>
 </BaseLayout>

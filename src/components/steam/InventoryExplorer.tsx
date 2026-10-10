@@ -1,11 +1,91 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import ModelViewer from '../ModelViewer';
 import { getSkinCompatibleModelPath } from '../../utils/weaponModels';
 import { resolveSkinTextureUrl } from '../../utils/weaponTextures';
 import type { EnrichedInventoryItem } from '../../types/inventory';
 
 export interface InventoryExplorerProps {
-  initialItems: EnrichedInventoryItem[];
+  /** Optional pre-rendered items; the explorer always refreshes from the live API on mount */
+  initialItems?: EnrichedInventoryItem[];
+  /** Live inventory endpoint (default: /api/inventory.json) */
+  apiUrl?: string;
+  /** Auto-refresh interval while the tab is visible, in ms (default: 5 minutes; 0 disables) */
+  refreshMs?: number;
+}
+
+export type InventoryStatus = 'loading' | 'live' | 'stale' | 'fallback' | 'error';
+
+interface LiveInventoryState {
+  items: EnrichedInventoryItem[];
+  status: InventoryStatus;
+  fetchedAt: string | null;
+  note: string | null;
+  refreshing: boolean;
+  refresh: () => void;
+}
+
+/**
+ * Loads the inventory from the live API in the browser and keeps it fresh.
+ * The API reports where the data came from (live / stale / fallback) in response headers.
+ */
+function useLiveInventory(initialItems: EnrichedInventoryItem[], apiUrl: string, refreshMs: number): LiveInventoryState {
+  const [items, setItems] = useState<EnrichedInventoryItem[]>(initialItems);
+  const [status, setStatus] = useState<InventoryStatus>('loading');
+  const [fetchedAt, setFetchedAt] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const inFlight = useRef(false);
+
+  const load = useCallback(async () => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setRefreshing(true);
+    try {
+      const res = await fetch(apiUrl, { headers: { Accept: 'application/json' } });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = (await res.json()) as EnrichedInventoryItem[];
+      if (!Array.isArray(data)) throw new Error('Unexpected response');
+      const source = res.headers.get('X-Inventory-Source');
+      setItems(data);
+      setStatus(source === 'live' ? 'live' : source === 'stale' ? 'stale' : 'fallback');
+      setFetchedAt(res.headers.get('X-Inventory-Fetched-At'));
+      setNote(res.headers.get('X-Inventory-Note'));
+    } catch (err) {
+      // Keep whatever we already show; only report an error if there is nothing to show
+      setStatus((prev) => (prev === 'loading' ? 'error' : prev));
+      setNote(err instanceof Error ? err.message : 'Request failed');
+    } finally {
+      inFlight.current = false;
+      setRefreshing(false);
+    }
+  }, [apiUrl]);
+
+  useEffect(() => {
+    void load();
+    if (!refreshMs) return;
+    const timer = setInterval(() => {
+      if (document.visibilityState === 'visible') void load();
+    }, refreshMs);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void load();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [load, refreshMs]);
+
+  return { items, status, fetchedAt, note, refreshing, refresh: () => void load() };
+}
+
+function formatAge(iso: string | null): string {
+  if (!iso) return '';
+  const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.round(mins / 60);
+  return hours < 24 ? `${hours} h ago` : `${Math.round(hours / 24)} d ago`;
 }
 
 export const CATEGORIES = [
@@ -189,18 +269,29 @@ function parseWeaponName(rawName: string) {
   };
 }
 
-export default function InventoryExplorer({ initialItems = [] }: InventoryExplorerProps) {
+export default function InventoryExplorer({
+  initialItems = [],
+  apiUrl = '/api/inventory.json',
+  refreshMs = 5 * 60 * 1000,
+}: InventoryExplorerProps) {
+  const { items, status, fetchedAt, note, refreshing, refresh } = useLiveInventory(initialItems, apiUrl, refreshMs);
+
   // Select AK-47 by default or first weapon with float, or first available item
   const defaultItem = useMemo(() => {
     return (
-      initialItems.find((i) => i.name.toLowerCase().includes('ak-47')) ||
-      initialItems.find((i) => i.float !== null) ||
-      initialItems[0] ||
+      items.find((i) => i.name.toLowerCase().includes('ak-47')) ||
+      items.find((i) => i.float !== null) ||
+      items[0] ||
       null
     );
-  }, [initialItems]);
+  }, [items]);
 
   const [selectedItem, setSelectedItem] = useState<EnrichedInventoryItem | null>(defaultItem);
+
+  // Keep the selection valid as the live inventory loads or changes (and pick up refreshed item data)
+  useEffect(() => {
+    setSelectedItem((prev) => (prev && items.find((i) => i.id === prev.id)) || defaultItem);
+  }, [items, defaultItem]);
   const [inspectMode, setInspectMode] = useState<InspectDockMode>('3d');
   const [activeCategory, setActiveCategory] = useState<InventoryCategory>('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -210,19 +301,19 @@ export default function InventoryExplorer({ initialItems = [] }: InventoryExplor
 
   // Filtered item list
   const filteredItems = useMemo(() => {
-    return initialItems.filter(
+    return items.filter(
       (item) => matchesCategory(item, activeCategory) && matchesSearch(item, searchQuery)
     );
-  }, [initialItems, activeCategory, searchQuery]);
+  }, [items, activeCategory, searchQuery]);
 
   // Category item counts
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const cat of CATEGORIES) {
-      counts[cat] = initialItems.filter((i) => matchesCategory(i, cat)).length;
+      counts[cat] = items.filter((i) => matchesCategory(i, cat)).length;
     }
     return counts;
-  }, [initialItems]);
+  }, [items]);
 
   const handleSelectItem = (item: EnrichedInventoryItem) => {
     setSelectedItem(item);
@@ -633,11 +724,44 @@ export default function InventoryExplorer({ initialItems = [] }: InventoryExplor
           </div>
         </div>
 
+        {/* Data source status: live / last-known / example snapshot */}
+        <div
+          role="status"
+          className={`flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-xs font-mono ${
+            status === 'live'
+              ? 'border-emerald-500/30 bg-emerald-500/5 text-emerald-300'
+              : status === 'loading'
+                ? 'border-[#1E2333] bg-[#0F1118] text-zinc-400'
+                : 'border-amber-500/30 bg-amber-500/5 text-amber-300'
+          }`}
+        >
+          <span>
+            {status === 'loading' && 'Loading inventory from Steam…'}
+            {status === 'live' && `● Live from Steam${fetchedAt ? ` · updated ${formatAge(fetchedAt)}` : ''}`}
+            {status === 'stale' &&
+              `Steam is unavailable right now — showing your last loaded inventory${fetchedAt ? ` (${formatAge(fetchedAt)})` : ''}.`}
+            {status === 'fallback' &&
+              'Couldn’t reach Steam — showing a saved example snapshot, not your current inventory.'}
+            {status === 'error' && 'Couldn’t load your inventory.'}
+            {note && (status === 'stale' || status === 'fallback' || status === 'error') && (
+              <span className="ml-1 text-zinc-500">({note})</span>
+            )}
+          </span>
+          <button
+            type="button"
+            onClick={refresh}
+            disabled={refreshing}
+            className="rounded border border-current/40 px-2 py-0.5 hover:bg-white/5 disabled:opacity-50 cursor-pointer"
+          >
+            {refreshing ? 'Refreshing…' : 'Refresh'}
+          </button>
+        </div>
+
         {/* Status Line: Results Count */}
         <div className="flex items-center justify-between text-xs font-mono text-zinc-500 px-1">
           <span>
             Showing <strong className="text-zinc-200">{filteredItems.length}</strong> of{' '}
-            <strong className="text-zinc-200">{initialItems.length}</strong> items
+            <strong className="text-zinc-200">{items.length}</strong> items
           </span>
           {searchQuery && (
             <span className="text-telemetry-blue">
@@ -651,7 +775,11 @@ export default function InventoryExplorer({ initialItems = [] }: InventoryExplor
       {/* SECTION 3: RESPONSIVE INVENTORY ITEM GRID                            */}
       {/* ==================================================================== */}
       <section aria-label="Inventory Grid">
-        {filteredItems.length === 0 ? (
+        {filteredItems.length === 0 && status === 'loading' ? (
+          <div className="rounded-xl border border-dashed border-[#1E2333] bg-[#0F1118]/50 p-12 text-center font-mono">
+            <p className="text-sm text-zinc-400 animate-pulse">Loading your CS2 inventory…</p>
+          </div>
+        ) : filteredItems.length === 0 ? (
           <div className="rounded-xl border border-dashed border-[#1E2333] bg-[#0F1118]/50 p-12 text-center space-y-3 font-mono">
             <p className="text-sm text-zinc-400">
               No CS2 inventory items match current filter and search query.
