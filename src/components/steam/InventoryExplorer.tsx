@@ -5,21 +5,26 @@ import { resolveSkinTextureUrl } from '../../utils/weaponTextures';
 import type { EnrichedInventoryItem } from '../../types/inventory';
 
 export interface InventoryExplorerProps {
-  /** Optional pre-rendered items; the explorer always refreshes from the live API on mount */
+  /** Optional build-time snapshot shown immediately; the explorer always refreshes from the live API on mount */
   initialItems?: EnrichedInventoryItem[];
+  /** When the snapshot was built (ISO) */
+  snapshotAt?: string | null;
   /** Live inventory endpoint (default: /api/inventory.json) */
   apiUrl?: string;
   /** Auto-refresh interval while the tab is visible, in ms (default: 5 minutes; 0 disables) */
   refreshMs?: number;
 }
 
-export type InventoryStatus = 'loading' | 'live' | 'stale' | 'fallback' | 'error';
+export type InventoryStatus = 'loading' | 'snapshot' | 'live' | 'stale' | 'fallback' | 'error';
 
 interface LiveInventoryState {
   items: EnrichedInventoryItem[];
   status: InventoryStatus;
   fetchedAt: string | null;
   note: string | null;
+  provider: string | null;
+  /** True once the first live refresh has finished (successfully or not) */
+  checked: boolean;
   refreshing: boolean;
   refresh: () => void;
 }
@@ -28,11 +33,18 @@ interface LiveInventoryState {
  * Loads the inventory from the live API in the browser and keeps it fresh.
  * The API reports where the data came from (live / stale / fallback) in response headers.
  */
-function useLiveInventory(initialItems: EnrichedInventoryItem[], apiUrl: string, refreshMs: number): LiveInventoryState {
+function useLiveInventory(
+  initialItems: EnrichedInventoryItem[],
+  snapshotAt: string | null,
+  apiUrl: string,
+  refreshMs: number
+): LiveInventoryState {
   const [items, setItems] = useState<EnrichedInventoryItem[]>(initialItems);
-  const [status, setStatus] = useState<InventoryStatus>('loading');
-  const [fetchedAt, setFetchedAt] = useState<string | null>(null);
+  const [status, setStatus] = useState<InventoryStatus>(initialItems.length > 0 ? 'snapshot' : 'loading');
+  const [fetchedAt, setFetchedAt] = useState<string | null>(initialItems.length > 0 ? snapshotAt : null);
   const [note, setNote] = useState<string | null>(null);
+  const [provider, setProvider] = useState<string | null>(null);
+  const [checked, setChecked] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const inFlight = useRef(false);
 
@@ -46,19 +58,26 @@ function useLiveInventory(initialItems: EnrichedInventoryItem[], apiUrl: string,
       const data = (await res.json()) as EnrichedInventoryItem[];
       if (!Array.isArray(data)) throw new Error('Unexpected response');
       const source = res.headers.get('X-Inventory-Source');
+      if (source === 'fallback' && initialItems.length > 0) {
+        // Never replace a real build-time snapshot with the hardcoded example list
+        setNote(res.headers.get('X-Inventory-Note'));
+        return;
+      }
       setItems(data);
       setStatus(source === 'live' ? 'live' : source === 'stale' ? 'stale' : 'fallback');
       setFetchedAt(res.headers.get('X-Inventory-Fetched-At'));
       setNote(res.headers.get('X-Inventory-Note'));
+      setProvider(res.headers.get('X-Inventory-Provider'));
     } catch (err) {
-      // Keep whatever we already show; only report an error if there is nothing to show
+      // Keep whatever we already show (e.g. the build snapshot); only report an error if there is nothing
       setStatus((prev) => (prev === 'loading' ? 'error' : prev));
       setNote(err instanceof Error ? err.message : 'Request failed');
     } finally {
       inFlight.current = false;
+      setChecked(true);
       setRefreshing(false);
     }
-  }, [apiUrl]);
+  }, [apiUrl, initialItems.length]);
 
   useEffect(() => {
     void load();
@@ -76,7 +95,7 @@ function useLiveInventory(initialItems: EnrichedInventoryItem[], apiUrl: string,
     };
   }, [load, refreshMs]);
 
-  return { items, status, fetchedAt, note, refreshing, refresh: () => void load() };
+  return { items, status, fetchedAt, note, provider, checked, refreshing, refresh: () => void load() };
 }
 
 function formatAge(iso: string | null): string {
@@ -271,10 +290,16 @@ function parseWeaponName(rawName: string) {
 
 export default function InventoryExplorer({
   initialItems = [],
+  snapshotAt = null,
   apiUrl = '/api/inventory.json',
   refreshMs = 5 * 60 * 1000,
 }: InventoryExplorerProps) {
-  const { items, status, fetchedAt, note, refreshing, refresh } = useLiveInventory(initialItems, apiUrl, refreshMs);
+  const { items, status, fetchedAt, note, provider, checked, refreshing, refresh } = useLiveInventory(
+    initialItems,
+    snapshotAt,
+    apiUrl,
+    refreshMs
+  );
 
   // Select AK-47 by default or first weapon with float, or first available item
   const defaultItem = useMemo(() => {
@@ -730,20 +755,27 @@ export default function InventoryExplorer({
           className={`flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-xs font-mono ${
             status === 'live'
               ? 'border-emerald-500/30 bg-emerald-500/5 text-emerald-300'
-              : status === 'loading'
+              : status === 'loading' || status === 'snapshot'
                 ? 'border-[#1E2333] bg-[#0F1118] text-zinc-400'
                 : 'border-amber-500/30 bg-amber-500/5 text-amber-300'
           }`}
         >
           <span>
             {status === 'loading' && 'Loading inventory from Steam…'}
-            {status === 'live' && `● Live from Steam${fetchedAt ? ` · updated ${formatAge(fetchedAt)}` : ''}`}
+            {status === 'snapshot' &&
+              (checked
+                ? `Couldn’t refresh from Steam — showing the inventory from the last site build${fetchedAt ? ` (${formatAge(fetchedAt)})` : ''}.`
+                : `Showing the inventory from the last site build${fetchedAt ? ` (${formatAge(fetchedAt)})` : ''} — checking for updates…`)}
+            {status === 'live' &&
+              `● Live${provider === 'csfloat' ? ' via CSFloat' : provider === 'steam+csfloat' ? ' from Steam + CSFloat' : ' from Steam'}${
+                fetchedAt ? ` · updated ${formatAge(fetchedAt)}` : ''
+              }`}
             {status === 'stale' &&
               `Steam is unavailable right now — showing your last loaded inventory${fetchedAt ? ` (${formatAge(fetchedAt)})` : ''}.`}
             {status === 'fallback' &&
               'Couldn’t reach Steam — showing a saved example snapshot, not your current inventory.'}
             {status === 'error' && 'Couldn’t load your inventory.'}
-            {note && (status === 'stale' || status === 'fallback' || status === 'error') && (
+            {note && (status === 'snapshot' || status === 'live' || status === 'stale' || status === 'fallback' || status === 'error') && (
               <span className="ml-1 text-zinc-500">({note})</span>
             )}
           </span>

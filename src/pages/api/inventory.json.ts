@@ -61,8 +61,10 @@ export const GET: APIRoute = async (context) => {
       '76561198920486334';
 
     const apiKey = runtimeEnv?.STEAM_API_KEY || process.env.STEAM_API_KEY;
+    // Must be a Worker variable/secret: Cloudflare "build" variables are not visible at runtime
+    const csfloatKey = runtimeEnv?.CSFLOAT_API_KEY || process.env.CSFLOAT_API_KEY;
 
-    const result = await getInventoryResult(steamId, apiKey);
+    const result = await getInventoryResult(steamId, apiKey, 15, { csfloatKey });
     const edgeCache = getEdgeCache();
     const key = lastGoodKey(steamId);
 
@@ -80,7 +82,10 @@ export const GET: APIRoute = async (context) => {
         if (typeof waitUntil === 'function') waitUntil.call((context.locals as any).runtime.ctx, save);
         else await save.catch(() => undefined);
       }
-      return respond(result.items, 'live', fetchedAt, result.partial ? { 'X-Inventory-Note': result.reason ?? 'partial' } : {});
+      return respond(result.items, 'live', fetchedAt, {
+        ...(result.provider ? { 'X-Inventory-Provider': result.provider } : {}),
+        ...(result.partial ? { 'X-Inventory-Note': result.reason ?? 'partial' } : {}),
+      });
     }
 
     // Steam failed: prefer the last real inventory over the hardcoded example snapshot

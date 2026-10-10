@@ -2,10 +2,28 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import InventoryExplorer from '../components/steam/InventoryExplorer';
 import { SITE_CONFIG } from '../lib/config';
+import { getInventoryResult } from '../utils/steam';
 
-// The inventory itself is fetched live in the browser from /api/inventory.json (see InventoryExplorer),
-// so it stays current without a rebuild and a Steam hiccup never gets baked into the static page.
 const steamId = SITE_CONFIG.author.steamId;
+
+// Build-time snapshot: fetched with the build environment's keys (CSFloat first-class, Steam as the
+// complete item list). It is only a starting point / safety net: InventoryExplorer then refreshes live
+// from /api/inventory.json in the browser. A failed or fallback result is never baked in.
+const csfloatKey = import.meta.env.CSFLOAT_API_KEY ?? process.env.CSFLOAT_API_KEY;
+const steamKey = import.meta.env.STEAM_API_KEY ?? process.env.STEAM_API_KEY;
+let snapshotItems: Awaited<ReturnType<typeof getInventoryResult>>['items'] = [];
+let snapshotAt: string | null = null;
+try {
+  const snapshot = await getInventoryResult(steamId, steamKey, 15, { csfloatKey });
+  if (snapshot.source === 'live') {
+    snapshotItems = snapshot.items;
+    snapshotAt = new Date().toISOString();
+  } else {
+    console.warn(`[inventory] build-time snapshot skipped: ${snapshot.reason ?? 'no live data'}`);
+  }
+} catch (error) {
+  console.warn('[inventory] build-time snapshot failed:', error);
+}
 const steamInventoryUrl = `https://steamcommunity.com/profiles/${steamId}/inventory/#730`;
 ---
 
@@ -70,6 +88,6 @@ const steamInventoryUrl = `https://steamcommunity.com/profiles/${steamId}/invent
     </div>
 
     <!-- Client-Side Interactive Inventory Island -->
-    <InventoryExplorer client:load />
+    <InventoryExplorer client:load initialItems={snapshotItems} snapshotAt={snapshotAt} />
   </div>
 </BaseLayout>
