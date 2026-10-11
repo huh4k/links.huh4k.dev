@@ -17,7 +17,8 @@ export interface LoadoutWeapon {
   rarity: string;
   rarityColor: string;
   color?: string;
-  modelUrl: string;
+  /** Optional override; by default the mesh is chosen per skin so wraps land on matching UVs */
+  modelUrl?: string;
   isStatTrak?: boolean;
 }
 
@@ -45,7 +46,6 @@ export const DEFAULT_LOADOUT_WEAPONS: LoadoutWeapon[] = [
     rarity: 'Classified',
     rarityColor: '#d32ce6',
     color: '#d32ce6',
-    modelUrl: '/models/weapon_rif_ak47.obj',
   },
   {
     id: '52289606446',
@@ -62,7 +62,6 @@ export const DEFAULT_LOADOUT_WEAPONS: LoadoutWeapon[] = [
     rarityColor: '#8847ff',
     color: '#8847ff',
     isStatTrak: true,
-    modelUrl: '/models/weapon_rif_m4a1_silencer.obj',
   },
   {
     id: '53778348583',
@@ -78,7 +77,6 @@ export const DEFAULT_LOADOUT_WEAPONS: LoadoutWeapon[] = [
     rarity: 'Classified',
     rarityColor: '#d32ce6',
     color: '#d32ce6',
-    modelUrl: '/models/weapon_snip_awp.obj',
   },
   {
     id: '52875530986',
@@ -94,7 +92,6 @@ export const DEFAULT_LOADOUT_WEAPONS: LoadoutWeapon[] = [
     rarity: 'Restricted',
     rarityColor: '#8847ff',
     color: '#8847ff',
-    modelUrl: '/models/weapon_pist_usp_silencer.obj',
   },
   {
     id: 'knife-karambit',
@@ -110,7 +107,6 @@ export const DEFAULT_LOADOUT_WEAPONS: LoadoutWeapon[] = [
     rarity: '★ Extraordinary',
     rarityColor: '#ffd700',
     color: '#ffd700',
-    modelUrl: '/models/placeholder-weapon.glb',
   },
 ];
 

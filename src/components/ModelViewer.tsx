@@ -213,7 +213,8 @@ export function StudioLighting() {
  */
 export function FallbackWeaponMesh() {
   return (
-    <group rotation={[0, -Math.PI / 4, 0]}>
+    // Laid on its side (blade pointing right) and scaled to sit inside the default camera frame
+    <group rotation={[0, 0, -Math.PI / 2]} scale={0.85}>
       {/* Blade */}
       <mesh position={[0, 0.45, 0]}>
         <boxGeometry args={[0.08, 1.3, 0.28]} />
@@ -255,9 +256,12 @@ export function FallbackWeaponMesh() {
 export function WeaponScene({
   modelUrl,
   onLoaded,
+  orientProfile = false,
 }: {
   modelUrl: string;
   onLoaded?: () => void;
+  /** Rotate the model into a side profile (used for knives, whose export axes vary) */
+  orientProfile?: boolean;
 }) {
   const { scene } = useGLTF(modelUrl);
   const loadedNotified = useRef(false);
@@ -275,6 +279,22 @@ export function WeaponScene({
 
   const normalizedScene = useMemo(() => {
     const clone = scene.clone(true);
+
+    // Knife exports use arbitrary axes. Rotate so the longest dimension runs along X (blade left-right),
+    // the middle one along Y (blade height) and the thinnest along Z (towards the camera): a side profile.
+    if (orientProfile) {
+      clone.updateMatrixWorld(true);
+      const sizes = new THREE.Box3().setFromObject(clone).getSize(new THREE.Vector3());
+      const axes = [new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 1)];
+      const order = [0, 1, 2].sort((a, b) => sizes.getComponent(b) - sizes.getComponent(a));
+      const longAxis = axes[order[0]];
+      const midAxis = axes[order[1]];
+      const basis = new THREE.Matrix4().makeBasis(longAxis, midAxis, new THREE.Vector3().crossVectors(longAxis, midAxis));
+      // basis maps profile space -> model space; its transpose maps the model into profile space
+      clone.quaternion.setFromRotationMatrix(basis.transpose());
+      clone.updateMatrixWorld(true);
+    }
+
     const box = new THREE.Box3().setFromObject(clone);
     const size = new THREE.Vector3();
     box.getSize(size);
@@ -291,7 +311,7 @@ export function WeaponScene({
     });
 
     return clone;
-  }, [scene]);
+  }, [scene, orientProfile]);
 
   // Clean up cloned geometries, materials, and textures on unmount or URL switch
   useEffect(() => {
@@ -972,7 +992,7 @@ export default function ModelViewer({
                   flipY={flipY}
                 />
               ) : (
-                <WeaponScene modelUrl={effectiveUrl} onLoaded={onLoaded} />
+                <WeaponScene modelUrl={effectiveUrl} onLoaded={onLoaded} orientProfile={/\/models\/knives\//.test(effectiveUrl)} />
               )
             ) : (
               <Center>
