@@ -278,6 +278,22 @@ export function WeaponScene({
   }, [onLoaded, modelUrl]);
 
   const normalizedScene = useMemo(() => {
+    // A knife export that only holds the physics collision hull is a featureless blob: treat it as a
+    // failed load so the viewer shows its built-in knife instead (re-export with the script to fix).
+    if (orientProfile) {
+      let visual = 0;
+      scene.traverse((o) => {
+        let n: THREE.Object3D | null = o;
+        let isPhysics = false;
+        while (n) {
+          if (/physics/i.test(n.name)) isPhysics = true;
+          n = n.parent;
+        }
+        if ((o as THREE.Mesh).isMesh && !isPhysics) visual++;
+      });
+      if (visual === 0) throw new Error(`${modelUrl} only contains a physics hull`);
+    }
+
     const clone = scene.clone(true);
 
     // Knife exports use arbitrary axes. Rotate so the longest dimension runs along X (blade left-right),
@@ -317,7 +333,7 @@ export function WeaponScene({
     }
 
     return clone;
-  }, [scene, orientProfile]);
+  }, [scene, orientProfile, modelUrl]);
 
   // Clean up cloned geometries, materials, and textures on unmount or URL switch
   useEffect(() => {

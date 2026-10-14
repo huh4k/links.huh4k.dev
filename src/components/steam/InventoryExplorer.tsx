@@ -426,9 +426,9 @@ export default function InventoryExplorer({
               )}
             </div>
 
-            <div className="min-h-[340px] overflow-hidden bg-ink-2 sm:min-h-[460px]">
+            <div className="h-[340px] overflow-hidden bg-ink-2 sm:h-[460px]">
               {inspectMode === '2d' ? (
-                <div className="flex h-full min-h-[340px] items-center justify-center p-8 sm:min-h-[460px]">
+                <div className="flex h-full items-center justify-center p-8">
                   <img
                     src={selectedItem.iconUrl}
                     alt={selectedItem.name}
@@ -444,7 +444,7 @@ export default function InventoryExplorer({
                   float={selectedItem.float}
                   seed={selectedItem.seed}
                   rarityColor={selectedItem.rarityColor}
-                  className="h-full min-h-[340px] w-full sm:min-h-[460px]"
+                  className="h-full w-full"
                   autoRotate={true}
                   showControlsHint={true}
                 />
