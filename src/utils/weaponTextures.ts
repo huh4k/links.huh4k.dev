@@ -243,7 +243,7 @@ export interface SkinFinish {
 export const SKIN_FINISH_FALLBACKS: Record<string, SkinFinish> = {
   mac10_candy_apple: { color: 0xc81e1e, metalness: 0.15, roughness: 0.4 },
   zeusx27_electric_blue: { color: 0x1747c9, metalness: 0.1, roughness: 0.35 },
-  usps_royal_guard: { color: 0x1f3f7a, metalness: 0.35, roughness: 0.4 },
+  usps_royal_guard: { color: 0x353239, metalness: 0.2, roughness: 0.38 },
   m4a1s_liquidation: { color: 0x2f4f9e, metalness: 0.35, roughness: 0.4 },
   galilar_control: { color: 0xcfc7ad, metalness: 0.2, roughness: 0.5 },
   ssg08_rapid_transit: { color: 0xd7dadf, metalness: 0.2, roughness: 0.45 },
