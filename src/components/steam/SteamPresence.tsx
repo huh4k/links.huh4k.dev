@@ -37,11 +37,12 @@ async function executeSharedFetch(): Promise<SteamPresenceStatus> {
     } catch {
       const fallback: SteamPresenceStatus = cachedStatus || {
         state: 'offline',
-        label: 'Offline',
+        label: 'Status unavailable',
         personaname: 'huh4k',
         avatarUrl: '',
         profileUrl: 'https://steamcommunity.com',
         lastUpdated: new Date().toISOString(),
+        unavailable: true,
       };
       cachedStatus = fallback;
       listeners.forEach((callback) => callback(fallback));
@@ -154,7 +155,11 @@ export default function SteamPresence({
     );
   };
 
+  const unavailable = !loading && !!current.unavailable;
   const stateWord = loading ? 'checking…' : isInGame ? 'in game' : isOnline ? 'online' : 'offline';
+
+  // Never claim "offline" when we simply could not reach Steam: show nothing (or a plain link) instead
+  if (unavailable && variant !== 'card') return null;
 
   if (variant === 'card') {
     return (
@@ -166,6 +171,8 @@ export default function SteamPresence({
         <p className="display mt-3 text-[clamp(2.25rem,5vw,3.75rem)] text-bone">
           {loading ? (
             'checking steam…'
+          ) : unavailable ? (
+            'status unavailable.'
           ) : isInGame && gameTitle ? (
             <>
               playing <span className="text-signal">{gameTitle}</span>

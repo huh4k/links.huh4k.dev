@@ -14,7 +14,9 @@ export const GET: APIRoute = async (context) => {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=15, s-maxage=15, stale-while-revalidate=30',
+        'Cache-Control': status.unavailable
+          ? 'no-store, max-age=0'
+          : 'public, max-age=15, s-maxage=15, stale-while-revalidate=30',
       },
     });
   } catch (error) {

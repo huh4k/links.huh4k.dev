@@ -78,6 +78,8 @@ export interface SteamPresenceStatus {
   profileUrl: string;
   game?: SteamPresenceGame;
   lastUpdated: string;
+  /** True when no source could be reached: callers should not claim the user is offline */
+  unavailable?: boolean;
 }
 
 /**

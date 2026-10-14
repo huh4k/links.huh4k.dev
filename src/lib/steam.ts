@@ -2,6 +2,7 @@ import type {
   SteamGetPlayerSummariesResponse,
   SteamGetOwnedGamesResponse,
   SteamPresenceStatus,
+  PresenceState,
   SteamGame,
 } from './types/steam';
 
@@ -111,6 +112,63 @@ export const FALLBACK_GAMES: SteamGame[] = [
 ];
 
 /**
+ * Presence without an API key: the public profile XML (steamcommunity.com/profiles/<id>?xml=1) carries
+ * the online state, avatar and current game for public profiles.
+ */
+async function getPlayerSummaryFromProfileXml(steamId: string): Promise<SteamPresenceStatus | null> {
+  try {
+    const res = await fetch(`https://steamcommunity.com/profiles/${steamId}?xml=1`, {
+      headers: { Accept: 'application/xml' },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return null;
+    const xml = await res.text();
+    const pick = (tag: string): string => {
+      const m = xml.match(new RegExp(`<${tag}>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?</${tag}>`));
+      return m ? m[1].trim() : '';
+    };
+    const onlineState = pick('onlineState').toLowerCase();
+    if (!onlineState) return null;
+
+    const gameName = pick('gameName');
+    const gameLink = pick('gameLink');
+    const appId = (gameLink.match(/\/app\/(\d+)/) || [])[1] || '';
+    let state: PresenceState = 'offline';
+    let label = 'Offline';
+    let game: SteamPresenceStatus['game'] = undefined;
+    if (onlineState === 'in-game' || gameName) {
+      state = 'in-game';
+      label = `Currently Playing: ${gameName || 'Game'}`;
+      if (appId) {
+        game = {
+          id: appId,
+          title: gameName || 'Game',
+          headerUrl: `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${appId}/header.jpg`,
+          capsuleUrl: `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${appId}/capsule_616x353.jpg`,
+          storeUrl: `https://store.steampowered.com/app/${appId}/`,
+        };
+      } else {
+        game = { id: '', title: gameName || 'Game', headerUrl: '', capsuleUrl: '', storeUrl: `https://steamcommunity.com/profiles/${steamId}` };
+      }
+    } else if (onlineState === 'online') {
+      state = 'online';
+      label = 'Online on Steam';
+    }
+    return {
+      state,
+      label,
+      personaname: pick('steamID') || DEFAULT_PERSONA_NAME,
+      avatarUrl: pick('avatarFull') || pick('avatarMedium') || pick('avatarIcon'),
+      profileUrl: `https://steamcommunity.com/profiles/${steamId}`,
+      game,
+      lastUpdated: new Date().toISOString(),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Fetches the user's current live status / game presence.
  * Gracefully falls back to offline state on errors.
  */
@@ -126,17 +184,25 @@ export async function getPlayerSummary(
   const apiKey = customApiKey || getSteamApiKey();
   const steamId = customSteamId || getSteamId64();
 
-  const fallback: SteamPresenceStatus = {
+  // Neither source answered: say so, rather than claiming "offline"
+  const unavailable: SteamPresenceStatus = {
     state: 'offline',
-    label: 'Offline',
+    label: 'Status unavailable',
     personaname: DEFAULT_PERSONA_NAME,
     avatarUrl: '',
     profileUrl: `https://steamcommunity.com/profiles/${steamId}`,
     lastUpdated: new Date().toISOString(),
+    unavailable: true,
+  };
+  const viaXml = async (): Promise<SteamPresenceStatus> => {
+    const result = steamId ? await getPlayerSummaryFromProfileXml(steamId) : null;
+    if (!result) return unavailable;
+    playerSummaryCache = { data: result, timestamp: Date.now() };
+    return result;
   };
 
   if (!apiKey || !steamId) {
-    return fallback;
+    return viaXml();
   }
 
   try {
@@ -148,14 +214,14 @@ export async function getPlayerSummary(
 
     if (!res.ok) {
       console.warn(`[Steam API] GetPlayerSummaries returned status ${res.status}`);
-      return fallback;
+      return viaXml();
     }
 
     const json = (await res.json()) as SteamGetPlayerSummariesResponse;
     const player = json.response?.players?.[0];
 
     if (!player) {
-      return fallback;
+      return viaXml();
     }
 
     let state: 'in-game' | 'online' | 'offline' = 'offline';
@@ -202,7 +268,7 @@ export async function getPlayerSummary(
     return result;
   } catch (error) {
     console.error('[Steam API] Error fetching player summary:', error);
-    return fallback;
+    return viaXml();
   }
 }
 
