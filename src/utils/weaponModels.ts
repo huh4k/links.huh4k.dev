@@ -155,12 +155,15 @@ export function isKnifeName(weaponName?: string): boolean {
   return base.includes('★') || KNIFE_MODEL_FOLDERS.some(([re]) => re.test(base));
 }
 
+/** Bump when the knife .glb files are re-exported: they are cached by browsers for a week */
+const KNIFE_MODELS_VERSION = 2;
+
 /** Path of the knife model for a market name, or undefined if it is not a known knife */
 export function getKnifeModelPath(weaponName?: string): string | undefined {
   if (!isKnifeName(weaponName)) return undefined;
   const base = (weaponName as string).split('|')[0];
   const hit = KNIFE_MODEL_FOLDERS.find(([re]) => re.test(base));
-  return hit ? `/models/knives/${hit[1]}.glb` : undefined;
+  return hit ? `/models/knives/${hit[1]}.glb?v=${KNIFE_MODELS_VERSION}` : undefined;
 }
 
 /**
