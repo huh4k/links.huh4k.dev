@@ -342,9 +342,15 @@ export default function InventoryExplorer({
 
   const handleSelectItem = (item: EnrichedInventoryItem) => {
     setSelectedItem(item);
-    // Smooth scroll into inspect stage on mobile devices if needed
-    if (typeof window !== 'undefined' && window.innerWidth < 1024 && stageRef.current) {
-      stageRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Bring the inspect stage into view: the grid sits below it, so a click would otherwise leave the
+    // viewer scrolled off-screen. Centre it when it fits, otherwise align its top under the header.
+    if (typeof window !== 'undefined') {
+      requestAnimationFrame(() => {
+        const el = stageRef.current;
+        if (!el) return;
+        const fits = el.getBoundingClientRect().height < window.innerHeight - 96;
+        el.scrollIntoView({ behavior: 'smooth', block: fits ? 'center' : 'start' });
+      });
     }
   };
 
@@ -406,7 +412,7 @@ export default function InventoryExplorer({
     <div>
       {/* inspect stage */}
       {selectedItem && (
-        <section ref={stageRef} aria-label="3D weapon inspect" className="mb-16 grid gap-10 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:gap-14">
+        <section ref={stageRef} aria-label="3D weapon inspect" className="mb-16 grid scroll-mt-20 gap-10 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:gap-14">
           <div>
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div className="flex gap-6" role="tablist" aria-label="Inspect view mode">

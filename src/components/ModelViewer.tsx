@@ -321,14 +321,32 @@ export function WeaponScene({
       clone.scale.setScalar(scaleFactor);
     }
 
-    // Exported knife materials come through as flat white (their colour comes from skin textures we do
-    // not ship), so give them a neutral brushed-steel look instead of a blown-out silhouette.
+    // Knives: keep the exported (stock) textures when they were shipped next to the .glb. Without them the
+    // material is flat white, so fall back to a neutral brushed-steel look instead of a blown-out silhouette.
     if (orientProfile) {
       clone.traverse((child) => {
         const mesh = child as THREE.Mesh;
         if (!mesh.isMesh) return;
         mesh.frustumCulled = false;
-        mesh.material = new THREE.MeshStandardMaterial({ color: '#b9bec6', metalness: 0.85, roughness: 0.38 });
+        const src = mesh.material as THREE.MeshStandardMaterial;
+        const hasColor = !!(src && src.map && src.map.image && (src.map.image as { width?: number }).width);
+        if (hasColor) {
+          const mat = src.clone();
+          mat.transparent = false;
+          mat.alphaMap = null;
+          mat.alphaTest = 0;
+          mat.color.set('#ffffff');
+          const orm = mat.metalnessMap && mat.metalnessMap.image ? mat.metalnessMap : null;
+          mat.roughnessMap = orm;
+          mat.metalnessMap = orm;
+          mat.aoMap = orm;
+          mat.metalness = orm ? 1 : 0.6;
+          mat.roughness = orm ? 1 : 0.5;
+          mat.normalMap = null;
+          mesh.material = mat;
+        } else {
+          mesh.material = new THREE.MeshStandardMaterial({ color: '#b9bec6', metalness: 0.85, roughness: 0.38 });
+        }
       });
     }
 
