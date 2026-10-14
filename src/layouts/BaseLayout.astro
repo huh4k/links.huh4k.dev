@@ -160,5 +160,37 @@ const ogImageUrl = new URL('/favicon.svg', SITE_CONFIG.url).href;
         setInterval(tick, 1000);
       })();
     </script>
+    <button
+      id="back-to-top"
+      type="button"
+      aria-label="Back to top"
+      class="fixed bottom-5 right-5 z-40 flex h-11 w-11 translate-y-3 items-center justify-center border border-rule-strong bg-ink-2/90 text-lg text-ash opacity-0 backdrop-blur-sm transition-all duration-200 pointer-events-none hover:border-signal hover:text-signal sm:bottom-8 sm:right-8"
+    >
+      ↑
+    </button>
+    <script is:inline>
+      function setupBackToTop() {
+        var btn = document.getElementById('back-to-top');
+        if (!btn || btn.dataset.bound) return;
+        btn.dataset.bound = 'true';
+        var visible = false;
+        function update() {
+          var show = window.scrollY > 600;
+          if (show === visible) return;
+          visible = show;
+          btn.classList.toggle('opacity-0', !show);
+          btn.classList.toggle('translate-y-3', !show);
+          btn.classList.toggle('pointer-events-none', !show);
+        }
+        window.addEventListener('scroll', update, { passive: true });
+        btn.addEventListener('click', function () {
+          var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
+        });
+        update();
+      }
+      setupBackToTop();
+      document.addEventListener('astro:page-load', setupBackToTop);
+    </script>
   </body>
 </html>

@@ -29,6 +29,7 @@ const links = [
   <section class="overflow-x-clip pb-14 sm:pb-24">
     <p class="eyebrow rise" style="--i:0">counter-strike 2 · software · tools</p>
     <h1
+      id="wordmark"
       class="display wordmark rise -ml-[0.035em] mt-5 text-[clamp(5.5rem,24vw,18rem)] leading-[0.78]"
       style="--i:1"
     >
@@ -169,5 +170,54 @@ const links = [
     }
     setupDiscordCopy();
     document.addEventListener('astro:page-load', setupDiscordCopy);
+  </script>
+
+  <style is:global>
+    .bullet-hole {
+      position: fixed; z-index: 90; width: 14px; height: 14px; margin: -7px 0 0 -7px;
+      border-radius: 50%; pointer-events: none;
+      background: radial-gradient(circle, #000 0 35%, rgba(255,106,26,.55) 40% 55%, transparent 60%);
+      animation: hole-fade 4s ease-out forwards;
+    }
+    @keyframes hole-fade { 0% { transform: scale(1.8); opacity: 1; } 8% { transform: scale(1); } 80% { opacity: .9; } 100% { opacity: 0; } }
+    .ace-banner {
+      position: fixed; inset: 0; z-index: 95; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      pointer-events: none; background: rgba(12,12,10,.82); animation: ace-in 2.6s ease-out forwards;
+    }
+    .ace-banner b { font-size: clamp(7rem, 30vw, 22rem); line-height: .8; letter-spacing: -.04em; color: #ff6a1a; }
+    .ace-banner span { margin-top: 1.5rem; font-family: 'IBM Plex Mono', monospace; font-size: 14px; letter-spacing: .15em; text-transform: uppercase; color: #ece6d6; }
+    @keyframes ace-in { 0% { opacity: 0; transform: scale(1.25); } 12% { opacity: 1; transform: scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }
+    @media (prefers-reduced-motion: reduce) { .bullet-hole, .ace-banner { animation-duration: 1.5s; } }
+  </style>
+
+  <script is:inline>
+    function setupWordmarkEgg() {
+      var el = document.getElementById('wordmark');
+      if (!el || el.dataset.egg) return;
+      el.dataset.egg = 'true';
+      var hits = 0, timer = null;
+      el.style.cursor = 'crosshair';
+      el.addEventListener('click', function (e) {
+        hits++;
+        clearTimeout(timer);
+        timer = setTimeout(function () { hits = 0; }, 1500);
+        var hole = document.createElement('div');
+        hole.className = 'bullet-hole';
+        hole.style.left = e.clientX + 'px';
+        hole.style.top = e.clientY + 'px';
+        document.body.appendChild(hole);
+        setTimeout(function () { hole.remove(); }, 4000);
+        if (hits >= 5) {
+          hits = 0;
+          var b = document.createElement('div');
+          b.className = 'ace-banner';
+          b.innerHTML = '<b class="display">ACE</b><span>5 clicks · 5 kills · gg</span>';
+          document.body.appendChild(b);
+          setTimeout(function () { b.remove(); }, 2600);
+        }
+      });
+    }
+    setupWordmarkEgg();
+    document.addEventListener('astro:page-load', setupWordmarkEgg);
   </script>
 </BaseLayout>

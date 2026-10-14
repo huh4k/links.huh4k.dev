@@ -14,11 +14,31 @@ interface CommandItem {
   external?: boolean;
 }
 
+const GO_TO: Record<string, () => void> = {
+  h: () => { window.location.href = '/'; },
+  i: () => { window.location.href = '/inventory'; },
+  g: () => { window.location.href = '/games'; },
+  l: () => { window.open('/leetify', '_blank', 'noopener,noreferrer'); },
+  b: () => { window.open('https://github.com/huh4k', '_blank', 'noopener,noreferrer'); },
+};
+
+const SHORTCUTS: { keys: string[]; label: string }[] = [
+  { keys: ['/'], label: 'jump to anything' },
+  { keys: ['g', 'h'], label: 'home' },
+  { keys: ['g', 'i'], label: 'inventory' },
+  { keys: ['g', 'g'], label: 'games' },
+  { keys: ['g', 'l'], label: 'leetify' },
+  { keys: ['g', 'b'], label: 'github' },
+  { keys: ['?'], label: 'this cheat sheet' },
+];
+
 export default function CommandDeck({ steamId }: CommandDeckProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const [pendingG, setPendingG] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const steamProfileUrl = `https://steamcommunity.com/profiles/${steamId}`;
@@ -158,6 +178,32 @@ export default function CommandDeck({ steamId }: CommandDeckProps) {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
       const isInput = target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable;
+      const plain = !e.metaKey && !e.ctrlKey && !e.altKey;
+
+      if (!isInput && plain && !isOpen) {
+        if (pendingG) {
+          const dest = GO_TO[e.key.toLowerCase()];
+          setPendingG(false);
+          if (dest) {
+            e.preventDefault();
+            dest();
+            return;
+          }
+        } else if (e.key === 'g') {
+          setPendingG(true);
+          return;
+        } else if (e.key === '?') {
+          e.preventDefault();
+          setShowHelp((prev) => !prev);
+          return;
+        }
+      }
+
+      if (e.key === 'Escape' && showHelp) {
+        e.preventDefault();
+        setShowHelp(false);
+        return;
+      }
 
       if (!isInput && e.key === '/') {
         e.preventDefault();
@@ -180,7 +226,13 @@ export default function CommandDeck({ steamId }: CommandDeckProps) {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('open-command-deck', handleCustomOpen);
     };
-  }, [isOpen]);
+  }, [isOpen, pendingG, showHelp]);
+
+  useEffect(() => {
+    if (!pendingG) return;
+    const t = setTimeout(() => setPendingG(false), 1200);
+    return () => clearTimeout(t);
+  }, [pendingG]);
 
   useEffect(() => {
     if (isOpen) {
@@ -214,7 +266,46 @@ export default function CommandDeck({ steamId }: CommandDeckProps) {
     }
   };
 
-  if (!isOpen) return null;
+  const pendingHint = pendingG && (
+    <div className="num fixed bottom-5 left-5 z-[100] flex items-center gap-2 border border-rule-strong bg-ink-2 px-3 py-2 text-[12px] uppercase tracking-wider text-ash sm:bottom-8 sm:left-8">
+      <span className="kbd">g</span> then <span className="text-bone">h i g l b</span>
+    </div>
+  );
+
+  if (showHelp && !isOpen) {
+    return (
+      <>
+        <div
+          className="fixed inset-0 z-[100] flex items-start justify-center bg-ink/90 px-4 pt-20 backdrop-blur-sm sm:pt-28"
+          onClick={() => setShowHelp(false)}
+        >
+          <div
+            className="w-full max-w-md border border-rule-strong bg-ink-2 shadow-[0_30px_80px_rgba(0,0,0,0.7)]"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-label="Keyboard shortcuts"
+          >
+            <p className="eyebrow border-b border-rule px-5 py-4">keyboard</p>
+            <ul>
+              {SHORTCUTS.map((s) => (
+                <li key={s.label} className="flex items-center justify-between border-b border-rule px-5 py-3 last:border-b-0">
+                  <span className="text-lg">{s.label}</span>
+                  <span className="flex items-center gap-1.5">
+                    {s.keys.map((k, i) => (
+                      <span key={i} className="kbd">{k}</span>
+                    ))}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="num border-t border-rule px-5 py-2.5 text-[10px] uppercase tracking-wider text-ash">esc or ? closes</p>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  if (!isOpen) return <>{pendingHint}</>;
 
   return (
     <div
