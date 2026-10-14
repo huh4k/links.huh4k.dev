@@ -118,6 +118,51 @@ export const WEAPON_MODEL_MAP: Record<string, string> = {
 const SORTED_KEYS = Object.keys(WEAPON_MODEL_MAP).sort((a, b) => b.length - a.length);
 
 /**
+ * Knife models live in /models/knives/<folder>.glb, exported from the game's
+ * weapons/models/knife/<folder>/weapon_<name>.vmdl_c (see scripts/export-knife-models.sh).
+ * Order matters: more specific names first (e.g. "m9 bayonet" before "bayonet").
+ */
+const KNIFE_MODEL_FOLDERS: Array<[RegExp, string]> = [
+  [/m9 bayonet|\bm9\b/i, 'knife_m9'],
+  [/bayonet/i, 'knife_bayonet'],
+  [/karambit/i, 'knife_karambit'],
+  [/butterfly/i, 'knife_butterfly'],
+  [/flip/i, 'knife_flip'],
+  [/gut knife/i, 'knife_gut'],
+  [/huntsman|tactical/i, 'knife_tactical'],
+  [/falchion/i, 'knife_falchion'],
+  [/bowie/i, 'knife_bowie'],
+  [/shadow dagger|daggers/i, 'knife_push'],
+  [/navaja/i, 'knife_navaja'],
+  [/stiletto/i, 'knife_stiletto'],
+  [/talon/i, 'knife_talon'],
+  [/ursus/i, 'knife_ursus'],
+  [/classic/i, 'knife_css'],
+  [/paracord/i, 'knife_cord'],
+  [/survival/i, 'knife_canis'],
+  [/nomad/i, 'knife_outdoor'],
+  [/skeleton/i, 'knife_skeleton'],
+  [/kukri/i, 'knife_kukri'],
+  [/^\s*(?:★\s*)?(?:stattrak™\s*)?knife\b/i, 'knife_default_ct'],
+];
+
+/** True if the name looks like a knife (★ items other than gloves, or a known knife name) */
+export function isKnifeName(weaponName?: string): boolean {
+  if (!weaponName) return false;
+  const base = weaponName.split('|')[0];
+  if (/glove|hand wraps/i.test(base)) return false;
+  return base.includes('★') || KNIFE_MODEL_FOLDERS.some(([re]) => re.test(base));
+}
+
+/** Path of the knife model for a market name, or undefined if it is not a known knife */
+export function getKnifeModelPath(weaponName?: string): string | undefined {
+  if (!isKnifeName(weaponName)) return undefined;
+  const base = (weaponName as string).split('|')[0];
+  const hit = KNIFE_MODEL_FOLDERS.find(([re]) => re.test(base));
+  return hit ? `/models/knives/${hit[1]}.glb` : undefined;
+}
+
+/**
  * Resolves a CS2 weapon or skin market name to its static 3D model asset path.
  *
  * @param weaponName Full skin name or weapon identifier
@@ -165,26 +210,9 @@ export function getWeaponModelPath(weaponName?: string): string {
     }
   }
 
-  // 7. Knife / Melee detection: fallback to placeholder combat knife GLB
-  if (
-    lower.includes('knife') ||
-    lower.includes('bayonet') ||
-    lower.includes('karambit') ||
-    lower.includes('daggers') ||
-    lower.includes('kukri') ||
-    lower.includes('stiletto') ||
-    lower.includes('talon') ||
-    lower.includes('ursus') ||
-    lower.includes('navaja') ||
-    lower.includes('skeleton') ||
-    lower.includes('nomad') ||
-    lower.includes('paracord') ||
-    lower.includes('bowie') ||
-    lower.includes('falchion') ||
-    lower.includes('huntsman')
-  ) {
-    return DEFAULT_WEAPON_MODEL;
-  }
+  // 7. Knife / Melee: real model if mapped (the viewer falls back to its built-in knife if the file is absent)
+  const knifePath = getKnifeModelPath(weaponName);
+  if (knifePath) return knifePath;
 
   // 8. General fallback
   return DEFAULT_WEAPON_MODEL;

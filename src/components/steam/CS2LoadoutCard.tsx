@@ -17,7 +17,8 @@ export interface LoadoutWeapon {
   rarity: string;
   rarityColor: string;
   color?: string;
-  modelUrl: string;
+  /** Optional override; by default the mesh is chosen per skin so wraps land on matching UVs */
+  modelUrl?: string;
   isStatTrak?: boolean;
 }
 
@@ -45,7 +46,6 @@ export const DEFAULT_LOADOUT_WEAPONS: LoadoutWeapon[] = [
     rarity: 'Classified',
     rarityColor: '#d32ce6',
     color: '#d32ce6',
-    modelUrl: '/models/weapon_rif_ak47.obj',
   },
   {
     id: '52289606446',
@@ -62,7 +62,6 @@ export const DEFAULT_LOADOUT_WEAPONS: LoadoutWeapon[] = [
     rarityColor: '#8847ff',
     color: '#8847ff',
     isStatTrak: true,
-    modelUrl: '/models/weapon_rif_m4a1_silencer.obj',
   },
   {
     id: '53778348583',
@@ -78,7 +77,6 @@ export const DEFAULT_LOADOUT_WEAPONS: LoadoutWeapon[] = [
     rarity: 'Classified',
     rarityColor: '#d32ce6',
     color: '#d32ce6',
-    modelUrl: '/models/weapon_snip_awp.obj',
   },
   {
     id: '52875530986',
@@ -94,7 +92,6 @@ export const DEFAULT_LOADOUT_WEAPONS: LoadoutWeapon[] = [
     rarity: 'Restricted',
     rarityColor: '#8847ff',
     color: '#8847ff',
-    modelUrl: '/models/weapon_pist_usp_silencer.obj',
   },
   {
     id: 'knife-karambit',
@@ -110,7 +107,6 @@ export const DEFAULT_LOADOUT_WEAPONS: LoadoutWeapon[] = [
     rarity: '★ Extraordinary',
     rarityColor: '#ffd700',
     color: '#ffd700',
-    modelUrl: '/models/placeholder-weapon.glb',
   },
 ];
 
@@ -139,83 +135,53 @@ export function formatSeed(seed: number): string {
   return `Seed #${seed}`;
 }
 
+const WEAR_SEGMENTS = [
+  { label: 'FN', from: 0, to: 0.07 },
+  { label: 'MW', from: 0.07, to: 0.15 },
+  { label: 'FT', from: 0.15, to: 0.38 },
+  { label: 'WW', from: 0.38, to: 0.45 },
+  { label: 'BS', from: 0.45, to: 1 },
+];
+
 /**
- * Live Segmented Float Wear Bar with wear bracket indicators and pin needle.
+ * Float readout: one hairline track split at the wear brackets, a single tick for the value.
  */
 export function FloatWearBar({ float }: { float: number }) {
   const clamped = Math.min(Math.max(float, 0), 1);
   const percent = getFloatPercentage(clamped);
-  const wearName = getWearBracket(clamped);
 
   return (
-    <div className="space-y-1.5 w-full">
-      <div className="flex items-center justify-between text-[11px] font-mono">
-        <div className="flex items-center gap-1.5">
-          <span className="text-zinc-500">Condition:</span>
-          <span className="font-semibold text-zinc-200">{wearName}</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-zinc-500">Float:</span>
-          <span className="font-mono font-bold text-cyan-400">
-            {clamped.toFixed(4)}
-          </span>
-        </div>
-      </div>
-
-      {/* Segmented Wear Bar Track */}
+    <div className="w-full">
       <div
-        className="relative h-2.5 w-full rounded-full bg-slate-900 border border-white/10 overflow-hidden flex shadow-inner"
+        className="relative flex h-[6px] w-full gap-[2px]"
         role="progressbar"
         aria-valuenow={clamped}
         aria-valuemin={0}
         aria-valuemax={1}
-        aria-label="CS2 Float Wear Bar"
+        aria-label="Float value"
       >
-        {/* FN: 0.00 - 0.07 (7%) */}
+        {WEAR_SEGMENTS.map((s) => {
+          const active = clamped >= s.from && (clamped < s.to || s.to === 1);
+          return (
+            <div
+              key={s.label}
+              style={{ width: `${(s.to - s.from) * 100}%` }}
+              className={active ? 'bg-bone' : 'bg-rule-strong'}
+              title={`${s.from.toFixed(2)} – ${s.to.toFixed(2)}`}
+            />
+          );
+        })}
         <div
-          style={{ width: '7%' }}
-          className="h-full bg-emerald-500/80 border-r border-black/40"
-          title="Factory New (0.00 - 0.07)"
-        />
-        {/* MW: 0.07 - 0.15 (8%) */}
-        <div
-          style={{ width: '8%' }}
-          className="h-full bg-cyan-500/80 border-r border-black/40"
-          title="Minimal Wear (0.07 - 0.15)"
-        />
-        {/* FT: 0.15 - 0.38 (23%) */}
-        <div
-          style={{ width: '23%' }}
-          className="h-full bg-amber-400/80 border-r border-black/40"
-          title="Field-Tested (0.15 - 0.38)"
-        />
-        {/* WW: 0.38 - 0.45 (7%) */}
-        <div
-          style={{ width: '7%' }}
-          className="h-full bg-orange-500/80 border-r border-black/40"
-          title="Well-Worn (0.38 - 0.45)"
-        />
-        {/* BS: 0.45 - 1.00 (55%) */}
-        <div
-          style={{ width: '55%' }}
-          className="h-full bg-rose-600/80"
-          title="Battle-Scarred (0.45 - 1.00)"
-        />
-
-        {/* Live Needle Indicator */}
-        <div
-          className="absolute top-0 bottom-0 w-1.5 -ml-0.5 bg-white shadow-[0_0_8px_#ffffff] z-10 rounded-full pointer-events-none transition-all duration-300"
+          className="pointer-events-none absolute -top-[5px] h-[16px] w-[2px] -translate-x-1/2 bg-signal"
           style={{ left: `${percent}%` }}
         />
       </div>
-
-      {/* Bracket Indicators */}
-      <div className="flex justify-between text-[9px] font-mono text-zinc-500 px-0.5">
-        <span className="text-emerald-400/80">FN 0.00</span>
-        <span className="text-cyan-400/80">MW 0.07</span>
-        <span className="text-amber-400/80">FT 0.15</span>
-        <span className="text-orange-400/80">WW 0.38</span>
-        <span className="text-rose-400/80">BS 0.45-1.00</span>
+      <div className="num mt-2 flex justify-between text-[10px] uppercase tracking-wider text-ash-dim">
+        {WEAR_SEGMENTS.map((s) => (
+          <span key={s.label} style={{ width: `${(s.to - s.from) * 100}%` }}>
+            {s.label}
+          </span>
+        ))}
       </div>
     </div>
   );
@@ -229,9 +195,7 @@ export interface CS2LoadoutCardProps {
 }
 
 /**
- * CS2 Loadout Bento Card (Module C-2, Homepage Bento Grid).
- * Features 5 weapon slots, interactive tabs, 3D model inspect,
- * segmented float wear bar, paint seed, rarity badge, and footer links.
+ * Loadout: inspect stage on the left, weapon index on the right.
  */
 export default function CS2LoadoutCard({
   weapons = DEFAULT_LOADOUT_WEAPONS,
@@ -253,147 +217,82 @@ export default function CS2LoadoutCard({
   );
 
   return (
-    <div
-      className={`rounded-2xl border border-hardware bg-[#0F1118] p-5 sm:p-6 relative overflow-hidden flex flex-col justify-between telemetry-card spotlight-card shadow-xl gap-4 ${className}`}
-    >
-      {/* Background Grid Pattern & Ambient Rarity Accent */}
-      <div className="absolute inset-0 bg-grid-pattern opacity-25 pointer-events-none" />
-      <div
-        className="absolute -top-24 -right-24 w-64 h-64 rounded-full blur-3xl opacity-15 pointer-events-none transition-colors duration-500"
-        style={{ backgroundColor: activeWeapon.rarityColor }}
-      />
-
-      {/* Card Header */}
-      <div className="relative z-10 flex items-center justify-between border-b border-[#1E2333] pb-3">
-        <div className="flex items-center gap-2.5">
-          <span className="w-2.5 h-2.5 rounded-sm bg-telemetry-amber shadow-sm shadow-telemetry-amber/60 animate-pulse" />
-          <span className="text-xs font-mono font-bold tracking-wider text-white uppercase">
-            [CS2 // LOADOUT]
-          </span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="px-2 py-0.5 rounded bg-[#151824] border border-[#1E2333] text-[10px] font-mono text-zinc-400">
-            {activeWeapon.slot}
-          </span>
-        </div>
-      </div>
-
-      {/* Interactive Tab Pills */}
-      <div
-        className="relative z-10 grid grid-cols-5 gap-1.5 p-1 rounded-xl bg-[#0A0C12] border border-[#1E2333]"
-        role="tablist"
-        aria-label="CS2 Active Weapon Loadout Slots"
-      >
-        {weapons.map((w, index) => {
-          const isActive = index === activeIndex;
-          return (
-            <button
-              key={w.id || w.name}
-              type="button"
-              role="tab"
-              aria-selected={isActive}
-              onClick={() => setActiveIndex(index)}
-              className={`px-1.5 py-1.5 sm:px-2 rounded-lg text-[11px] sm:text-xs font-mono font-bold transition-all duration-200 cursor-pointer text-center truncate ${
-                isActive
-                  ? 'text-white shadow-md'
-                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-[#151824]'
-              }`}
-              style={
-                isActive
-                  ? {
-                      backgroundColor: `${w.rarityColor}22`,
-                      borderColor: `${w.rarityColor}88`,
-                      borderWidth: '1px',
-                      borderStyle: 'solid',
-                      boxShadow: `0 0 12px ${w.rarityColor}33`,
-                    }
-                  : {
-                      border: '1px solid transparent',
-                    }
-              }
-            >
-              {w.tabLabel}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* 3D Inspect Viewport Stage */}
-      <div className="relative z-10 w-full h-48 sm:h-56 rounded-xl overflow-hidden border border-[#1E2333] bg-[#0A0C12] shadow-inner">
-        <ModelViewer
-          modelUrl={modelAssetUrl}
-          textureUrl={textureUrl}
-          weaponName={activeWeapon.name}
-          skinName={activeWeapon.skin}
-          float={activeWeapon.float}
-          seed={activeWeapon.seed}
-          rarityColor={activeWeapon.rarityColor}
-          className="w-full h-full"
-          autoRotate={true}
-          showControlsHint={true}
-        />
-      </div>
-
-      {/* Weapon Details & Telemetry Dock */}
-      <div className="relative z-10 space-y-3 bg-[#0A0C12]/80 border border-[#1E2333] rounded-xl p-3 sm:p-3.5">
-        {/* Weapon Title & StatTrak Badge */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            {activeWeapon.isStatTrak && (
-              <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-[#cf6a32]/20 border border-[#cf6a32]/40 text-[#cf6a32]">
-                StatTrak™
-              </span>
-            )}
-            <h3
-              className="text-xs sm:text-sm font-mono font-bold text-white truncate"
-              title={activeWeapon.name}
-            >
-              {activeWeapon.name}
-            </h3>
-          </div>
+    <div className={`grid gap-8 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-12 ${className}`}>
+      {/* stage */}
+      <div>
+        <div className="relative h-[320px] overflow-hidden bg-ink-2 sm:h-[460px]">
+          <ModelViewer
+            modelUrl={modelAssetUrl}
+            textureUrl={textureUrl}
+            weaponName={activeWeapon.name}
+            skinName={activeWeapon.skin}
+            float={activeWeapon.float}
+            seed={activeWeapon.seed}
+            rarityColor={activeWeapon.rarityColor}
+            className="h-full w-full"
+            autoRotate={true}
+            showControlsHint={true}
+          />
+          <span className="eyebrow pointer-events-none absolute left-4 top-4">{activeWeapon.slot}</span>
           <span
-            className="shrink-0 px-2 py-0.5 rounded text-[10px] font-mono font-bold tracking-wider uppercase"
-            style={{
-              color: activeWeapon.rarityColor,
-              backgroundColor: `${activeWeapon.rarityColor}18`,
-              border: `1px solid ${activeWeapon.rarityColor}40`,
-            }}
+            className="num pointer-events-none absolute right-4 top-4 text-[11px] uppercase tracking-[0.16em]"
+            style={{ color: activeWeapon.rarityColor }}
           >
-            [{activeWeapon.rarity}]
+            {activeWeapon.rarity}
           </span>
         </div>
 
-        {/* Badges Row: Pattern Seed & Condition */}
-        <div className="flex items-center gap-2 flex-wrap text-[10px] font-mono">
-          <span className="px-2 py-0.5 rounded bg-[#151824] border border-[#1E2333] text-zinc-300">
-            {formatSeed(activeWeapon.seed)}
-          </span>
-          <span className="px-2 py-0.5 rounded bg-[#151824] border border-[#1E2333] text-zinc-300">
-            {activeWeapon.wear}
-          </span>
+        <div className="mt-6 grid gap-6 sm:grid-cols-[1fr_minmax(0,20rem)] sm:items-end">
+          <div className="min-w-0">
+            <p className="text-[15px] text-ash">
+              {activeWeapon.isStatTrak && <span className="mr-2 text-signal">StatTrak™</span>}
+              {activeWeapon.weapon}
+            </p>
+            <h3 className="display mt-1 text-[clamp(2.25rem,5vw,3.75rem)]">{activeWeapon.skin}</h3>
+            <p className="num mt-3 text-[12px] uppercase tracking-wider text-ash">
+              {activeWeapon.wear} · float {activeWeapon.float.toFixed(4)} · {formatSeed(activeWeapon.seed).toLowerCase()}
+            </p>
+          </div>
+          <FloatWearBar float={activeWeapon.float} />
         </div>
-
-        {/* Live Segmented Float Wear Bar */}
-        <FloatWearBar float={activeWeapon.float} />
       </div>
 
-      {/* Card Footer Navigation */}
-      <div className="relative z-10 pt-2 border-t border-[#1E2333] flex items-center justify-between text-xs font-mono">
-        <a
-          href="/inventory"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-telemetry-blue/15 hover:bg-telemetry-blue/25 border border-telemetry-blue/40 hover:border-telemetry-blue/70 text-telemetry-blue hover:text-white text-xs font-mono font-bold transition-all tactile-btn"
-        >
-          <span>[VIEW ALL SKINS] →</span>
-        </a>
+      {/* index */}
+      <div className="flex flex-col">
+        <ul role="tablist" aria-label="Loadout slots" className="border-t border-rule">
+          {weapons.map((w, index) => {
+            const isActive = index === activeIndex;
+            return (
+              <li key={w.id || w.name}>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => setActiveIndex(index)}
+                  className={`group flex w-full items-baseline gap-4 border-b border-rule py-4 text-left transition-colors ${
+                    isActive ? 'text-bone' : 'text-ash hover:text-bone'
+                  }`}
+                >
+                  <span className={`num w-6 text-[12px] ${isActive ? 'text-signal' : ''}`}>0{index + 1}</span>
+                  <span className="display text-[clamp(1.6rem,3vw,2.25rem)]">{w.tabLabel}</span>
+                  <span className="ml-auto truncate text-[14px]">{w.skin}</span>
+                  <span
+                    className="h-2 w-2 shrink-0 self-center rounded-full"
+                    style={{ backgroundColor: isActive ? w.rarityColor : 'transparent', boxShadow: `inset 0 0 0 1px ${w.rarityColor}` }}
+                  />
+                </button>
+              </li>
+            );
+          })}
+        </ul>
 
         <a
           href={steamInventoryUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-[11px] font-mono text-zinc-400 hover:text-telemetry-amber transition-colors"
+          className="u-link mt-6 self-start text-[15px] text-ash hover:text-bone"
         >
-          <span>Steam Inventory</span>
-          <span>↗</span>
+          steam inventory ↗
         </a>
       </div>
     </div>

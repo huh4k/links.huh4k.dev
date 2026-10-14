@@ -26,8 +26,10 @@ import {
   enrichInventory,
   fetchCS2Inventory,
   fetchCS2InventoryResult,
+  getInventoryResult,
   FALLBACK_INVENTORY,
 } from '../src/utils/steam.ts';
+import { mapCSFloatItem, extractCSFloatItems, fetchCSFloatInventory } from '../src/utils/csfloatInventory.ts';
 import { GET as inventoryApiHandler } from '../src/pages/api/inventory.json.ts';
 import type { EnrichedInventoryItem, RawSteamDescription } from '../src/types/inventory.ts';
 
@@ -642,6 +644,132 @@ async function runTestSuite() {
       } as any);
       assert(res.headers.get('X-Inventory-Source') === 'live', 'API sets X-Inventory-Source: live for fresh Steam data');
       assert(Boolean(res.headers.get('X-Inventory-Fetched-At')), 'API sets X-Inventory-Fetched-At for live data');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // TEST 11: CSFloat inventory source (mapping, auth header, merge, Steam-down path)
+  // NOTE: the CSFloat response shape is mapped defensively from our understanding of the API;
+  // these tests pin that mapping, they do not prove the live contract.
+  // --------------------------------------------------------------------------
+  console.log('\n[Test 11] CSFloat inventory source');
+  {
+    const csfItem = {
+      asset_id: '900001',
+      market_hash_name: 'AK-47 | Ice Coaled (Minimal Wear)',
+      float_value: 0.0825,
+      paint_seed: 367,
+      icon_url: 'abcHash',
+      rarity: 5,
+      d_param: '777',
+    };
+    const mapped = mapCSFloatItem(csfItem, '76561198920486334');
+    assert(mapped?.id === '900001' && mapped?.float === 0.0825 && mapped?.seed === 367, 'Maps asset id, float and seed');
+    assert(mapped?.type === 'Rifle' && mapped?.rarity === 'Classified', 'Infers type and rarity (Classified, id 5)');
+    assert(Boolean(mapped?.iconUrl.endsWith('abcHash')), 'Builds the Steam economy image URL from a bare icon hash');
+    assert(Boolean(mapped?.inspectUrl?.includes('A900001D777')), 'Builds an inspect link from d_param');
+    assert(mapCSFloatItem({ market_hash_name: 'x' }) === null, 'Skips entries without an asset id');
+    assert(mapCSFloatItem({ asset_id: '1', market_hash_name: '★ Karambit | Doppler (Factory New)', rarity: 6 })?.type === 'Knife', 'Knives are typed as Knife');
+    assert(
+      mapCSFloatItem({ asset_id: '2', market_hash_name: 'M4A1-S | Liquidation (Field-Tested)', is_stattrak: true })?.name.startsWith('StatTrak™'),
+      'Prefixes StatTrak™ when flagged'
+    );
+    assert(extractCSFloatItems({ inventory: [csfItem] }).length === 1, 'Unwraps { inventory: [...] } responses');
+    assert(extractCSFloatItems([csfItem, csfItem]).length === 2, 'Accepts a bare array');
+
+    const originalFetch = globalThis.fetch;
+    const steamPage = () =>
+      new Response(
+        JSON.stringify({
+          success: 1,
+          assets: [{ appid: 730, contextid: '2', assetid: '900001', classid: 'c1', instanceid: '0', amount: '1' }],
+          descriptions: [
+            {
+              appid: 730, classid: 'c1', instanceid: '0', name: 'AK-47 | Ice Coaled',
+              market_name: 'AK-47 | Ice Coaled (Minimal Wear)', type: 'Rifle', icon_url: 'steamIcon', tradable: 1, marketable: 1,
+              tags: [{ category: 'Type', internal_name: 'CSGO_Type_Rifle', localized_tag_name: 'Rifle' }],
+            },
+          ],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+
+    // 11a: key is sent as the Authorization header
+    let sentAuth = '';
+    globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+      if (url.toString().includes('csfloat.com/api/v1/me/inventory')) {
+        sentAuth = String((init?.headers as Record<string, string>)?.Authorization ?? '');
+        return new Response(JSON.stringify([csfItem]), { status: 200 });
+      }
+      return originalFetch(url);
+    }) as typeof fetch;
+    try {
+      const r = await fetchCSFloatInventory('test-key', '76561198920486334');
+      assert(sentAuth === 'test-key' && r.items.length === 1, 'Sends the API key in the Authorization header and parses the list');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    // 11b: Steam live (no float) + CSFloat -> floats merged in, provider steam+csfloat
+    globalThis.fetch = (async (url: string | URL | Request) => {
+      const u = url.toString();
+      if (u.includes('steamcommunity.com/inventory')) return steamPage();
+      if (u.includes('csfloat.com/api/v1/me/inventory')) return new Response(JSON.stringify([csfItem]), { status: 200 });
+      return new Response('{}', { status: 500 });
+    }) as typeof fetch;
+    try {
+      const merged = await getInventoryResult('76561198920486334', undefined, 0, { csfloatKey: 'k' });
+      assert(merged.provider === 'steam+csfloat', 'Provider is steam+csfloat when both sources respond');
+      assert(merged.items[0]?.float === 0.0825 && merged.items[0]?.seed === 367, 'CSFloat float/seed are merged into the Steam item');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    // 11c: Steam 429 + CSFloat ok -> CSFloat inventory, live + partial
+    globalThis.fetch = (async (url: string | URL | Request) => {
+      const u = url.toString();
+      if (u.includes('steamcommunity.com/inventory')) return new Response('{}', { status: 429 });
+      if (u.includes('csfloat.com/api/v1/me/inventory')) return new Response(JSON.stringify([csfItem]), { status: 200 });
+      return new Response('{}', { status: 500 });
+    }) as typeof fetch;
+    try {
+      const viaCsf = await getInventoryResult('76561198920486334', undefined, 0, { csfloatKey: 'k' });
+      assert(viaCsf.source === 'live' && viaCsf.provider === 'csfloat', 'Steam 429 + CSFloat ok serves CSFloat data as live');
+      assert(viaCsf.partial === true && viaCsf.items.length === 1, 'CSFloat-only result is flagged partial');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    // 11d: both fail -> fallback whose reason explains both failures (incl. a missing runtime key)
+    globalThis.fetch = (async (url: string | URL | Request) => {
+      if (url.toString().includes('steamcommunity.com/inventory')) return new Response('{}', { status: 429 });
+      return new Response('{}', { status: 500 });
+    }) as typeof fetch;
+    try {
+      const none = await getInventoryResult('76561198920486334', undefined, 0, {});
+      assert(none.source === 'fallback' && Boolean(none.reason?.includes('no API key')), 'Missing key is called out in the fallback reason');
+      const bad = await getInventoryResult('76561198920486334', undefined, 0, { csfloatKey: 'k' });
+      assert(bad.source === 'fallback' && Boolean(bad.reason?.includes('CSFloat')), 'CSFloat failure is included in the fallback reason');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    // 11e: API route reads CSFLOAT_API_KEY from the runtime env and reports the provider
+    globalThis.fetch = (async (url: string | URL | Request) => {
+      const u = url.toString();
+      if (u.includes('steamcommunity.com/inventory')) return steamPage();
+      if (u.includes('csfloat.com/api/v1/me/inventory')) return new Response(JSON.stringify([csfItem]), { status: 200 });
+      return new Response('{}', { status: 500 });
+    }) as typeof fetch;
+    try {
+      const res = await inventoryApiHandler({
+        request: new Request('https://links.huh4k.dev/api/inventory.json'),
+        locals: { runtime: { env: { CSFLOAT_API_KEY: 'runtime-key' } } },
+        params: {},
+      } as any);
+      assert(res.headers.get('X-Inventory-Provider') === 'steam+csfloat', 'API route uses the runtime CSFLOAT_API_KEY and reports the provider');
     } finally {
       globalThis.fetch = originalFetch;
     }

@@ -2,6 +2,7 @@
  * Steam Community API & CSFloat Inspect Data Pipeline Utilities
  */
 
+import { fetchCSFloatInventory } from './csfloatInventory';
 import type {
   RawSteamDescription,
   RawSteamInventoryResponse,
@@ -657,6 +658,13 @@ export async function enrichInventory(
   let enrichedCount = 0;
 
   for (const item of items) {
+    // Only skinned weapons/knives/gloves carry a float: graffiti, medals, music kits and stock weapons never
+    // do, so asking the (throttled, 5s-timeout) inspect API about them just burns time on every request.
+    const canHaveFloat = item.name.includes(' | ') && !/^(graffiti|sticker|patch|music kit)/i.test(item.name);
+    if (!canHaveFloat) {
+      result.push(item);
+      continue;
+    }
     if (item.inspectUrl && item.float === null && enrichedCount < maxEnrich) {
       const enriched = await enrichWithCSFloat(item);
       result.push(enriched);
@@ -686,8 +694,10 @@ export interface InventoryResult {
   source: Exclude<InventorySource, 'stale'>;
   /** Why the fallback was used, or a note on a partial live result */
   reason?: string;
-  /** True when a later page failed and only part of the inventory was loaded */
+  /** True when a later page failed (or CSFloat alone supplied it) and the inventory may be incomplete */
   partial?: boolean;
+  /** Which service(s) supplied the items */
+  provider?: 'steam' | 'csfloat' | 'steam+csfloat';
 }
 
 const MAX_INVENTORY_PAGES = 10;
@@ -891,20 +901,59 @@ export async function fetchCS2Inventory(steamId64: string, apiKey?: string): Pro
 export async function getInventoryResult(
   steamId64: string,
   apiKey?: string,
-  maxEnrich = 15
+  maxEnrich = 15,
+  options: { csfloatKey?: string } = {}
 ): Promise<InventoryResult> {
-  const result = await fetchCS2InventoryResult(steamId64, apiKey);
-  // Only enrich live data; the fallback snapshot already carries floats and seeds
-  if (result.source !== 'live') return result;
-  return { ...result, items: await enrichInventory(result.items, maxEnrich) };
+  // Ask both sources at once: Steam has the complete item list, CSFloat is the reliable source of
+  // floats/seeds and keeps working when Steam rate-limits shared server IPs.
+  const [steam, csfloat] = await Promise.all([
+    fetchCS2InventoryResult(steamId64, apiKey),
+    options.csfloatKey ? fetchCSFloatInventory(options.csfloatKey, steamId64) : Promise.resolve(null),
+  ]);
+  const csfloatItems = csfloat && csfloat.items.length > 0 ? csfloat.items : null;
+
+  if (steam.source === 'live') {
+    let items = steam.items;
+    if (csfloatItems) {
+      const byId = new Map(csfloatItems.map((i) => [i.id, i]));
+      items = items.map((item) => {
+        const extra = byId.get(item.id);
+        if (!extra) return item;
+        return {
+          ...item,
+          float: item.float ?? extra.float,
+          seed: item.seed ?? extra.seed,
+          inspectUrl: item.inspectUrl ?? extra.inspectUrl,
+        };
+      });
+    }
+    // Last resort for anything still missing a float: the (throttled) inspect API
+    items = await enrichInventory(items, maxEnrich);
+    return { ...steam, items, provider: csfloatItems ? 'steam+csfloat' : 'steam' };
+  }
+
+  // Steam failed: CSFloat's own copy of the inventory beats the hardcoded example snapshot
+  if (csfloatItems) {
+    return {
+      items: csfloatItems,
+      source: 'live',
+      provider: 'csfloat',
+      partial: true,
+      reason: `Steam unavailable (${steam.reason ?? 'no response'}); showing the weapons and skins CSFloat returned`,
+    };
+  }
+
+  const csfloatNote = csfloat?.error ? `; CSFloat: ${csfloat.error}` : options.csfloatKey ? '' : '; CSFloat: no API key configured';
+  return { ...steam, reason: `${steam.reason ?? 'Steam unavailable'}${csfloatNote}` };
 }
 
 export async function getEnrichedInventory(
   steamId64: string,
   apiKey?: string,
-  maxEnrich = 15
+  maxEnrich = 15,
+  options: { csfloatKey?: string } = {}
 ): Promise<EnrichedInventoryItem[]> {
-  return (await getInventoryResult(steamId64, apiKey, maxEnrich)).items;
+  return (await getInventoryResult(steamId64, apiKey, maxEnrich, options)).items;
 }
 
 // Backward-compatibility and spec-compliant aliases

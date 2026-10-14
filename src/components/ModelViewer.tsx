@@ -213,7 +213,8 @@ export function StudioLighting() {
  */
 export function FallbackWeaponMesh() {
   return (
-    <group rotation={[0, -Math.PI / 4, 0]}>
+    // Laid on its side (blade pointing right) and scaled to sit inside the default camera frame
+    <group rotation={[0, 0, -Math.PI / 2]} scale={0.85}>
       {/* Blade */}
       <mesh position={[0, 0.45, 0]}>
         <boxGeometry args={[0.08, 1.3, 0.28]} />
@@ -255,9 +256,12 @@ export function FallbackWeaponMesh() {
 export function WeaponScene({
   modelUrl,
   onLoaded,
+  orientProfile = false,
 }: {
   modelUrl: string;
   onLoaded?: () => void;
+  /** Rotate the model into a side profile (used for knives, whose export axes vary) */
+  orientProfile?: boolean;
 }) {
   const { scene } = useGLTF(modelUrl);
   const loadedNotified = useRef(false);
@@ -275,6 +279,22 @@ export function WeaponScene({
 
   const normalizedScene = useMemo(() => {
     const clone = scene.clone(true);
+
+    // Knife exports use arbitrary axes. Rotate so the longest dimension runs along X (blade left-right),
+    // the middle one along Y (blade height) and the thinnest along Z (towards the camera): a side profile.
+    if (orientProfile) {
+      clone.updateMatrixWorld(true);
+      const sizes = new THREE.Box3().setFromObject(clone).getSize(new THREE.Vector3());
+      const axes = [new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 1)];
+      const order = [0, 1, 2].sort((a, b) => sizes.getComponent(b) - sizes.getComponent(a));
+      const longAxis = axes[order[0]];
+      const midAxis = axes[order[1]];
+      const basis = new THREE.Matrix4().makeBasis(longAxis, midAxis, new THREE.Vector3().crossVectors(longAxis, midAxis));
+      // basis maps profile space -> model space; its transpose maps the model into profile space
+      clone.quaternion.setFromRotationMatrix(basis.transpose());
+      clone.updateMatrixWorld(true);
+    }
+
     const box = new THREE.Box3().setFromObject(clone);
     const size = new THREE.Vector3();
     box.getSize(size);
@@ -291,7 +311,7 @@ export function WeaponScene({
     });
 
     return clone;
-  }, [scene]);
+  }, [scene, orientProfile]);
 
   // Clean up cloned geometries, materials, and textures on unmount or URL switch
   useEffect(() => {
@@ -695,13 +715,12 @@ function CanvasSpinner({ weaponName }: { weaponName?: string }) {
   const { progress } = useProgress();
   return (
     <Html center>
-      <div className="flex flex-col items-center justify-center p-4 bg-slate-900/90 backdrop-blur-md rounded-xl border border-slate-700/60 shadow-2xl text-center pointer-events-none select-none min-w-[180px]">
-        <div className="w-8 h-8 mb-2 border-2 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin" />
-        <span className="text-xs font-semibold tracking-wider text-slate-200 uppercase">
-          {weaponName ? `Loading ${weaponName}` : 'Loading 3D Model'}
+      <div className="pointer-events-none flex min-w-[180px] select-none flex-col items-center text-center">
+        <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-[#948e7e]">
+          {weaponName ? `loading ${weaponName}` : 'loading model'}
         </span>
-        <span className="text-[11px] font-mono text-cyan-400 mt-1">
-          {progress ? `${Math.round(progress)}%` : 'Processing...'}
+        <span className="mt-1 font-mono text-2xl tabular-nums text-[#ff6a1a]">
+          {progress ? `${Math.round(progress)}%` : '…'}
         </span>
       </div>
     </Html>
@@ -801,18 +820,13 @@ export function ModelViewerSkeleton({
 }) {
   return (
     <div
-      className={`relative flex flex-col items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-b from-slate-900/95 to-slate-950 border border-slate-800/80 shadow-2xl ${
+      className={`relative flex flex-col items-center justify-center overflow-hidden bg-[#141411] ${
         className || 'w-full h-80 min-h-[340px]'
       }`}
     >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(14,165,233,0.08),transparent_60%)] animate-pulse" />
-      <div className="relative z-10 flex flex-col items-center">
-        <div className="w-12 h-12 mb-3 rounded-full border-2 border-cyan-500/20 border-t-cyan-400 animate-spin" />
-        <p className="text-xs font-semibold uppercase tracking-wider text-slate-300">
-          {weaponName ? `Loading ${weaponName}...` : 'Initializing 3D Viewer...'}
-        </p>
-        <span className="text-[10px] text-slate-500 mt-1 font-mono">CS2 Inspect Studio</span>
-      </div>
+      <p className="animate-pulse font-mono text-[11px] uppercase tracking-[0.16em] text-[#948e7e]">
+        {weaponName ? `loading ${weaponName}` : 'loading viewer'}
+      </p>
     </div>
   );
 }
@@ -931,11 +945,11 @@ export default function ModelViewer({
   return (
     <div
       ref={containerRef}
-      className={`relative overflow-hidden rounded-2xl bg-gradient-to-b from-slate-900/90 via-slate-950 to-black border border-slate-800/80 shadow-2xl select-none group ${className}`}
+      className={`relative overflow-hidden bg-[#141411] select-none group ${className}`}
       onPointerDown={() => setHintVisible(false)}
     >
       {/* Background Studio Ambience */}
-      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_50%_35%,rgba(56,189,248,0.06),transparent_70%)]" />
+      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_50%_55%,rgba(255,106,26,0.07),transparent_65%)]" />
 
       {/* React Three Fiber Canvas */}
       <Canvas
@@ -972,7 +986,7 @@ export default function ModelViewer({
                   flipY={flipY}
                 />
               ) : (
-                <WeaponScene modelUrl={effectiveUrl} onLoaded={onLoaded} />
+                <WeaponScene modelUrl={effectiveUrl} onLoaded={onLoaded} orientProfile={/\/models\/knives\//.test(effectiveUrl)} />
               )
             ) : (
               <Center>
@@ -995,8 +1009,8 @@ export default function ModelViewer({
       {/* Interaction Hint Badge */}
       {showControlsHint && hintVisible && (
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 pointer-events-none transition-opacity duration-500 opacity-80 group-hover:opacity-100">
-          <span className="px-3 py-1 text-[11px] font-medium tracking-wide bg-slate-900/80 backdrop-blur-md text-slate-300 rounded-full border border-slate-700/60 shadow-lg">
-            Drag to rotate • Scroll to zoom
+          <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-[#69655a]">
+            drag to rotate · scroll to zoom
           </span>
         </div>
       )}

@@ -5,21 +5,26 @@ import { resolveSkinTextureUrl } from '../../utils/weaponTextures';
 import type { EnrichedInventoryItem } from '../../types/inventory';
 
 export interface InventoryExplorerProps {
-  /** Optional pre-rendered items; the explorer always refreshes from the live API on mount */
+  /** Optional build-time snapshot shown immediately; the explorer always refreshes from the live API on mount */
   initialItems?: EnrichedInventoryItem[];
+  /** When the snapshot was built (ISO) */
+  snapshotAt?: string | null;
   /** Live inventory endpoint (default: /api/inventory.json) */
   apiUrl?: string;
   /** Auto-refresh interval while the tab is visible, in ms (default: 5 minutes; 0 disables) */
   refreshMs?: number;
 }
 
-export type InventoryStatus = 'loading' | 'live' | 'stale' | 'fallback' | 'error';
+export type InventoryStatus = 'loading' | 'snapshot' | 'live' | 'stale' | 'fallback' | 'error';
 
 interface LiveInventoryState {
   items: EnrichedInventoryItem[];
   status: InventoryStatus;
   fetchedAt: string | null;
   note: string | null;
+  provider: string | null;
+  /** True once the first live refresh has finished (successfully or not) */
+  checked: boolean;
   refreshing: boolean;
   refresh: () => void;
 }
@@ -28,11 +33,18 @@ interface LiveInventoryState {
  * Loads the inventory from the live API in the browser and keeps it fresh.
  * The API reports where the data came from (live / stale / fallback) in response headers.
  */
-function useLiveInventory(initialItems: EnrichedInventoryItem[], apiUrl: string, refreshMs: number): LiveInventoryState {
+function useLiveInventory(
+  initialItems: EnrichedInventoryItem[],
+  snapshotAt: string | null,
+  apiUrl: string,
+  refreshMs: number
+): LiveInventoryState {
   const [items, setItems] = useState<EnrichedInventoryItem[]>(initialItems);
-  const [status, setStatus] = useState<InventoryStatus>('loading');
-  const [fetchedAt, setFetchedAt] = useState<string | null>(null);
+  const [status, setStatus] = useState<InventoryStatus>(initialItems.length > 0 ? 'snapshot' : 'loading');
+  const [fetchedAt, setFetchedAt] = useState<string | null>(initialItems.length > 0 ? snapshotAt : null);
   const [note, setNote] = useState<string | null>(null);
+  const [provider, setProvider] = useState<string | null>(null);
+  const [checked, setChecked] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const inFlight = useRef(false);
 
@@ -46,19 +58,26 @@ function useLiveInventory(initialItems: EnrichedInventoryItem[], apiUrl: string,
       const data = (await res.json()) as EnrichedInventoryItem[];
       if (!Array.isArray(data)) throw new Error('Unexpected response');
       const source = res.headers.get('X-Inventory-Source');
+      if (source === 'fallback' && initialItems.length > 0) {
+        // Never replace a real build-time snapshot with the hardcoded example list
+        setNote(res.headers.get('X-Inventory-Note'));
+        return;
+      }
       setItems(data);
       setStatus(source === 'live' ? 'live' : source === 'stale' ? 'stale' : 'fallback');
       setFetchedAt(res.headers.get('X-Inventory-Fetched-At'));
       setNote(res.headers.get('X-Inventory-Note'));
+      setProvider(res.headers.get('X-Inventory-Provider'));
     } catch (err) {
-      // Keep whatever we already show; only report an error if there is nothing to show
+      // Keep whatever we already show (e.g. the build snapshot); only report an error if there is nothing
       setStatus((prev) => (prev === 'loading' ? 'error' : prev));
       setNote(err instanceof Error ? err.message : 'Request failed');
     } finally {
       inFlight.current = false;
+      setChecked(true);
       setRefreshing(false);
     }
-  }, [apiUrl]);
+  }, [apiUrl, initialItems.length]);
 
   useEffect(() => {
     void load();
@@ -76,7 +95,7 @@ function useLiveInventory(initialItems: EnrichedInventoryItem[], apiUrl: string,
     };
   }, [load, refreshMs]);
 
-  return { items, status, fetchedAt, note, refreshing, refresh: () => void load() };
+  return { items, status, fetchedAt, note, provider, checked, refreshing, refresh: () => void load() };
 }
 
 function formatAge(iso: string | null): string {
@@ -271,10 +290,16 @@ function parseWeaponName(rawName: string) {
 
 export default function InventoryExplorer({
   initialItems = [],
+  snapshotAt = null,
   apiUrl = '/api/inventory.json',
   refreshMs = 5 * 60 * 1000,
 }: InventoryExplorerProps) {
-  const { items, status, fetchedAt, note, refreshing, refresh } = useLiveInventory(initialItems, apiUrl, refreshMs);
+  const { items, status, fetchedAt, note, provider, checked, refreshing, refresh } = useLiveInventory(
+    initialItems,
+    snapshotAt,
+    apiUrl,
+    refreshMs
+  );
 
   // Select AK-47 by default or first weapon with float, or first available item
   const defaultItem = useMemo(() => {
@@ -363,541 +388,262 @@ export default function InventoryExplorer({
     return getWearTier(selectedItem.float);
   }, [selectedItem]);
 
+  const WEAR_BRACKETS = [
+    { label: 'FN', from: 0, to: 0.07 },
+    { label: 'MW', from: 0.07, to: 0.15 },
+    { label: 'FT', from: 0.15, to: 0.38 },
+    { label: 'WW', from: 0.38, to: 0.45 },
+    { label: 'BS', from: 0.45, to: 1 },
+  ];
+
+  const tabClass = (on: boolean) =>
+    `cursor-pointer pb-1 text-[15px] transition-colors ${on ? 'text-bone shadow-[0_2px_0_0_#ff6a1a]' : 'text-ash hover:text-bone'}`;
+
+  const statusTone =
+    status === 'live' ? 'text-live' : status === 'loading' || status === 'snapshot' ? 'text-ash' : 'text-signal';
+
   return (
-    <div className="space-y-8">
-      {/* ==================================================================== */}
-      {/* SECTION 1: INTERACTIVE 3D INSPECT STAGE                              */}
-      {/* ==================================================================== */}
+    <div>
+      {/* inspect stage */}
       {selectedItem && (
-        <section
-          ref={stageRef}
-          aria-label="3D Weapon Inspect Stage"
-          className="rounded-2xl border border-[#1E2333] bg-[#0B0D13] p-4 sm:p-6 shadow-2xl relative overflow-hidden"
-        >
-          {/* Subtle Stage Ambience Gradient */}
-          <div
-            className="absolute top-0 right-0 w-96 h-96 rounded-full blur-3xl opacity-10 pointer-events-none"
-            style={{ backgroundColor: selectedItem.rarityColor || '#38bdf8' }}
-          />
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-            {/* Viewport Column (7 Cols on desktop) */}
-            <div className="lg:col-span-7 flex flex-col justify-between">
-              {/* Inspect View Dock Controls */}
-              <div className="flex flex-wrap items-center justify-between gap-2 mb-3 px-0.5">
-                <div
-                  className="flex items-center gap-1.5 p-1 rounded-xl bg-[#0A0C12] border border-[#1E2333] font-mono text-xs"
-                  role="tablist"
-                  aria-label="Inspect View Mode"
-                >
-                  {/* Option 1: 3D Model (R2 PBR) */}
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={inspectMode === '3d'}
-                    onClick={() => setInspectMode('3d')}
-                    className={`px-2.5 py-1.5 sm:px-3 rounded-lg font-bold transition-all cursor-pointer ${
-                      inspectMode === '3d'
-                        ? 'bg-telemetry-blue/20 border border-telemetry-blue text-white shadow-sm'
-                        : 'border border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-[#151824]'
-                    }`}
-                  >
-                    [3D Model (R2 PBR)]
-                  </button>
-
-                  {/* Option 2: Steam 2D Artwork */}
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={inspectMode === '2d'}
-                    onClick={() => setInspectMode('2d')}
-                    className={`px-2.5 py-1.5 sm:px-3 rounded-lg font-bold transition-all cursor-pointer ${
-                      inspectMode === '2d'
-                        ? 'bg-telemetry-blue/20 border border-telemetry-blue text-white shadow-sm'
-                        : 'border border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-[#151824]'
-                    }`}
-                  >
-                    [Steam 2D Artwork]
-                  </button>
-                </div>
-
-                {/* Option 3: Launch CS2 Inspect Direct Action */}
-                {selectedItem.inspectUrl ? (
-                  <a
-                    href={selectedItem.inspectUrl}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl font-mono text-xs font-bold text-telemetry-blue hover:text-sky-300 hover:bg-telemetry-blue/10 border border-telemetry-blue/30 transition-colors"
-                    title="Launch CS2 client and inspect item"
-                  >
-                    <span>[Launch CS2 Inspect ↗]</span>
-                  </a>
-                ) : (
-                  <span
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl font-mono text-xs font-bold text-zinc-600 border border-zinc-800 cursor-not-allowed"
-                    title="No in-game inspect link available for this item"
-                  >
-                    <span>[Launch CS2 Inspect ↗]</span>
-                  </span>
-                )}
+        <section ref={stageRef} aria-label="3D weapon inspect" className="mb-16 grid gap-10 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:gap-14">
+          <div>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex gap-6" role="tablist" aria-label="Inspect view mode">
+                <button type="button" role="tab" aria-selected={inspectMode === '3d'} onClick={() => setInspectMode('3d')} className={tabClass(inspectMode === '3d')}>
+                  3d model
+                </button>
+                <button type="button" role="tab" aria-selected={inspectMode === '2d'} onClick={() => setInspectMode('2d')} className={tabClass(inspectMode === '2d')}>
+                  steam art
+                </button>
               </div>
-
-              {/* Viewport Container (3D Model or 2D Artwork) */}
-              <div className="w-full flex-1 min-h-[340px] sm:min-h-[420px] rounded-xl overflow-hidden border border-[#1E2333]/80 bg-black/40">
-                {inspectMode === '2d' ? (
-                  <div className="relative w-full h-full min-h-[340px] sm:min-h-[420px] flex flex-col items-center justify-center p-6 bg-gradient-to-b from-slate-900/90 via-slate-950 to-black select-none overflow-hidden group">
-                    {/* Background Radial Glow */}
-                    <div
-                      className="absolute inset-0 pointer-events-none opacity-20 transition-opacity duration-500 group-hover:opacity-30"
-                      style={{
-                        background: `radial-gradient(circle at 50% 50%, ${selectedItem.rarityColor || '#38bdf8'} 0%, transparent 70%)`,
-                      }}
-                    />
-
-                    {/* Valve Official Isometric Render */}
-                    <div className="relative z-10 flex items-center justify-center w-full h-full max-h-[280px] sm:max-h-[340px]">
-                      <img
-                        src={selectedItem.iconUrl}
-                        alt={selectedItem.name}
-                        className="max-h-full max-w-full object-contain filter drop-shadow-[0_12px_24px_rgba(0,0,0,0.85)] transition-transform duration-300 group-hover:scale-105"
-                      />
-                    </div>
-
-                    {/* Stage Label Badge */}
-                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 pointer-events-none transition-opacity duration-500 opacity-80 group-hover:opacity-100">
-                      <span className="px-3 py-1 text-[11px] font-mono tracking-wide bg-slate-900/80 backdrop-blur-md text-slate-300 rounded-full border border-slate-700/60 shadow-lg">
-                        Steam 2D Artwork • Valve Isometric Render
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <ModelViewer
-                    modelUrl={activeModelPath}
-                    textureUrl={activeTextureUrl}
-                    weaponName={selectedItem.name}
-                    skinName={selectedParsed?.skinName}
-                    float={selectedItem.float}
-                    seed={selectedItem.seed}
-                    rarityColor={selectedItem.rarityColor}
-                    className="w-full h-full min-h-[340px] sm:min-h-[420px]"
-                    autoRotate={true}
-                    showControlsHint={true}
-                  />
-                )}
-              </div>
+              {selectedItem.inspectUrl ? (
+                <a href={selectedItem.inspectUrl} className="u-link text-[15px] text-ash hover:text-bone" title="Launch CS2 and inspect">
+                  inspect in game ↗
+                </a>
+              ) : (
+                <span className="text-[15px] text-ash-dim" title="No in-game inspect link for this item">no inspect link</span>
+              )}
             </div>
 
-            {/* Item Telemetry & Inspect Metrics Panel (5 Cols on desktop) */}
-            <div className="lg:col-span-5 flex flex-col justify-between space-y-5 bg-[#0F1118]/80 rounded-xl p-5 border border-[#1E2333]">
-              {/* Header Badges & Title */}
-              <div className="space-y-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  {/* StatTrak / Souvenir Badge */}
-                  {selectedParsed?.isStatTrak && (
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold font-mono tracking-wider bg-[#cf6a32]/20 text-[#cf6a32] border border-[#cf6a32]/40 shadow-sm shadow-[#cf6a32]/20">
-                      StatTrak™
-                    </span>
-                  )}
-                  {selectedParsed?.isSouvenir && (
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold font-mono tracking-wider bg-yellow-500/20 text-yellow-400 border border-yellow-500/40">
-                      Souvenir
-                    </span>
-                  )}
-
-                  {/* Rarity Badge */}
-                  <span
-                    className="px-2 py-0.5 rounded text-[10px] font-bold font-mono tracking-wider uppercase border"
-                    style={{
-                      color: selectedItem.rarityColor || '#b0c3d9',
-                      borderColor: `${selectedItem.rarityColor || '#b0c3d9'}60`,
-                      backgroundColor: `${selectedItem.rarityColor || '#b0c3d9'}15`,
-                    }}
-                  >
-                    {selectedItem.rarity}
-                  </span>
-
-                  {/* Weapon Type */}
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-black/60 text-zinc-400 border border-[#1E2333]">
-                    {selectedItem.type}
-                  </span>
-                </div>
-
-                {/* Skin Title */}
-                <div>
-                  <h2 className="text-xl sm:text-2xl font-bold font-mono text-white tracking-tight leading-snug">
-                    {selectedParsed?.weaponBase}
-                    {selectedParsed?.skinName ? (
-                      <span className="text-telemetry-blue block sm:inline sm:ml-2">
-                        | {selectedParsed.skinName}
-                      </span>
-                    ) : null}
-                  </h2>
-                  {selectedWear && (
-                    <div className="flex items-center gap-2 text-xs font-mono text-zinc-400 mt-1">
-                      <span style={{ color: selectedWear.color }} className="font-semibold">
-                        {selectedWear.name}
-                      </span>
-                      <span>•</span>
-                      <span className="text-zinc-500">Tier: {selectedWear.tag}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Wear Rating Float Progress Bar */}
-              {selectedItem.float !== null ? (
-                <div className="space-y-2 p-3.5 rounded-lg bg-black/50 border border-[#1E2333]">
-                  <div className="flex items-center justify-between text-xs font-mono">
-                    <span className="text-zinc-400">Wear Rating (Float)</span>
-                    <span className="font-bold text-white tracking-wider">
-                      {selectedItem.float.toFixed(8)}
-                    </span>
-                  </div>
-
-                  {/* Multi-Segmented Float Bar with Indicator Pin */}
-                  <div className="relative pt-2 pb-1">
-                    {/* The 5 standard CS2 Wear Brackets: FN(0-0.07), MW(0.07-0.15), FT(0.15-0.38), WW(0.38-0.45), BS(0.45-1.00) */}
-                    <div className="h-2.5 w-full rounded-full overflow-hidden flex bg-zinc-900 border border-zinc-700/60 shadow-inner">
-                      <div className="h-full bg-emerald-500" style={{ width: '7%' }} title="Factory New (0.00 - 0.07)" />
-                      <div className="h-full bg-sky-500" style={{ width: '8%' }} title="Minimal Wear (0.07 - 0.15)" />
-                      <div className="h-full bg-amber-500" style={{ width: '23%' }} title="Field-Tested (0.15 - 0.38)" />
-                      <div className="h-full bg-orange-500" style={{ width: '7%' }} title="Well-Worn (0.38 - 0.45)" />
-                      <div className="h-full bg-red-500" style={{ width: '55%' }} title="Battle-Scarred (0.45 - 1.00)" />
-                    </div>
-
-                    {/* Indicator needle with glowing ping dot */}
-                    <div
-                      className="absolute top-1 bottom-0 -ml-[1px] w-[2px] bg-white z-20 pointer-events-none"
-                      style={{
-                        left: `${Math.min(100, Math.max(0, selectedItem.float * 100))}%`,
-                      }}
-                    >
-                      <div className="absolute -top-1 -left-[3px] w-2 h-2 rounded-full bg-white shadow-[0_0_8px_#fff]" />
-                    </div>
-                  </div>
-
-                  {/* Bracket Labels */}
-                  <div className="flex justify-between text-[9px] font-mono text-zinc-500 pt-0.5 px-0.5">
-                    <span>FN: 0.00</span>
-                    <span>MW: 0.07</span>
-                    <span>FT: 0.15</span>
-                    <span>WW: 0.38</span>
-                    <span>BS: 0.45</span>
-                    <span>1.00</span>
-                  </div>
+            <div className="min-h-[340px] overflow-hidden bg-ink-2 sm:min-h-[460px]">
+              {inspectMode === '2d' ? (
+                <div className="flex h-full min-h-[340px] items-center justify-center p-8 sm:min-h-[460px]">
+                  <img
+                    src={selectedItem.iconUrl}
+                    alt={selectedItem.name}
+                    className="max-h-[320px] max-w-full object-contain drop-shadow-[0_18px_30px_rgba(0,0,0,0.7)]"
+                  />
                 </div>
               ) : (
-                <div className="p-3.5 rounded-lg bg-black/40 border border-[#1E2333] text-xs font-mono text-zinc-500">
-                  Wear Rating: <span className="text-zinc-400">N/A (Standard Issue / Stock Quality)</span>
-                </div>
+                <ModelViewer
+                  modelUrl={activeModelPath}
+                  textureUrl={activeTextureUrl}
+                  weaponName={selectedItem.name}
+                  skinName={selectedParsed?.skinName}
+                  float={selectedItem.float}
+                  seed={selectedItem.seed}
+                  rarityColor={selectedItem.rarityColor}
+                  className="h-full min-h-[340px] w-full sm:min-h-[460px]"
+                  autoRotate={true}
+                  showControlsHint={true}
+                />
               )}
-
-              {/* Secondary Telemetry: Paint Seed & Certificate Hash */}
-              <div className="grid grid-cols-2 gap-3 text-xs font-mono">
-                {/* Paint Seed */}
-                <div className="p-3 rounded-lg bg-black/40 border border-[#1E2333]">
-                  <span className="text-[10px] text-zinc-500 block uppercase">Pattern Template</span>
-                  <span className="text-white font-semibold text-sm mt-0.5 block">
-                    {selectedItem.seed !== null ? `#${selectedItem.seed}` : 'N/A'}
-                  </span>
-                </div>
-
-                {/* Asset ID */}
-                <div className="p-3 rounded-lg bg-black/40 border border-[#1E2333]">
-                  <span className="text-[10px] text-zinc-500 block uppercase">Asset Telemetry ID</span>
-                  <span className="text-zinc-300 font-mono text-xs mt-0.5 block truncate" title={selectedItem.id}>
-                    {selectedItem.id}
-                  </span>
-                </div>
-              </div>
-
-              {/* Item Certificate (if present) */}
-              {selectedItem.certificate && (
-                <div className="p-3 rounded-lg bg-black/40 border border-[#1E2333] space-y-1">
-                  <div className="flex items-center justify-between text-[10px] font-mono text-zinc-500 uppercase">
-                    <span>Item Certificate Hash</span>
-                    <button
-                      type="button"
-                      onClick={() => copyCertificate(selectedItem.certificate!)}
-                      className="text-telemetry-blue hover:text-white transition-colors cursor-pointer"
-                    >
-                      {copiedCert ? '✓ Copied' : 'Copy Hash'}
-                    </button>
-                  </div>
-                  <div
-                    className="text-[11px] font-mono text-zinc-300 truncate bg-black/60 px-2 py-1 rounded border border-white/5 select-all"
-                    title={selectedItem.certificate}
-                  >
-                    {selectedItem.certificate}
-                  </div>
-                </div>
-              )}
-
-              {/* Action Buttons: Direct Inspect URL & External Links */}
-              <div className="pt-2 flex flex-wrap items-center gap-2.5">
-                {selectedItem.inspectUrl ? (
-                  <>
-                    <a
-                      href={selectedItem.inspectUrl}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-telemetry-blue hover:bg-sky-400 text-black font-semibold text-xs font-mono transition-colors tactile-btn shadow-md shadow-telemetry-blue/20"
-                    >
-                      <span>Inspect in Game</span>
-                      <span>↗</span>
-                    </a>
-
-                    <button
-                      type="button"
-                      onClick={() => copyInspectUrl(selectedItem.inspectUrl!)}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#1E2333] bg-[#0F1118] hover:border-zinc-500 text-xs font-mono text-zinc-300 transition-colors tactile-btn cursor-pointer"
-                    >
-                      <span>{copiedInspect ? '✓ Copied URL' : 'Copy Inspect Link'}</span>
-                    </button>
-                  </>
-                ) : (
-                  <span className="text-xs font-mono text-zinc-500 italic">
-                    In-game preview link not applicable for this item type
-                  </span>
-                )}
-              </div>
             </div>
+          </div>
+
+          <div className="flex flex-col justify-end">
+            <p className="num flex flex-wrap items-center gap-x-3 text-[11px] uppercase tracking-[0.16em]">
+              {selectedParsed?.isStatTrak && <span className="text-signal">StatTrak™</span>}
+              {selectedParsed?.isSouvenir && <span className="text-signal">Souvenir</span>}
+              <span style={{ color: selectedItem.rarityColor || undefined }}>{selectedItem.rarity}</span>
+              <span className="text-ash">{selectedItem.type}</span>
+            </p>
+            <h2 className="mt-3 text-xl text-ash">{selectedParsed?.weaponBase}</h2>
+            {selectedParsed?.skinName && (
+              <p className="display text-[clamp(2.5rem,5.5vw,4.5rem)]">{selectedParsed.skinName}</p>
+            )}
+            {selectedWear && (
+              <p className="num mt-3 text-[12px] uppercase tracking-wider text-ash">
+                <span style={{ color: selectedWear.color }}>{selectedWear.name}</span> · {selectedWear.tag}
+              </p>
+            )}
+
+            {selectedItem.float !== null ? (
+              <div className="mt-8">
+                <div className="flex items-baseline justify-between">
+                  <span className="eyebrow">float</span>
+                  <span className="num text-xl">{selectedItem.float.toFixed(8)}</span>
+                </div>
+                <div className="relative mt-3 flex h-[6px] gap-[2px]">
+                  {WEAR_BRACKETS.map((b) => {
+                    const f = selectedItem.float as number;
+                    const on = f >= b.from && (f < b.to || b.to === 1);
+                    return (
+                      <div key={b.label} style={{ width: `${(b.to - b.from) * 100}%` }} className={on ? 'bg-bone' : 'bg-rule-strong'} title={`${b.from.toFixed(2)} – ${b.to.toFixed(2)}`} />
+                    );
+                  })}
+                  <div
+                    className="pointer-events-none absolute -top-[5px] h-[16px] w-[2px] -translate-x-1/2 bg-signal"
+                    style={{ left: `${Math.min(100, Math.max(0, selectedItem.float * 100))}%` }}
+                  />
+                </div>
+                <div className="num mt-2 flex text-[10px] uppercase tracking-wider text-ash-dim">
+                  {WEAR_BRACKETS.map((b) => (
+                    <span key={b.label} style={{ width: `${(b.to - b.from) * 100}%` }}>{b.label}</span>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="mt-8 text-[15px] text-ash">no float — stock quality.</p>
+            )}
+
+            <dl className="mt-8 border-t border-rule text-[15px]">
+              <div className="flex justify-between gap-6 border-b border-rule py-3">
+                <dt className="text-ash">pattern seed</dt>
+                <dd className="num">{selectedItem.seed !== null ? `#${selectedItem.seed}` : '—'}</dd>
+              </div>
+              <div className="flex justify-between gap-6 border-b border-rule py-3">
+                <dt className="text-ash">asset id</dt>
+                <dd className="num truncate" title={selectedItem.id}>{selectedItem.id}</dd>
+              </div>
+              {selectedItem.certificate && (
+                <div className="flex items-center justify-between gap-6 border-b border-rule py-3">
+                  <dt className="text-ash">certificate</dt>
+                  <dd className="flex min-w-0 items-center gap-4">
+                    <span className="num max-w-[10rem] select-all truncate text-[12px]" title={selectedItem.certificate}>{selectedItem.certificate}</span>
+                    <button type="button" onClick={() => copyCertificate(selectedItem.certificate!)} className="u-link shrink-0 cursor-pointer text-ash hover:text-bone">
+                      {copiedCert ? 'copied ✓' : 'copy'}
+                    </button>
+                  </dd>
+                </div>
+              )}
+            </dl>
+
+            {selectedItem.inspectUrl && (
+              <div className="mt-6 flex flex-wrap gap-3">
+                <a href={selectedItem.inspectUrl} className="btn btn-signal">inspect in game ↗</a>
+                <button type="button" onClick={() => copyInspectUrl(selectedItem.inspectUrl!)} className="btn">
+                  {copiedInspect ? 'copied ✓' : 'copy link'}
+                </button>
+              </div>
+            )}
           </div>
         </section>
       )}
 
-      {/* ==================================================================== */}
-      {/* SECTION 2: CATEGORY FILTER PILLS & INSTANT SEARCH CONTROLS           */}
-      {/* ==================================================================== */}
-      <section aria-label="Inventory Filters and Search" className="space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          {/* Filter Pills Taxonomy */}
-          <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none font-mono text-xs">
+      {/* controls */}
+      <section aria-label="Filters and search" className="border-t border-rule pt-6">
+        <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+          <div className="scrollbar-none -mx-5 flex gap-6 overflow-x-auto px-5 sm:mx-0 sm:px-0">
             {CATEGORIES.map((category) => {
               const isActive = activeCategory === category;
-              const count = categoryCounts[category] || 0;
-
               return (
-                <button
-                  key={category}
-                  type="button"
-                  onClick={() => setActiveCategory(category)}
-                  className={`px-3 py-1.5 rounded-lg border whitespace-nowrap transition-all tactile-btn cursor-pointer flex items-center gap-1.5 ${
-                    isActive
-                      ? 'bg-telemetry-blue/15 border-telemetry-blue text-white font-semibold shadow-sm shadow-telemetry-blue/20'
-                      : 'bg-[#0F1118] border-[#1E2333] text-zinc-400 hover:text-white hover:border-zinc-600'
-                  }`}
-                >
-                  <span>[{category}]</span>
-                  <span
-                    className={`text-[10px] px-1 py-0.2 rounded ${
-                      isActive ? 'bg-telemetry-blue/20 text-telemetry-blue' : 'bg-black/50 text-zinc-500'
-                    }`}
-                  >
-                    {count}
-                  </span>
+                <button key={category} type="button" onClick={() => setActiveCategory(category)} className={`${tabClass(isActive)} whitespace-nowrap`}>
+                  {String(category).toLowerCase()} <span className="num text-[11px] text-ash">{categoryCounts[category] || 0}</span>
                 </button>
               );
             })}
           </div>
 
-          {/* Instant Search Box & Results Counter */}
-          <div className="flex items-center gap-3">
-            <div className="relative w-full sm:w-64">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 font-mono text-xs">
-                {'>'}
-              </span>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search skins, seeds, floats..."
-                className="w-full pl-7 pr-8 py-1.5 rounded-lg border border-[#1E2333] bg-[#0F1118] text-xs font-mono text-white placeholder-zinc-500 focus:outline-none focus:border-telemetry-blue transition-colors"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white text-xs font-mono cursor-pointer"
-                  title="Clear search"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-          </div>
+          <label className="relative block w-full md:w-72">
+            <span className="sr-only">Search inventory</span>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="search skins, seeds, floats"
+              className="w-full border-b border-rule-strong bg-transparent pb-2 pr-6 text-lg text-bone placeholder-ash-dim transition-colors focus:border-signal focus:outline-none"
+            />
+            {searchQuery && (
+              <button type="button" onClick={() => setSearchQuery('')} className="absolute right-0 top-0 cursor-pointer text-ash hover:text-bone" title="Clear search">✕</button>
+            )}
+          </label>
         </div>
 
-        {/* Data source status: live / last-known / example snapshot */}
-        <div
-          role="status"
-          className={`flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-xs font-mono ${
-            status === 'live'
-              ? 'border-emerald-500/30 bg-emerald-500/5 text-emerald-300'
-              : status === 'loading'
-                ? 'border-[#1E2333] bg-[#0F1118] text-zinc-400'
-                : 'border-amber-500/30 bg-amber-500/5 text-amber-300'
-          }`}
-        >
+        <div role="status" className={`num mt-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 text-[12px] uppercase tracking-wider ${statusTone}`}>
           <span>
-            {status === 'loading' && 'Loading inventory from Steam…'}
-            {status === 'live' && `● Live from Steam${fetchedAt ? ` · updated ${formatAge(fetchedAt)}` : ''}`}
-            {status === 'stale' &&
-              `Steam is unavailable right now — showing your last loaded inventory${fetchedAt ? ` (${formatAge(fetchedAt)})` : ''}.`}
-            {status === 'fallback' &&
-              'Couldn’t reach Steam — showing a saved example snapshot, not your current inventory.'}
-            {status === 'error' && 'Couldn’t load your inventory.'}
-            {note && (status === 'stale' || status === 'fallback' || status === 'error') && (
-              <span className="ml-1 text-zinc-500">({note})</span>
+            {status === 'loading' && 'loading inventory from steam…'}
+            {status === 'snapshot' &&
+              (checked
+                ? `couldn’t refresh — showing last site build${fetchedAt ? ` (${formatAge(fetchedAt)})` : ''}`
+                : `showing last site build${fetchedAt ? ` (${formatAge(fetchedAt)})` : ''} · checking for updates…`)}
+            {status === 'live' &&
+              `● live${provider === 'csfloat' ? ' via csfloat' : provider === 'steam+csfloat' ? ' via steam + csfloat' : ' via steam'}${fetchedAt ? ` · updated ${formatAge(fetchedAt)}` : ''}`}
+            {status === 'stale' && `steam unavailable — last loaded inventory${fetchedAt ? ` (${formatAge(fetchedAt)})` : ''}`}
+            {status === 'fallback' && 'couldn’t reach steam — saved example snapshot, not the current inventory'}
+            {status === 'error' && 'couldn’t load the inventory'}
+            {note && (status === 'snapshot' || status === 'live' || status === 'stale' || status === 'fallback' || status === 'error') && (
+              <span className="ml-1 normal-case text-ash">({note})</span>
             )}
           </span>
-          <button
-            type="button"
-            onClick={refresh}
-            disabled={refreshing}
-            className="rounded border border-current/40 px-2 py-0.5 hover:bg-white/5 disabled:opacity-50 cursor-pointer"
-          >
-            {refreshing ? 'Refreshing…' : 'Refresh'}
-          </button>
-        </div>
-
-        {/* Status Line: Results Count */}
-        <div className="flex items-center justify-between text-xs font-mono text-zinc-500 px-1">
-          <span>
-            Showing <strong className="text-zinc-200">{filteredItems.length}</strong> of{' '}
-            <strong className="text-zinc-200">{items.length}</strong> items
+          <span className="flex items-center gap-5 text-ash">
+            <span>{filteredItems.length} / {items.length} items</span>
+            <button type="button" onClick={refresh} disabled={refreshing} className="u-link cursor-pointer hover:text-bone disabled:opacity-50">
+              {refreshing ? 'refreshing…' : 'refresh'}
+            </button>
           </span>
-          {searchQuery && (
-            <span className="text-telemetry-blue">
-              Filter: &ldquo;{searchQuery}&rdquo;
-            </span>
-          )}
         </div>
       </section>
 
-      {/* ==================================================================== */}
-      {/* SECTION 3: RESPONSIVE INVENTORY ITEM GRID                            */}
-      {/* ==================================================================== */}
-      <section aria-label="Inventory Grid">
+      {/* grid */}
+      <section aria-label="Inventory grid" className="mt-8">
         {filteredItems.length === 0 && status === 'loading' ? (
-          <div className="rounded-xl border border-dashed border-[#1E2333] bg-[#0F1118]/50 p-12 text-center font-mono">
-            <p className="text-sm text-zinc-400 animate-pulse">Loading your CS2 inventory…</p>
-          </div>
+          <p className="num animate-pulse py-24 text-center text-[13px] uppercase tracking-wider text-ash">loading…</p>
         ) : filteredItems.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-[#1E2333] bg-[#0F1118]/50 p-12 text-center space-y-3 font-mono">
-            <p className="text-sm text-zinc-400">
-              No CS2 inventory items match current filter and search query.
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                setActiveCategory('All');
-                setSearchQuery('');
-              }}
-              className="px-3 py-1.5 rounded-lg border border-telemetry-blue bg-telemetry-blue/10 text-xs text-telemetry-blue hover:bg-telemetry-blue/20 transition-colors cursor-pointer tactile-btn"
-            >
-              Reset Filters
+          <div className="py-24 text-center">
+            <p className="text-xl text-ash">nothing matches.</p>
+            <button type="button" onClick={() => { setActiveCategory('All'); setSearchQuery(''); }} className="u-link mt-4 cursor-pointer text-bone">
+              reset filters
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
+          <ul className="grid grid-cols-2 gap-px bg-rule sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
             {filteredItems.map((item) => {
               const isSelected = selectedItem?.id === item.id;
               const parsed = parseWeaponName(item.name);
               const wear = getWearTier(item.float);
 
               return (
-                <div
-                  key={item.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => handleSelectItem(item)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      handleSelectItem(item);
-                    }
-                  }}
-                  className={`group relative rounded-xl border p-3 flex flex-col justify-between transition-all cursor-pointer select-none text-left overflow-hidden ${
-                    isSelected
-                      ? 'border-telemetry-blue bg-[#161a28] shadow-lg shadow-telemetry-blue/10 ring-1 ring-telemetry-blue'
-                      : 'border-[#1E2333] bg-[#0F1118] hover:border-telemetry-blue/50 hover:bg-[#131622]'
-                  }`}
-                  style={{
-                    borderTopColor: item.rarityColor || '#b0c3d9',
-                    borderTopWidth: '3px',
-                  }}
-                >
-                  {/* Card Header: Badges & Wear Tag */}
-                  <div className="flex items-center justify-between gap-1 mb-1.5 font-mono text-[10px]">
-                    <div className="flex items-center gap-1 truncate">
-                      {parsed.isStatTrak && (
-                        <span className="px-1 py-0.2 rounded font-bold bg-[#cf6a32]/20 text-[#cf6a32] border border-[#cf6a32]/30">
-                          ST
-                        </span>
-                      )}
-                      {parsed.isSouvenir && (
-                        <span className="px-1 py-0.2 rounded font-bold bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
-                          SOUV
-                        </span>
-                      )}
-                      {wear ? (
-                        <span
-                          className="px-1 py-0.2 rounded font-semibold"
-                          style={{
-                            color: wear.color,
-                            backgroundColor: `${wear.color}15`,
-                          }}
-                        >
-                          {wear.tag}
-                        </span>
-                      ) : (
-                        <span className="text-zinc-500">Stock</span>
-                      )}
-                    </div>
-
-                    {/* Paint Seed Badge */}
-                    {item.seed !== null && (
-                      <span className="text-zinc-500 font-mono text-[9px] shrink-0">
-                        #{item.seed}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Thumbnail */}
-                  <div className="relative py-2 flex items-center justify-center min-h-[96px]">
-                    <img
-                      src={item.iconUrl}
-                      alt={item.name}
-                      loading="lazy"
-                      className="max-h-20 w-auto object-contain transition-transform duration-200 group-hover:scale-105 filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.6)]"
+                <li key={item.id} className="bg-ink">
+                  <button
+                    type="button"
+                    onClick={() => handleSelectItem(item)}
+                    aria-pressed={isSelected}
+                    className={`group relative flex h-full w-full cursor-pointer flex-col p-4 text-left transition-colors ${isSelected ? 'bg-ink-3' : 'hover:bg-ink-2'}`}
+                  >
+                    <span
+                      className={`absolute inset-x-0 top-0 h-[3px] origin-left transition-transform duration-300 ${isSelected ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'}`}
+                      style={{ backgroundColor: item.rarityColor || '#948e7e' }}
                     />
-                  </div>
-
-                  {/* Weapon Name & Skin Title */}
-                  <div className="space-y-0.5 pt-1.5 border-t border-[#1E2333]/60 font-mono">
-                    <p className="text-[11px] text-zinc-400 truncate" title={parsed.weaponBase}>
-                      {parsed.weaponBase}
-                    </p>
-                    <p
-                      className="text-xs font-semibold text-white truncate"
-                      title={parsed.skinName || parsed.weaponBase}
-                    >
-                      {parsed.skinName || parsed.weaponBase}
-                    </p>
-
-                    {/* Bottom Metadata: Float & Rarity Accent */}
-                    <div className="flex items-center justify-between text-[10px] text-zinc-500 pt-1">
-                      <span>
-                        {item.float !== null ? item.float.toFixed(4) : item.type}
+                    <span className="num flex items-center justify-between text-[10px] uppercase tracking-wider text-ash">
+                      <span className="flex gap-2">
+                        {parsed.isStatTrak && <span className="text-signal">ST</span>}
+                        {parsed.isSouvenir && <span className="text-signal">SV</span>}
+                        <span style={{ color: wear?.color }}>{wear ? wear.tag : 'stock'}</span>
                       </span>
-                      <span
-                        className="w-1.5 h-1.5 rounded-full"
-                        style={{ backgroundColor: item.rarityColor || '#b0c3d9' }}
-                        title={item.rarity}
+                      {item.seed !== null && <span>#{item.seed}</span>}
+                    </span>
+
+                    <span className="flex min-h-[104px] items-center justify-center py-3">
+                      <img
+                        src={item.iconUrl}
+                        alt={item.name}
+                        loading="lazy"
+                        className="max-h-20 w-auto object-contain drop-shadow-[0_6px_10px_rgba(0,0,0,0.6)] transition-transform duration-300 group-hover:scale-105"
                       />
-                    </div>
-                  </div>
-                </div>
+                    </span>
+
+                    <span className="truncate text-[13px] text-ash" title={parsed.weaponBase}>{parsed.weaponBase}</span>
+                    <span className="truncate text-[17px] font-semibold leading-tight tracking-tight" title={parsed.skinName || parsed.weaponBase}>
+                      {parsed.skinName || parsed.weaponBase}
+                    </span>
+                    <span className="num mt-1 text-[11px] text-ash">{item.float !== null ? item.float.toFixed(4) : item.type}</span>
+                  </button>
+                </li>
               );
             })}
-          </div>
+          </ul>
         )}
       </section>
     </div>

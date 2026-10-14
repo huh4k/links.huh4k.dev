@@ -10,387 +10,165 @@ const steamId = getSteamId64();
 const steamProfileUrl = `https://steamcommunity.com/profiles/${steamId}`;
 const steamInventoryUrl = `https://steamcommunity.com/profiles/${steamId}/inventory/`;
 const topGames = await getTopPlayedGames(3);
+const fmt = (n: number) => new Intl.NumberFormat('en-US').format(n);
+
+const links = [
+  { title: 'Steam', note: 'profile, badges, the whole library', href: steamProfileUrl, external: true },
+  { title: 'Leetify', note: 'match stats, aim, who carried', href: '/leetify', external: true },
+  { title: 'Inventory', note: 'every skin, real floats, spin them around', href: '/inventory', external: false },
+  { title: 'Games', note: 'what i actually play', href: '/games', external: false },
+  { title: 'GitHub', note: 'code', href: 'https://github.com/huh4k', external: true },
+];
 ---
 
 <BaseLayout
-  title={`${SITE_CONFIG.author.name} — Steam & CS2 Hub`}
+  title={`${SITE_CONFIG.author.name} — ${SITE_CONFIG.title}`}
   description={SITE_CONFIG.description}
   currentPath="/"
 >
-  <div class="space-y-6 sm:space-y-8">
-    <!-- Top Telemetry Strip -->
-    <div class="flex flex-wrap items-center justify-between gap-3 text-xs font-mono text-zinc-400 border-b border-[#1E2333] pb-3">
-      <div class="flex items-center gap-2.5">
-        <span class="w-2 h-2 rounded-full bg-telemetry-green shadow-sm shadow-telemetry-green/60 animate-pulse"></span>
-        <span class="text-white font-bold tracking-wider">[HUH4K // PROFILE & METRICS]</span>
-        <span class="text-zinc-600 hidden sm:inline">•</span>
-        <span class="text-zinc-400 hidden sm:inline">STEAM & LEETIFY VERIFIED</span>
-      </div>
-
-      <div class="flex items-center gap-2 text-[11px]">
-        <button
-          type="button"
-          onclick="window.dispatchEvent(new CustomEvent('open-command-deck'))"
-          class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#151824] hover:bg-[#1E2333] border border-[#1E2333] hover:border-telemetry-blue/50 text-zinc-300 hover:text-white transition-colors cursor-pointer tactile-btn"
-        >
-          <span class="text-telemetry-blue font-bold">/</span>
-          <span>COMMAND DECK</span>
-          <kbd class="px-1 rounded bg-black/60 text-[9px] text-zinc-400 border border-white/5">/</kbd>
-        </button>
-      </div>
+  <!-- hero -->
+  <section class="overflow-x-clip pb-14 sm:pb-24">
+    <p class="eyebrow rise" style="--i:0">counter-strike 2 · software · tools</p>
+    <h1
+      class="display wordmark rise -ml-[0.035em] mt-5 text-[clamp(5.5rem,24vw,18rem)] leading-[0.78]"
+      style="--i:1"
+    >
+      huh4k<span class="text-signal">.</span>
+    </h1>
+    <div class="rise mt-9 flex flex-wrap items-end justify-between gap-x-10 gap-y-5" style="--i:2">
+      <p class="max-w-xl text-[clamp(1.5rem,3.2vw,2.35rem)] leading-[1.1] tracking-tight">
+        links and shit. <span class="text-ash">pronounced <span class="num text-bone">hufk</span>.</span>
+      </p>
+      <SteamPresence client:load variant="line" />
     </div>
+  </section>
 
-    <!-- THE ASYMMETRIC BENTO MATRIX -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-stretch">
-      <!-- MODULE A: Identity & Live Presence (Span 5 cols on lg) -->
-      <section
-        class="lg:col-span-5 rounded-2xl border border-hardware bg-[#0F1118] p-5 sm:p-7 relative overflow-hidden flex flex-col justify-between telemetry-card spotlight-card shadow-xl gap-6"
-      >
-        <div class="absolute inset-0 bg-grid-pattern opacity-25 pointer-events-none"></div>
-
-        <div class="relative z-10 space-y-5">
-          <!-- Header Bar -->
-          <div class="flex items-center justify-between border-b border-[#1E2333] pb-3">
-            <div class="flex items-center gap-2">
-              <span class="px-2 py-0.5 rounded bg-telemetry-blue/15 border border-telemetry-blue/30 text-[10px] font-mono text-telemetry-blue font-bold tracking-wider">
-                [PROFILE]
-              </span>
-              <span class="text-[11px] font-mono text-zinc-400">huh4k.dev</span>
-            </div>
-            <span class="text-[11px] font-mono text-zinc-500 font-medium">
-              STEAM ID: {steamId.slice(-6)}
-            </span>
-          </div>
-
-          <!-- Avatar & Handle Display -->
-          <div class="space-y-3.5">
-            <div class="flex items-center gap-4">
-              <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-[#1E2333] to-[#0A0C12] border border-hardware flex items-center justify-center font-mono font-black text-xl text-white tracking-wider shadow-inner shadow-black relative shrink-0">
-                <span>H4K</span>
-                <span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-telemetry-green border-2 border-[#0F1118] shadow-sm shadow-telemetry-green/60 animate-pulse"></span>
-              </div>
-
-              <div class="min-w-0">
-                <div class="flex items-center gap-2 flex-wrap">
-                  <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-white font-mono">
-                    huh4k
-                  </h1>
-                  <span class="text-xs font-mono px-2 py-0.5 rounded bg-[#1E2333] text-zinc-300 font-semibold border border-white/5">
-                    links.huh4k.dev
-                  </span>
-                </div>
-                <p class="text-xs font-mono text-zinc-400 mt-1">
-                  Counter-Strike 2 • Software & Tools
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Live Steam Presence Status Island -->
-          <div class="pt-1">
-            <SteamPresence client:load variant="badge" />
-          </div>
-        </div>
-
-        <!-- Tactile Actions: Copy Discord & Steam Community -->
-        <div class="relative z-10 pt-4 border-t border-[#1E2333] space-y-3">
-          <div class="flex items-center gap-2">
-            <!-- Copy Discord Button -->
-            <button
-              id="copy-discord-btn"
-              type="button"
-              class="flex-1 inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-lg border border-hardware bg-[#151824] hover:border-telemetry-blue hover:bg-[#1E2333] text-zinc-200 hover:text-white text-xs font-mono font-semibold transition-all tactile-btn cursor-pointer shadow-sm"
-              title="Copy Discord Tag"
-            >
-              <svg class="w-3.5 h-3.5 fill-current text-telemetry-blue" viewBox="0 0 24 24">
-                <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.894.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
-              </svg>
-              <span id="discord-btn-text">Copy Discord [huh4k]</span>
-            </button>
-
-            <!-- Steam Community Link -->
-            <a
-              href={steamProfileUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              class="px-3.5 py-2.5 rounded-lg border border-hardware bg-[#151824] hover:border-telemetry-blue text-zinc-300 hover:text-white text-xs font-mono font-semibold transition-all tactile-btn"
-              title="Open Steam Profile"
-            >
-              <span>Steam Profile ↗</span>
-            </a>
-          </div>
-
-          <!-- Quick Specs -->
-          <div class="flex items-center justify-between text-[11px] font-mono text-zinc-500 pt-1">
-            <span>Cloudflare Edge</span>
-            <span class="text-zinc-600">•</span>
-            <span>Active Uplink</span>
-          </div>
-        </div>
-      </section>
-
-      <!-- MODULE B: CS2 Live Combat Telemetry Hero (Span 7 cols on lg) -->
-      <section class="lg:col-span-7 flex flex-col justify-between">
-        <CS2StatsCard steamId={steamId} className="h-full" />
-      </section>
-
-      <!-- MODULE C: Top Played Games Shelf (Span 12 cols on lg) -->
-      <section
-        class="lg:col-span-12 rounded-2xl border border-hardware bg-[#0F1118] p-5 sm:p-6 relative overflow-hidden flex flex-col justify-between telemetry-card spotlight-card shadow-xl gap-5"
-      >
-        <div class="absolute inset-0 bg-grid-pattern opacity-25 pointer-events-none"></div>
-
-        <div class="relative z-10 space-y-4">
-          <!-- Header -->
-          <div class="flex items-center justify-between border-b border-[#1E2333] pb-3">
-            <div class="flex items-center gap-2.5">
-              <span class="w-2.5 h-2.5 rounded-sm bg-telemetry-blue shadow-sm shadow-telemetry-blue/60"></span>
-              <span class="text-xs font-mono font-bold tracking-wider text-white uppercase">
-                [STEAM // TOP PLAYED GAMES]
-              </span>
-            </div>
-
-            <a
-              href="/games"
-              class="inline-flex items-center gap-1.5 text-xs font-mono font-semibold text-telemetry-blue hover:text-white transition-colors"
-            >
-              <span>View All Games</span>
-              <span>→</span>
-            </a>
-          </div>
-
-          <!-- Games List (Top 3) -->
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {topGames.map((game, index) => (
-              <a
-                href={game.storeUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="group rounded-xl border border-hardware bg-[#0A0C12] hover:border-telemetry-blue/60 transition-all p-3 flex flex-col justify-between gap-3 tactile-btn relative overflow-hidden"
-              >
-                <div class="relative aspect-[16/9] rounded-lg overflow-hidden border border-white/5 bg-black/60">
-                  <img
-                    src={game.capsuleUrl || game.headerUrl}
-                    alt={game.name}
-                    loading="lazy"
-                    decoding="async"
-                    width="460"
-                    height="215"
-                    class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                  <div class="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/80 font-mono text-[9px] text-telemetry-green font-bold border border-white/10">
-                    {new Intl.NumberFormat('en-US').format(game.playtimeHours)} hrs
-                  </div>
-                </div>
-
-                <div class="space-y-1">
-                  <div class="flex items-center justify-between text-[10px] font-mono text-zinc-500">
-                    <span>#0{index + 1}</span>
-                    <span>App {game.appId}</span>
-                  </div>
-                  <h3 class="text-xs font-mono font-bold text-white group-hover:text-telemetry-blue transition-colors truncate">
-                    {game.name}
-                  </h3>
-                </div>
-              </a>
-            ))}
-          </div>
-        </div>
-
-        <!-- Footer -->
-        <div class="relative z-10 pt-2 border-t border-[#1E2333] flex items-center justify-between text-[11px] font-mono text-zinc-500">
-          <span>Synced with Steam Community Library</span>
-          <a href="/games" class="text-telemetry-blue hover:underline">
-            Open Games Shelf →
-          </a>
-        </div>
-      </section>
-
-      <!-- MODULE D: Platform Nodes 2x2 Grid (Span 7 cols on lg, bottom left) -->
-      <section
-        class="lg:col-span-7 rounded-2xl border border-hardware bg-[#0F1118] p-5 sm:p-6 relative overflow-hidden flex flex-col justify-between telemetry-card spotlight-card shadow-xl gap-4"
-      >
-        <div class="absolute inset-0 bg-grid-pattern opacity-25 pointer-events-none"></div>
-
-        <div class="relative z-10 space-y-3">
-          <!-- Header -->
-          <div class="flex items-center justify-between border-b border-[#1E2333] pb-3">
-            <div class="flex items-center gap-2.5">
-              <span class="w-2.5 h-2.5 rounded-sm bg-telemetry-amber shadow-sm shadow-telemetry-amber/60"></span>
-              <span class="text-xs font-mono font-bold tracking-wider text-white uppercase">
-                [QUICK LINKS]
-              </span>
-            </div>
-            <span class="text-[11px] font-mono text-zinc-500">
-              Verified Profiles
-            </span>
-          </div>
-
-          <!-- 2x2 Platform Grid -->
-          <div class="grid grid-cols-2 gap-3">
-            <!-- Node 1: Steam Profile -->
-            <a
-              href={steamProfileUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              class="group rounded-xl border border-hardware bg-[#0A0C12] hover:border-telemetry-blue p-3.5 flex flex-col justify-between gap-3 transition-all tactile-btn"
-            >
-              <div class="space-y-1">
-                <div class="flex items-center justify-between text-[10px] font-mono text-telemetry-blue">
-                  <span>[STEAM]</span>
-                  <span class="group-hover:text-white transition-colors">↗</span>
-                </div>
-                <h4 class="text-sm font-mono font-bold text-white group-hover:text-telemetry-blue transition-colors">
-                  Steam Profile
-                </h4>
-                <p class="text-[11px] font-mono text-zinc-400 line-clamp-1">
-                  Community & badges
-                </p>
-              </div>
-              <span class="text-[10px] font-mono text-zinc-500 group-hover:text-zinc-300">Open Profile</span>
-            </a>
-
-            <!-- Node 2: Leetify -->
-            <a
-              href="/leetify"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="group rounded-xl border border-hardware bg-[#0A0C12] hover:border-[#BF3B68] p-3.5 flex flex-col justify-between gap-3 transition-all tactile-btn"
-            >
-              <div class="space-y-1">
-                <div class="flex items-center justify-between text-[10px] font-mono text-[#BF3B68]">
-                  <span>[LEETIFY]</span>
-                  <span class="group-hover:text-white transition-colors">↗</span>
-                </div>
-                <h4 class="text-sm font-mono font-bold text-white group-hover:text-[#BF3B68] transition-colors">
-                  Leetify
-                </h4>
-                <p class="text-[11px] font-mono text-zinc-400 line-clamp-1">
-                  CS2 match analytics
-                </p>
-              </div>
-              <span class="text-[10px] font-mono text-zinc-500 group-hover:text-zinc-300">View Stats</span>
-            </a>
-
-            <!-- Node 3: Steam Inventory -->
-            <a
-              href={steamInventoryUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              class="group rounded-xl border border-hardware bg-[#0A0C12] hover:border-telemetry-amber p-3.5 flex flex-col justify-between gap-3 transition-all tactile-btn"
-            >
-              <div class="space-y-1">
-                <div class="flex items-center justify-between text-[10px] font-mono text-telemetry-amber">
-                  <span>[INVENTORY]</span>
-                  <span class="group-hover:text-white transition-colors">↗</span>
-                </div>
-                <h4 class="text-sm font-mono font-bold text-white group-hover:text-telemetry-amber transition-colors">
-                  CS2 Inventory
-                </h4>
-                <p class="text-[11px] font-mono text-zinc-400 line-clamp-1">
-                  Weapon skins & stickers
-                </p>
-              </div>
-              <span class="text-[10px] font-mono text-zinc-500 group-hover:text-zinc-300">Inspect Items</span>
-            </a>
-
-            <!-- Node 4: Games Shelf -->
-            <a
-              href="/games"
-              class="group rounded-xl border border-hardware bg-[#0A0C12] hover:border-telemetry-blue p-3.5 flex flex-col justify-between gap-3 transition-all tactile-btn"
-            >
-              <div class="space-y-1">
-                <div class="flex items-center justify-between text-[10px] font-mono text-telemetry-blue">
-                  <span>[GAMES]</span>
-                  <span class="group-hover:text-white transition-colors">→</span>
-                </div>
-                <h4 class="text-sm font-mono font-bold text-white group-hover:text-telemetry-blue transition-colors">
-                  Games Shelf
-                </h4>
-                <p class="text-[11px] font-mono text-zinc-400 line-clamp-1">
-                  Full library view
-                </p>
-              </div>
-              <span class="text-[10px] font-mono text-zinc-500 group-hover:text-zinc-300">Open Library</span>
-            </a>
-          </div>
-        </div>
-
-        <!-- Footer -->
-        <div class="relative z-10 pt-2 border-t border-[#1E2333] flex items-center justify-between text-[11px] font-mono text-zinc-500">
+  <!-- find me -->
+  <section aria-labelledby="find-me">
+    <h2 id="find-me" class="eyebrow mb-5">find me</h2>
+    <ul class="border-t border-rule">
+      {links.map((link, i) => (
+        <li class="rise" style={`--i:${i + 3}`}>
           <a
-            href="https://github.com/huh4k"
+            href={link.href}
+            target={link.external ? '_blank' : undefined}
+            rel={link.external ? 'noopener noreferrer' : undefined}
+            class="link-row"
+          >
+            <span class="num link-row-meta w-7 shrink-0 text-[13px] text-ash">0{i + 1}</span>
+            <span class="display text-[clamp(2.4rem,7vw,5.25rem)] leading-[0.95]">{link.title}</span>
+            <span class="link-row-meta ml-auto hidden max-w-[15rem] text-right text-[15px] leading-snug text-ash md:block">
+              {link.note}
+            </span>
+            <span class="link-row-arrow ml-auto text-2xl leading-none md:ml-0">{link.external ? '↗' : '→'}</span>
+          </a>
+        </li>
+      ))}
+      <li class="rise" style={`--i:${links.length + 3}`}>
+        <button id="copy-discord-btn" type="button" class="link-row" title="Copy my Discord username">
+          <span class="num link-row-meta w-7 shrink-0 text-[13px] text-ash">0{links.length + 1}</span>
+          <span class="display text-[clamp(2.4rem,7vw,5.25rem)] leading-[0.95]">Discord</span>
+          <span id="discord-btn-text" class="link-row-meta ml-auto hidden max-w-[15rem] text-right text-[15px] leading-snug text-ash md:block">
+            huh4k — click to copy
+          </span>
+          <span class="link-row-arrow ml-auto text-2xl leading-none md:ml-0" aria-hidden="true">⧉</span>
+        </button>
+      </li>
+    </ul>
+  </section>
+
+  <!-- the numbers -->
+  <section class="mt-24 sm:mt-36" aria-labelledby="numbers">
+    <header class="mb-10 flex items-end justify-between gap-6 border-t border-rule pt-5">
+      <h2 id="numbers" class="display text-[clamp(2rem,4.5vw,3.25rem)]">the numbers</h2>
+      <a href="/leetify" target="_blank" rel="noopener noreferrer" class="u-link pb-1 text-[15px] text-ash hover:text-bone">leetify ↗</a>
+    </header>
+    <CS2StatsCard steamId={steamId} />
+  </section>
+
+  <!-- most played -->
+  <section class="mt-24 sm:mt-36" aria-labelledby="played">
+    <header class="mb-10 flex items-end justify-between gap-6 border-t border-rule pt-5">
+      <h2 id="played" class="display text-[clamp(2rem,4.5vw,3.25rem)]">most played</h2>
+      <a href="/games" class="u-link pb-1 text-[15px] text-ash hover:text-bone">all games →</a>
+    </header>
+
+    <ul class="grid gap-x-6 gap-y-12 md:grid-cols-3">
+      {topGames.map((game, index) => (
+        <li>
+          <a
+            href={game.storeUrl}
             target="_blank"
             rel="noopener noreferrer"
-            class="text-zinc-400 hover:text-white transition-colors"
+            class="group block"
           >
-            [GITHUB] github.com/huh4k ↗
+            <div class="relative aspect-[460/215] overflow-hidden bg-ink-3">
+              <img
+                src={game.capsuleUrl || game.headerUrl}
+                alt={game.name}
+                loading="lazy"
+                decoding="async"
+                width="460"
+                height="215"
+                class="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+              />
+            </div>
+            <div class="mt-4 flex items-start justify-between gap-4">
+              <div class="min-w-0">
+                <h3 class="truncate text-[22px] font-semibold leading-tight tracking-tight transition-colors group-hover:text-signal">
+                  {game.name}
+                </h3>
+                <p class="num mt-1 text-[13px] text-ash">{fmt(game.playtimeHours)} hrs</p>
+              </div>
+              <span class="display outline-text shrink-0 text-5xl leading-none">0{index + 1}</span>
+            </div>
           </a>
-          <button
-            type="button"
-            onclick="window.dispatchEvent(new CustomEvent('open-command-deck'))"
-            class="text-telemetry-blue hover:underline cursor-pointer"
-          >
-            Press [ / ] for deck
-          </button>
-        </div>
-      </section>
+        </li>
+      ))}
+    </ul>
+  </section>
 
-      <!-- MODULE E: CS2 Loadout Showcase (Span 5 cols on lg, bottom right) -->
-      <section class="lg:col-span-5 flex flex-col">
-        <CS2LoadoutShowcase steamInventoryUrl={steamInventoryUrl} className="h-full" />
-      </section>
-    </div>
-  </div>
+  <!-- loadout -->
+  <section class="mt-24 sm:mt-36" aria-labelledby="loadout">
+    <header class="mb-10 flex items-end justify-between gap-6 border-t border-rule pt-5">
+      <h2 id="loadout" class="display text-[clamp(2rem,4.5vw,3.25rem)]">loadout</h2>
+      <a href="/inventory" class="u-link pb-1 text-[15px] text-ash hover:text-bone">every skin →</a>
+    </header>
+    <CS2LoadoutShowcase steamInventoryUrl={steamInventoryUrl} />
+  </section>
 
-  <!-- Client-side script for Discord copy button -->
   <script is:inline>
     function setupDiscordCopy() {
-      const copyBtn = document.getElementById('copy-discord-btn');
-      const copyText = document.getElementById('discord-btn-text');
-
-      if (copyBtn && copyText && !copyBtn.dataset.bound) {
-        copyBtn.dataset.bound = 'true';
-        copyBtn.addEventListener('click', async () => {
-          let copied = false;
+      var btn = document.getElementById('copy-discord-btn');
+      var label = document.getElementById('discord-btn-text');
+      if (!btn || !label || btn.dataset.bound) return;
+      btn.dataset.bound = 'true';
+      var original = label.textContent;
+      btn.addEventListener('click', async function () {
+        var copied = false;
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText('huh4k');
+            copied = true;
+          }
+        } catch (e) { /* fall through */ }
+        if (!copied) {
           try {
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-              await navigator.clipboard.writeText('huh4k');
-              copied = true;
-            }
-          } catch {
-            // Fallback handled below
-          }
-
-          if (!copied) {
-            try {
-              const el = document.createElement('textarea');
-              el.value = 'huh4k';
-              el.setAttribute('readonly', '');
-              el.style.position = 'absolute';
-              el.style.left = '-9999px';
-              document.body.appendChild(el);
-              el.select();
-              document.execCommand('copy');
-              document.body.removeChild(el);
-              copied = true;
-            } catch {
-              // Ignore
-            }
-          }
-
-          const original = copyText.textContent;
-          copyText.textContent = '✓ Copied: huh4k';
-          copyBtn.classList.add('border-telemetry-green', 'text-telemetry-green');
-
-          setTimeout(() => {
-            copyText.textContent = original;
-            copyBtn.classList.remove('border-telemetry-green', 'text-telemetry-green');
-          }, 2000);
-        });
-      }
+            var el = document.createElement('textarea');
+            el.value = 'huh4k';
+            el.setAttribute('readonly', '');
+            el.style.position = 'absolute';
+            el.style.left = '-9999px';
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+          } catch (e) { /* ignore */ }
+        }
+        label.textContent = 'copied ✓';
+        setTimeout(function () { label.textContent = original; }, 1800);
+      });
     }
-
     setupDiscordCopy();
     document.addEventListener('astro:page-load', setupDiscordCopy);
   </script>
