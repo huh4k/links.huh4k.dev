@@ -19,7 +19,7 @@ export const SITE_CONFIG: SiteConfig = {
   title: 'links and shit',
   description: 'pronounced hufk',
   url: 'https://huh4k.dev',
-  portfolioUrl: 'https://pf.huh4k.dev',
+  portfolioUrl: 'https://work.huh4k.dev',
   author: {
     name: 'huh4k',
     handle: '@huh4k',
