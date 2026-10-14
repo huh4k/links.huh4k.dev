@@ -124,9 +124,6 @@ const ogImageUrl = new URL('/favicon.svg', SITE_CONFIG.url).href;
         <div class="num mt-12 flex flex-wrap items-center justify-between gap-x-8 gap-y-2 border-t border-rule pt-5 text-[11px] uppercase tracking-[0.12em] text-ash">
           <span>© {currentYear} huh4k</span>
           <span id="hud-clock" class="tabular-nums">utc --:--:--</span>
-          <button id="sfx-toggle" type="button" class="cursor-pointer transition-colors hover:text-bone" title="Toggle click sounds">
-            click sounds: <span id="sfx-state">off</span>
-          </button>
         </div>
       </div>
     </footer>
@@ -143,48 +140,6 @@ const ogImageUrl = new URL('/favicon.svg', SITE_CONFIG.url).href;
         }
         tick();
         setInterval(tick, 1000);
-      })();
-    </script>
-
-    <!-- Optional click sounds -->
-    <script is:inline>
-      (function () {
-        var sfxEnabled = false;
-        var audioCtx = null;
-
-        function playClick() {
-          if (!sfxEnabled) return;
-          try {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            var o = audioCtx.createOscillator();
-            var g = audioCtx.createGain();
-            o.connect(g);
-            g.connect(audioCtx.destination);
-            o.type = 'square';
-            o.frequency.setValueAtTime(880, audioCtx.currentTime);
-            o.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + 0.04);
-            g.gain.setValueAtTime(0.06, audioCtx.currentTime);
-            g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.06);
-            o.start(audioCtx.currentTime);
-            o.stop(audioCtx.currentTime + 0.06);
-          } catch (e) { /* ignore */ }
-        }
-
-        var btn = document.getElementById('sfx-toggle');
-        var label = document.getElementById('sfx-state');
-        if (btn && label) {
-          btn.addEventListener('click', function () {
-            sfxEnabled = !sfxEnabled;
-            label.textContent = sfxEnabled ? 'on' : 'off';
-            if (sfxEnabled) playClick();
-          });
-        }
-
-        document.addEventListener('click', function (e) {
-          if (!sfxEnabled) return;
-          var t = e.target;
-          if (t && (t.closest('a') || t.closest('button'))) playClick();
-        }, { capture: true, passive: true });
       })();
     </script>
   </body>
