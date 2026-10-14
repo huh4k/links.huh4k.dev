@@ -7,7 +7,7 @@
 #   VPK=~/CS2_PakFiles/game/csgo/pak01_dir.vpk CLI=~/path/to/Source2Viewer-CLI scripts/export-knife-models.sh
 # Export only some knives:  KNIVES="karambit m9 butterfly" ...
 set -euo pipefail
-: "${VPK:?set VPK to pak01_dir.vpk}"; : "${CLI:=./Source2Viewer-CLI}"
+: "${VPK:=$HOME/CS2_PakFiles/game/csgo/pak01_dir.vpk}"; : "${CLI:=./Source2Viewer-CLI}"
 : "${OUT:=$HOME/cs2_knives_export}"; : "${DEST:=public/models/knives}"
 : "${KNIVES:=bayonet bowie butterfly canis cord css default_ct default_t falchion flip gut karambit kukri m9 navaja outdoor push skeleton stiletto tactical talon ursus}"
 

@@ -69,3 +69,4 @@ ehthumbs.db
 coverage/
 test-results/
 playwright-report/
+/scripts
