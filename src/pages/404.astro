@@ -1,0 +1,31 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="404 — huh4k" description="Nothing here." currentPath="/404">
+  <section class="overflow-x-clip pb-10 sm:pb-16">
+    <p class="eyebrow rise" style="--i:0">page not found</p>
+    <h1
+      class="display rise -ml-[0.035em] mt-5 text-[clamp(6rem,30vw,22rem)] leading-[0.78]"
+      style="--i:1"
+    >
+      404<span class="text-signal">.</span>
+    </h1>
+    <p class="rise mt-9 max-w-xl text-[clamp(1.5rem,3.2vw,2.35rem)] leading-[1.1] tracking-tight" style="--i:2">
+      whiffed. <span class="text-ash">that page doesn't exist.</span>
+    </p>
+  </section>
+
+  <section class="border-t border-rule pt-5">
+    <ul class="rise flex flex-wrap gap-x-8 gap-y-3 text-[17px]" style="--i:3">
+      <li><a href="/" class="u-link text-bone">← home</a></li>
+      <li><a href="/inventory" class="u-link text-ash hover:text-bone">inventory</a></li>
+      <li><a href="/games" class="u-link text-ash hover:text-bone">games</a></li>
+      <li>
+        <button type="button" class="u-link text-ash hover:text-bone" onclick="window.dispatchEvent(new CustomEvent('open-command-deck'))">
+          search <span class="kbd">/</span>
+        </button>
+      </li>
+    </ul>
+  </section>
+</BaseLayout>

@@ -27,7 +27,7 @@ const isHome = currentPath === '/';
 const isInventory = currentPath === '/inventory';
 const isGames = currentPath === '/games';
 const canonicalUrl = new URL(Astro.url.pathname, SITE_CONFIG.url).href;
-const ogImageUrl = new URL('/favicon.svg', SITE_CONFIG.url).href;
+const ogImageUrl = new URL('/og.png', SITE_CONFIG.url).href;
 ---
 
 <!doctype html>
@@ -49,9 +49,11 @@ const ogImageUrl = new URL('/favicon.svg', SITE_CONFIG.url).href;
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonicalUrl} />
     <meta property="og:image" content={ogImageUrl} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
 
     <!-- Twitter Cards -->
-    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImageUrl} />
