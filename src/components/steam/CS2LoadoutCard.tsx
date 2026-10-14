@@ -29,7 +29,7 @@ export interface LoadoutWeapon {
  * - CT Rifle: StatTrak™ M4A1-S | Liquidation (Field-Tested, Float: 0.3438, Seed: 937)
  * - Sniper: AWP | Ice Coaled (Factory New, Float: 0.0631, Seed: 309)
  * - Sidearm: USP-S | Royal Guard (Factory New, Float: 0.0560, Seed: 644)
- * - Knife: ★ Karambit | Doppler (Factory New, Float: 0.0089, Seed: 399) / Combat Knife 3D model
+ * - Knife: ★ Nomad Knife | Blue Steel (Field-Tested, Float: 0.3652, Seed: 163)
  */
 export const DEFAULT_LOADOUT_WEAPONS: LoadoutWeapon[] = [
   {
@@ -43,6 +43,21 @@ export const DEFAULT_LOADOUT_WEAPONS: LoadoutWeapon[] = [
     wearShort: 'MW',
     float: 0.0825,
     seed: 367,
+    rarity: 'Classified',
+    rarityColor: '#d32ce6',
+    color: '#d32ce6',
+  },
+  {
+    id: 'm4a4-cyber-security',
+    slot: 'T Rifle',
+    tabLabel: 'M4A4',
+    name: 'M4A4 | Cyber Security (Minimal Wear)',
+    weapon: 'M4A4',
+    skin: 'Cyber Security',
+    wear: 'Minimal Wear',
+    wearShort: 'MW',
+    float: 0.1447,
+    seed: 320,
     rarity: 'Classified',
     rarityColor: '#d32ce6',
     color: '#d32ce6',
@@ -94,16 +109,16 @@ export const DEFAULT_LOADOUT_WEAPONS: LoadoutWeapon[] = [
     color: '#8847ff',
   },
   {
-    id: 'knife-karambit',
+    id: '53997021184',
     slot: 'Knife',
     tabLabel: 'Knife',
-    name: '★ Karambit | Doppler (Factory New)',
-    weapon: '★ Karambit',
-    skin: 'Doppler',
-    wear: 'Factory New',
-    wearShort: 'FN',
-    float: 0.0089,
-    seed: 399,
+    name: '★ Nomad Knife | Blue Steel (Field-Tested)',
+    weapon: '★ Nomad Knife',
+    skin: 'Blue Steel',
+    wear: 'Field-Tested',
+    wearShort: 'FT',
+    float: 0.3652,
+    seed: 163,
     rarity: '★ Extraordinary',
     rarityColor: '#ffd700',
     color: '#ffd700',
