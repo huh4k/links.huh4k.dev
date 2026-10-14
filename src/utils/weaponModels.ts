@@ -5,6 +5,7 @@
  * and knife variations to their corresponding static .obj or .glb model assets.
  */
 
+import { resolvePaintByNumber } from './paintByNumber';
 import { getSkinMeshFamily } from './weaponTextures';
 
 export const DEFAULT_WEAPON_MODEL = '/models/placeholder-weapon.glb';
@@ -341,6 +342,7 @@ export const getLegacyWeaponModelPath = getObjsWeaponModelPath;
 export function getSkinCompatibleModelPath(weaponName?: string, skinName?: string): string {
   const legacy = getObjsWeaponModelPath(weaponName);
   const cs2 = getWeaponModelPath(weaponName);
-  if (getSkinMeshFamily(weaponName, skinName) === 'cs2') return cs2 || legacy || '';
+  // Paint-by-number masks are laid out on the Source 2 mesh UVs
+  if (resolvePaintByNumber(weaponName, skinName) || getSkinMeshFamily(weaponName, skinName) === 'cs2') return cs2 || legacy || '';
   return legacy || cs2;
 }

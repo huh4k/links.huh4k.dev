@@ -6,6 +6,7 @@ import { OBJLoader } from 'three-stdlib';
 import * as THREE from 'three';
 import { getWeaponModelPath, getObjsWeaponModelPath, getSkinCompatibleModelPath, getLegacyWeaponModelPath, isObjModelUrl, WEAPON_MODEL_MAP, OBJS_MODEL_MAP, CSGO_LEGACY_MODEL_MAP } from '../utils/weaponModels';
 import { getR2WeaponTextures, loadR2Texture, resolveActualR2TextureUrl } from '../utils/r2Textures';
+import { resolvePaintByNumber, renderPaintByNumber } from '../utils/paintByNumber';
 import { resolveSkinTextureUrl, resolveUVSheetTextureUrl, resolveSkinFinish, isDataMapUrl, isColorWrapUrl } from '../utils/weaponTextures';
 
 export interface ModelViewerProps {
@@ -681,6 +682,30 @@ export function ObjWeaponScene({
       }
       return false;
     })();
+
+    // ── Paint-by-number skins: bake the colour zones from the skin's mask ─────
+    const pbn = !isLegacyModel ? resolvePaintByNumber(effectiveWeaponName, skinName) : undefined;
+    if (pbn) {
+      new THREE.ImageLoader()
+        .loadAsync(pbn.masksUrl)
+        .then((img) => {
+          if (isCancelled) return;
+          const { color, orm } = renderPaintByNumber(img, pbn);
+          const colorTex = new THREE.CanvasTexture(color);
+          const ormTex = new THREE.CanvasTexture(orm);
+          configure(colorTex, true, flipY);
+          configure(ormTex, false, flipY);
+          material.map = colorTex;
+          material.color.set(0xffffff);
+          material.roughnessMap = ormTex;
+          material.metalnessMap = ormTex;
+          material.roughness = 1;
+          material.metalness = 1;
+          material.needsUpdate = true;
+          syncMeshes();
+        })
+        .catch(() => { /* keeps the flat base-coat finish */ });
+    }
 
     // ── Source 2 PBR data maps ───────────────────────────────────────────────
     if (!isLegacyModel) {
