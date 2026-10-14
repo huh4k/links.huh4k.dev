@@ -33,7 +33,7 @@ export async function runTier3() {
       harness.assertEqual(cached.seed, testSeed);
 
       // Execute SSR endpoint
-      const req = new Request('https://links.huh4k.dev/api/inventory.json');
+      const req = new Request('https://huh4k.dev/api/inventory.json');
       const res = await apiModule.GET({ request: req, locals: {}, params: {} });
       harness.assertEqual(res.status, 200, 'SSR endpoint returns HTTP 200');
 

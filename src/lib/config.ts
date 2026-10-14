@@ -3,6 +3,7 @@ export interface SiteConfig {
   title: string;
   description: string;
   url: string;
+  portfolioUrl: string;
   author: {
     name: string;
     handle: string;
@@ -17,7 +18,8 @@ export const SITE_CONFIG: SiteConfig = {
   name: 'huh4k',
   title: 'links and shit',
   description: 'pronounced hufk',
-  url: 'https://links.huh4k.dev',
+  url: 'https://huh4k.dev',
+  portfolioUrl: 'https://pf.huh4k.dev',
   author: {
     name: 'huh4k',
     handle: '@huh4k',

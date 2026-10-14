@@ -1005,7 +1005,7 @@ async function runChallengerHarness() {
       }) as typeof fetch;
 
       const mockContext = {
-        request: new Request('https://links.huh4k.dev/api/inventory.json?steamid=76561198920486334'),
+        request: new Request('https://huh4k.dev/api/inventory.json?steamid=76561198920486334'),
         locals: {},
         params: {},
       } as any;

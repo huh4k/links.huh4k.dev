@@ -23,7 +23,7 @@ The E2E test infrastructure implements an **opaque-box, requirement-driven testi
 
 ## 2. Directory Layout & Test Suite Architecture
 ```
-links.huh4k.dev
+huh4k.dev
 ├── tests/
 │   ├── e2e/
 │   │   ├── runner.mjs                         # Master CLI test runner (supports --tier and --suite)

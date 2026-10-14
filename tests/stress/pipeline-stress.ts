@@ -650,7 +650,7 @@ async function run() {
     const promises = Array.from({ length: concurrentRequests }, async (_, i) => {
       const steamId = i % 2 === 0 ? '76561198000000000' : '76561198000000001';
       const mockContext = {
-        request: new Request(`https://links.huh4k.dev/api/inventory.json?steamid=${steamId}`),
+        request: new Request(`https://huh4k.dev/api/inventory.json?steamid=${steamId}`),
         locals: {},
         params: {},
       } as any;

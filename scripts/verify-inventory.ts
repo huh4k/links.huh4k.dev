@@ -513,7 +513,7 @@ async function runTestSuite() {
   console.log('\n[Test 9] SSR API Route Handler Validation (/api/inventory.json)');
   {
     const mockContext = {
-      request: new Request('https://links.huh4k.dev/api/inventory.json?steamid=76561198920486334'),
+      request: new Request('https://huh4k.dev/api/inventory.json?steamid=76561198920486334'),
       locals: {},
       params: {},
     } as any;
@@ -618,7 +618,7 @@ async function runTestSuite() {
       assert(fb.source === 'fallback' && Boolean(fb.reason?.includes('429')), 'Rate limit is reported as fallback with a reason');
 
       const res = await inventoryApiHandler({
-        request: new Request('https://links.huh4k.dev/api/inventory.json'),
+        request: new Request('https://huh4k.dev/api/inventory.json'),
         locals: {},
         params: {},
       } as any);
@@ -638,7 +638,7 @@ async function runTestSuite() {
     }) as typeof fetch;
     try {
       const res = await inventoryApiHandler({
-        request: new Request('https://links.huh4k.dev/api/inventory.json'),
+        request: new Request('https://huh4k.dev/api/inventory.json'),
         locals: {},
         params: {},
       } as any);
@@ -765,7 +765,7 @@ async function runTestSuite() {
     }) as typeof fetch;
     try {
       const res = await inventoryApiHandler({
-        request: new Request('https://links.huh4k.dev/api/inventory.json'),
+        request: new Request('https://huh4k.dev/api/inventory.json'),
         locals: { runtime: { env: { CSFLOAT_API_KEY: 'runtime-key' } } },
         params: {},
       } as any);

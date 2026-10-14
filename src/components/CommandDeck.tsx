@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { SITE_CONFIG } from '../lib/config';
 
 interface CommandDeckProps {
   steamId: string;
@@ -19,6 +20,7 @@ const GO_TO: Record<string, () => void> = {
   i: () => { window.location.href = '/inventory'; },
   g: () => { window.location.href = '/games'; },
   l: () => { window.open('/leetify', '_blank', 'noopener,noreferrer'); },
+  p: () => { window.open(SITE_CONFIG.portfolioUrl, '_blank', 'noopener,noreferrer'); },
   b: () => { window.open('https://github.com/huh4k', '_blank', 'noopener,noreferrer'); },
 };
 
@@ -28,6 +30,7 @@ const SHORTCUTS: { keys: string[]; label: string }[] = [
   { keys: ['g', 'i'], label: 'inventory' },
   { keys: ['g', 'g'], label: 'games' },
   { keys: ['g', 'l'], label: 'leetify' },
+  { keys: ['g', 'p'], label: 'portfolio' },
   { keys: ['g', 'b'], label: 'github' },
   { keys: ['?'], label: 'this cheat sheet' },
 ];
@@ -141,6 +144,17 @@ export default function CommandDeck({ steamId }: CommandDeckProps) {
       action: () => {
         window.location.href = '/test/model-viewer';
       },
+    },
+    {
+      id: 'portfolio',
+      tag: '[PORTFOLIO]',
+      title: 'Portfolio',
+      subtitle: 'Selected work and projects',
+      badge: 'Work ↗',
+      action: () => {
+        window.open(SITE_CONFIG.portfolioUrl, '_blank', 'noopener,noreferrer');
+      },
+      external: true,
     },
     {
       id: 'github',
@@ -268,7 +282,7 @@ export default function CommandDeck({ steamId }: CommandDeckProps) {
 
   const pendingHint = pendingG && (
     <div className="num fixed bottom-5 left-5 z-[100] flex items-center gap-2 border border-rule-strong bg-ink-2 px-3 py-2 text-[12px] uppercase tracking-wider text-ash sm:bottom-8 sm:left-8">
-      <span className="kbd">g</span> then <span className="text-bone">h i g l b</span>
+      <span className="kbd">g</span> then <span className="text-bone">h i g l p b</span>
     </div>
   );
 
