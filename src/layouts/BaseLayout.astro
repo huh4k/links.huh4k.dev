@@ -123,20 +123,27 @@ const ogImageUrl = new URL('/favicon.svg', SITE_CONFIG.url).href;
 
         <div class="num mt-12 flex flex-wrap items-center justify-between gap-x-8 gap-y-2 border-t border-rule pt-5 text-[11px] uppercase tracking-[0.12em] text-ash">
           <span>© {currentYear} huh4k</span>
-          <span id="hud-clock" class="tabular-nums">utc --:--:--</span>
+          <span id="hud-clock" class="tabular-nums">--:--:-- AEST</span>
         </div>
       </div>
     </footer>
 
-    <!-- UTC clock -->
+    <!-- Local clock: Sydney/Melbourne time, labelled AEST or AEDT depending on daylight saving -->
     <script is:inline>
       (function () {
-        function pad(n) { return String(n).padStart(2, '0'); }
+        var fmt = new Intl.DateTimeFormat('en-AU', {
+          timeZone: 'Australia/Sydney',
+          hour: '2-digit', minute: '2-digit', second: '2-digit',
+          hourCycle: 'h23',
+          timeZoneName: 'short',
+        });
         function tick() {
           var el = document.getElementById('hud-clock');
           if (!el) return;
-          var now = new Date();
-          el.textContent = 'utc ' + pad(now.getUTCHours()) + ':' + pad(now.getUTCMinutes()) + ':' + pad(now.getUTCSeconds());
+          var t = {};
+          fmt.formatToParts(new Date()).forEach(function (p) { t[p.type] = p.value; });
+          var zone = /^(AEST|AEDT)$/.test(t.timeZoneName) ? t.timeZoneName : (t.timeZoneName || 'AEST');
+          el.textContent = t.hour + ':' + t.minute + ':' + t.second + ' ' + zone;
         }
         tick();
         setInterval(tick, 1000);
