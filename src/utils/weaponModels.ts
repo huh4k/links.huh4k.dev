@@ -154,12 +154,28 @@ export function isKnifeName(weaponName?: string): boolean {
   return base.includes('★') || KNIFE_MODEL_FOLDERS.some(([re]) => re.test(base));
 }
 
+/**
+ * Knife exports that contain the real visual mesh. The other exports in /models/knives/ are only the
+ * physics collision hull (a featureless blob), so those knives use the viewer's built-in knife until
+ * they are re-exported (see scripts/export-knife-models.sh).
+ */
+const USABLE_KNIFE_MODELS = new Set([
+  'knife_m9',
+  'knife_bayonet',
+  'knife_karambit',
+  'knife_stiletto',
+  'knife_ursus',
+  'knife_cord',
+  'knife_canis',
+  'knife_default_ct',
+]);
+
 /** Path of the knife model for a market name, or undefined if it is not a known knife */
 export function getKnifeModelPath(weaponName?: string): string | undefined {
   if (!isKnifeName(weaponName)) return undefined;
   const base = (weaponName as string).split('|')[0];
   const hit = KNIFE_MODEL_FOLDERS.find(([re]) => re.test(base));
-  return hit ? `/models/knives/${hit[1]}.glb` : undefined;
+  return hit && USABLE_KNIFE_MODELS.has(hit[1]) ? `/models/knives/${hit[1]}.glb` : undefined;
 }
 
 /**

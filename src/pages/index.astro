@@ -69,7 +69,7 @@ const links = [
           <span class="num link-row-meta w-7 shrink-0 text-[13px] text-ash">0{links.length + 1}</span>
           <span class="display text-[clamp(2.4rem,7vw,5.25rem)] leading-[0.95]">Discord</span>
           <span id="discord-btn-text" class="link-row-meta ml-auto hidden max-w-[15rem] text-right text-[15px] leading-snug text-ash md:block">
-            huh4k — click to copy
+            huh3k — click to copy
           </span>
           <span class="link-row-arrow ml-auto text-2xl leading-none md:ml-0" aria-hidden="true">⧉</span>
         </button>
@@ -148,14 +148,14 @@ const links = [
         var copied = false;
         try {
           if (navigator.clipboard && navigator.clipboard.writeText) {
-            await navigator.clipboard.writeText('huh4k');
+            await navigator.clipboard.writeText('huh3k');
             copied = true;
           }
         } catch (e) { /* fall through */ }
         if (!copied) {
           try {
             var el = document.createElement('textarea');
-            el.value = 'huh4k';
+            el.value = 'huh3k';
             el.setAttribute('readonly', '');
             el.style.position = 'absolute';
             el.style.left = '-9999px';

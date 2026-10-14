@@ -8,7 +8,7 @@ import type {
 const STEAM_API_BASE = 'https://api.steampowered.com';
 
 // Default / fallback configurations
-const DEFAULT_STEAM_ID = '76561198000000000';
+const DEFAULT_STEAM_ID = '76561198920486334';
 const DEFAULT_PERSONA_NAME = 'huh4k';
 
 // In-memory cache structures to avoid Valve rate limits

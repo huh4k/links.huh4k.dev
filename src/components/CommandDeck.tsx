@@ -28,7 +28,7 @@ export default function CommandDeck({ steamId }: CommandDeckProps) {
     let succeeded = false;
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText('huh4k');
+        await navigator.clipboard.writeText('huh3k');
         succeeded = true;
       }
     } catch {
@@ -38,7 +38,7 @@ export default function CommandDeck({ steamId }: CommandDeckProps) {
     if (!succeeded) {
       try {
         const el = document.createElement('textarea');
-        el.value = 'huh4k';
+        el.value = 'huh3k';
         el.setAttribute('readonly', '');
         el.style.position = 'absolute';
         el.style.left = '-9999px';
@@ -136,8 +136,8 @@ export default function CommandDeck({ steamId }: CommandDeckProps) {
     {
       id: 'discord',
       tag: '[DISCORD]',
-      title: copied ? 'Copied: huh4k' : 'Copy Discord Username',
-      subtitle: 'Click to copy username: huh4k',
+      title: copied ? 'Copied: huh3k' : 'Copy Discord Username',
+      subtitle: 'Click to copy username: huh3k',
       badge: copied ? '✓ Copied' : 'Copy',
       action: copyDiscord,
     },
