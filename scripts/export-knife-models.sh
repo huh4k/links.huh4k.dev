@@ -16,7 +16,8 @@ for k in $KNIVES; do
   model="weapons/models/knife/knife_${k}/weapon_knife_${k}.vmdl_c"
   echo "== knife_${k}"
   "$CLI" -i "$VPK" -o "$OUT" -d --gltf_export_format glb --gltf_export_materials --gltf_textures_adapt -f "$model" || { echo "  export failed" >&2; continue; }
-  glb="$(find "$OUT" -name "weapon_knife_${k}*.glb" -print -quit)"
+  # prefer the biggest matching export that is not a physics hull (the hull is a featureless blob)
+  glb="$(find "$OUT" -name "weapon_knife_${k}*.glb" ! -iname '*physics*' -exec ls -S {} + 2>/dev/null | head -n 1)"
   if [ -n "$glb" ]; then
     cp "$glb" "$DEST/knife_${k}.glb"
     echo "  -> $DEST/knife_${k}.glb ($(du -h "$DEST/knife_${k}.glb" | cut -f1))"

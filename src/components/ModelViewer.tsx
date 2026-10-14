@@ -1,5 +1,5 @@
 import React, { Suspense, useState, useEffect, useRef, useMemo } from 'react';
-import { Canvas, useLoader } from '@react-three/fiber';
+import { Canvas, useLoader, useThree } from '@react-three/fiber';
 import { OrbitControls, Center, useGLTF, useProgress, Html, Environment, Lightformer } from '@react-three/drei';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { OBJLoader } from 'three-stdlib';
@@ -305,10 +305,16 @@ export function WeaponScene({
       clone.scale.setScalar(scaleFactor);
     }
 
-    clone.traverse((child) => {
-      if ((child as THREE.Mesh).isMesh) {
-      }
-    });
+    // Exported knife materials come through as flat white (their colour comes from skin textures we do
+    // not ship), so give them a neutral brushed-steel look instead of a blown-out silhouette.
+    if (orientProfile) {
+      clone.traverse((child) => {
+        const mesh = child as THREE.Mesh;
+        if (!mesh.isMesh) return;
+        mesh.frustumCulled = false;
+        mesh.material = new THREE.MeshStandardMaterial({ color: '#b9bec6', metalness: 0.85, roughness: 0.38 });
+      });
+    }
 
     return clone;
   }, [scene, orientProfile]);
@@ -728,6 +734,31 @@ function CanvasSpinner({ weaponName }: { weaponName?: string }) {
 }
 
 /**
+ * Pulls the camera back when the container is narrower than wide enough for the (normalised) model,
+ * so long weapons and knives are never cut off at the edges.
+ */
+function FitCamera({ baseDistance }: { baseDistance: number }) {
+  const camera = useThree((s) => s.camera);
+  const width = useThree((s) => s.size.width);
+  const height = useThree((s) => s.size.height);
+
+  useEffect(() => {
+    const cam = camera as THREE.PerspectiveCamera;
+    const aspect = width / Math.max(height, 1);
+    const t = Math.tan(THREE.MathUtils.degToRad(cam.fov) / 2);
+    const halfWidth = 1.45; // normalised models are ~2.0-2.4 wide; allow a little rotation slack
+    const needed = halfWidth / (t * aspect);
+    const dist = Math.max(baseDistance, needed);
+    const dir = cam.position.clone();
+    if (dir.lengthSq() === 0) dir.set(0, 0.12, 1);
+    cam.position.copy(dir.normalize().multiplyScalar(dist));
+    cam.updateProjectionMatrix();
+  }, [camera, width, height, baseDistance]);
+
+  return null;
+}
+
+/**
  * Scene controls managing OrbitControls damping, polar angle clamping,
  * zoom boundaries, and debounced auto-rotation resumption.
  */
@@ -885,7 +916,7 @@ export default function ModelViewer({
   idleResumeDelayMs = 3000,
   enableZoom = true,
   minDistance = 1.2,
-  maxDistance = 5.5,
+  maxDistance = 9,
   fov = 45,
   cameraPosition = [0, 0.4, 3.2],
   weaponName,
@@ -959,6 +990,7 @@ export default function ModelViewer({
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance', toneMapping: THREE.NoToneMapping }}
         className="w-full h-full cursor-grab active:cursor-grabbing"
       >
+        <FitCamera baseDistance={Math.hypot(cameraPosition[0], cameraPosition[1], cameraPosition[2])} />
         <StudioLighting />
 
         <ModelErrorBoundary
