@@ -1,8 +1,6 @@
 import type {
   SteamGetPlayerSummariesResponse,
   SteamGetOwnedGamesResponse,
-  SteamPresenceStatus,
-  PresenceState,
   SteamGame,
 } from './types/steam';
 
@@ -10,7 +8,6 @@ const STEAM_API_BASE = 'https://api.steampowered.com';
 
 // Default / fallback configurations
 const DEFAULT_STEAM_ID = '76561198920486334';
-const DEFAULT_PERSONA_NAME = 'huh4k';
 
 // In-memory cache structures to avoid Valve rate limits
 interface CacheEntry<T> {
@@ -18,8 +15,6 @@ interface CacheEntry<T> {
   timestamp: number;
 }
 
-let playerSummaryCache: CacheEntry<SteamPresenceStatus> | null = null;
-const SUMMARY_CACHE_TTL_MS = 30 * 1000; // 30 seconds
 
 let ownedGamesCache: CacheEntry<SteamGame[]> | null = null;
 const OWNED_GAMES_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -110,167 +105,6 @@ export const FALLBACK_GAMES: SteamGame[] = [
     storeUrl: 'https://store.steampowered.com/app/400/',
   },
 ];
-
-/**
- * Presence without an API key: the public profile XML (steamcommunity.com/profiles/<id>?xml=1) carries
- * the online state, avatar and current game for public profiles.
- */
-async function getPlayerSummaryFromProfileXml(steamId: string): Promise<SteamPresenceStatus | null> {
-  try {
-    const res = await fetch(`https://steamcommunity.com/profiles/${steamId}?xml=1`, {
-      headers: { Accept: 'application/xml' },
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!res.ok) return null;
-    const xml = await res.text();
-    const pick = (tag: string): string => {
-      const m = xml.match(new RegExp(`<${tag}>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?</${tag}>`));
-      return m ? m[1].trim() : '';
-    };
-    const onlineState = pick('onlineState').toLowerCase();
-    if (!onlineState) return null;
-
-    const gameName = pick('gameName');
-    const gameLink = pick('gameLink');
-    const appId = (gameLink.match(/\/app\/(\d+)/) || [])[1] || '';
-    let state: PresenceState = 'offline';
-    let label = 'Offline';
-    let game: SteamPresenceStatus['game'] = undefined;
-    if (onlineState === 'in-game' || gameName) {
-      state = 'in-game';
-      label = `Currently Playing: ${gameName || 'Game'}`;
-      if (appId) {
-        game = {
-          id: appId,
-          title: gameName || 'Game',
-          headerUrl: `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${appId}/header.jpg`,
-          capsuleUrl: `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${appId}/capsule_616x353.jpg`,
-          storeUrl: `https://store.steampowered.com/app/${appId}/`,
-        };
-      } else {
-        game = { id: '', title: gameName || 'Game', headerUrl: '', capsuleUrl: '', storeUrl: `https://steamcommunity.com/profiles/${steamId}` };
-      }
-    } else if (onlineState === 'online') {
-      state = 'online';
-      label = 'Online on Steam';
-    }
-    return {
-      state,
-      label,
-      personaname: pick('steamID') || DEFAULT_PERSONA_NAME,
-      avatarUrl: pick('avatarFull') || pick('avatarMedium') || pick('avatarIcon'),
-      profileUrl: `https://steamcommunity.com/profiles/${steamId}`,
-      game,
-      lastUpdated: new Date().toISOString(),
-    };
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Fetches the user's current live status / game presence.
- * Gracefully falls back to offline state on errors.
- */
-export async function getPlayerSummary(
-  customSteamId?: string,
-  customApiKey?: string
-): Promise<SteamPresenceStatus> {
-  const now = Date.now();
-  if (playerSummaryCache && now - playerSummaryCache.timestamp < SUMMARY_CACHE_TTL_MS) {
-    return playerSummaryCache.data;
-  }
-
-  const apiKey = customApiKey || getSteamApiKey();
-  const steamId = customSteamId || getSteamId64();
-
-  // Neither source answered: say so, rather than claiming "offline"
-  const unavailable: SteamPresenceStatus = {
-    state: 'offline',
-    label: 'Status unavailable',
-    personaname: DEFAULT_PERSONA_NAME,
-    avatarUrl: '',
-    profileUrl: `https://steamcommunity.com/profiles/${steamId}`,
-    lastUpdated: new Date().toISOString(),
-    unavailable: true,
-  };
-  const viaXml = async (): Promise<SteamPresenceStatus> => {
-    const result = steamId ? await getPlayerSummaryFromProfileXml(steamId) : null;
-    if (!result) return unavailable;
-    playerSummaryCache = { data: result, timestamp: Date.now() };
-    return result;
-  };
-
-  if (!apiKey || !steamId) {
-    return viaXml();
-  }
-
-  try {
-    const url = `${STEAM_API_BASE}/ISteamUser/GetPlayerSummaries/v2/?key=${apiKey}&steamids=${steamId}`;
-    const res = await fetch(url, {
-      headers: { Accept: 'application/json' },
-      signal: AbortSignal.timeout(5000), // 5 second timeout
-    });
-
-    if (!res.ok) {
-      console.warn(`[Steam API] GetPlayerSummaries returned status ${res.status}`);
-      return viaXml();
-    }
-
-    const json = (await res.json()) as SteamGetPlayerSummariesResponse;
-    const player = json.response?.players?.[0];
-
-    if (!player) {
-      return viaXml();
-    }
-
-    let state: 'in-game' | 'online' | 'offline' = 'offline';
-    let label = 'Offline';
-
-    const isInGame = Boolean(player.gameextrainfo || (player.gameid && player.gameid !== '0'));
-    const isOnline = player.personastate > 0;
-
-    let gameInfo: SteamPresenceStatus['game'] = undefined;
-
-    if (isInGame) {
-      state = 'in-game';
-      const gameTitle = player.gameextrainfo || 'Game';
-      label = `Currently Playing: ${gameTitle}`;
-      const appId = player.gameid || '730';
-      gameInfo = {
-        id: appId,
-        title: gameTitle,
-        headerUrl: `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${appId}/header.jpg`,
-        capsuleUrl: `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${appId}/capsule_616x353.jpg`,
-        storeUrl: `https://store.steampowered.com/app/${appId}/`,
-      };
-    } else if (isOnline) {
-      state = 'online';
-      label =
-        player.personastate === 3
-          ? 'Away on Steam'
-          : player.personastate === 4
-            ? 'Snooze on Steam'
-            : 'Online on Steam';
-    }
-
-    const result: SteamPresenceStatus = {
-      state,
-      label,
-      personaname: player.personaname || DEFAULT_PERSONA_NAME,
-      avatarUrl: player.avatarfull || player.avatarmedium || player.avatar || '',
-      profileUrl: player.profileurl || `https://steamcommunity.com/profiles/${steamId}`,
-      game: gameInfo,
-      lastUpdated: new Date().toISOString(),
-    };
-
-    playerSummaryCache = { data: result, timestamp: now };
-    return result;
-  } catch (error) {
-    console.error('[Steam API] Error fetching player summary:', error);
-    return viaXml();
-  }
-}
 
 /**
  * Fetches all owned games for the given Steam ID with total logged playtime.

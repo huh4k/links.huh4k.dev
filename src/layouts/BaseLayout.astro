@@ -6,7 +6,6 @@ import '@fontsource/ibm-plex-mono/600.css';
 import '../styles/global.css';
 import { SITE_CONFIG } from '../lib/config';
 import { getSteamId64 } from '../lib/steam';
-import SteamPresence from '../components/steam/SteamPresence';
 import SocialLinks from '../components/SocialLinks.astro';
 import CommandDeck from '../components/CommandDeck';
 
@@ -94,7 +93,6 @@ const ogImageUrl = new URL('/favicon.svg', SITE_CONFIG.url).href;
         </nav>
 
         <div class="flex shrink-0 items-center gap-4">
-          <SteamPresence client:load variant="badge" className="hidden sm:flex" />
           <button
             type="button"
             onclick="window.dispatchEvent(new CustomEvent('open-command-deck'))"

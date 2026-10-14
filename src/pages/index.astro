@@ -1,6 +1,5 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import SteamPresence from '../components/steam/SteamPresence';
 import CS2StatsCard from '../components/steam/CS2StatsCard.astro';
 import CS2LoadoutShowcase from '../components/steam/CS2LoadoutShowcase.astro';
 import { SITE_CONFIG } from '../lib/config';
@@ -39,7 +38,6 @@ const links = [
       <p class="max-w-xl text-[clamp(1.5rem,3.2vw,2.35rem)] leading-[1.1] tracking-tight">
         links and shit. <span class="text-ash">pronounced <span class="num text-bone">hufk</span>.</span>
       </p>
-      <SteamPresence client:load variant="line" />
     </div>
   </section>
 

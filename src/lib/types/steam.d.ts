@@ -58,31 +58,6 @@ export interface SteamGetOwnedGamesResponse {
 }
 
 /**
- * Clean UI / API Presence State
- */
-export type PresenceState = 'in-game' | 'online' | 'offline';
-
-export interface SteamPresenceGame {
-  id: string;
-  title: string;
-  headerUrl: string;
-  capsuleUrl: string;
-  storeUrl: string;
-}
-
-export interface SteamPresenceStatus {
-  state: PresenceState;
-  label: string;
-  personaname: string;
-  avatarUrl: string;
-  profileUrl: string;
-  game?: SteamPresenceGame;
-  lastUpdated: string;
-  /** True when no source could be reached: callers should not claim the user is offline */
-  unavailable?: boolean;
-}
-
-/**
  * Clean Game Library Model for UI
  */
 export interface SteamGame {

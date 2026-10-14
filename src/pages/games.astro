@@ -1,6 +1,5 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import SteamPresence from '../components/steam/SteamPresence';
 import GameFilter from '../components/steam/GameFilter';
 import CS2StatsCard from '../components/steam/CS2StatsCard.astro';
 import { getSteamId64, getTopPlayedGames } from '../lib/steam';
@@ -26,11 +25,7 @@ const allGames = await getTopPlayedGames(50);
   </header>
 
   <section class="border-t border-rule pt-5">
-    <SteamPresence client:idle variant="card" />
-  </section>
-
-  <section class="mt-24 sm:mt-36">
-    <h2 class="eyebrow mb-10 border-t border-rule pt-5">premier</h2>
+    <h2 class="eyebrow mb-10">premier</h2>
     <CS2StatsCard steamId={steamId} />
   </section>
 
