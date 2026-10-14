@@ -121,7 +121,10 @@ const ogImageUrl = new URL('/favicon.svg', SITE_CONFIG.url).href;
 
         <div class="num mt-12 flex flex-wrap items-center justify-between gap-x-8 gap-y-2 border-t border-rule pt-5 text-[11px] uppercase tracking-[0.12em] text-ash">
           <span>© {currentYear} huh4k</span>
-          <span id="hud-clock" class="tabular-nums">--:--:-- AEST</span>
+          <span class="flex items-center gap-3">
+            <span id="hud-mood" class="normal-case tracking-normal text-ash-dim"></span>
+            <span id="hud-clock" class="tabular-nums">--:--:-- AEST</span>
+          </span>
         </div>
       </div>
     </footer>
@@ -142,6 +145,16 @@ const ogImageUrl = new URL('/favicon.svg', SITE_CONFIG.url).href;
           fmt.formatToParts(new Date()).forEach(function (p) { t[p.type] = p.value; });
           var zone = /^(AEST|AEDT)$/.test(t.timeZoneName) ? t.timeZoneName : (t.timeZoneName || 'AEST');
           el.textContent = t.hour + ':' + t.minute + ':' + t.second + ' ' + zone;
+          var mood = document.getElementById('hud-mood');
+          if (mood) {
+            var h = parseInt(t.hour, 10);
+            mood.textContent =
+              h < 6 ? 'probably asleep' :
+              h < 9 ? 'waking up' :
+              h < 18 ? 'around' :
+              h < 23 ? 'likely queueing' :
+              'one more match';
+          }
         }
         tick();
         setInterval(tick, 1000);
