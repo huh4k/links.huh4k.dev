@@ -11,101 +11,37 @@ const allGames = await getTopPlayedGames(50);
 ---
 
 <BaseLayout
-  title="Gaming Shelf & Steam Library — huh4k"
-  description="huh4k's Steam gaming presence, Counter-Strike 2 Premier rating, and lifetime playtime statistics."
+  title="Games — huh4k"
+  description="What huh4k plays: live Steam status, Counter-Strike 2 Premier rating and lifetime playtime."
   currentPath="/games"
 >
-  <div class="space-y-10">
-    <!-- Back to Hub Navigation -->
-    <div class="flex items-center justify-between">
-      <a
-        href="/"
-        class="inline-flex items-center gap-1.5 text-xs font-mono text-zinc-400 hover:text-white transition-colors"
-      >
-        <span>←</span>
-        <span>Back to Links Hub</span>
-      </a>
+  <header class="pb-14 sm:pb-20">
+    <p class="eyebrow rise" style="--i:0">steam · leetify</p>
+    <h1 class="display rise mt-5 text-[clamp(4rem,15vw,11rem)] leading-[0.82]" style="--i:1">
+      games<span class="text-signal">.</span>
+    </h1>
+    <p class="rise mt-8 max-w-xl text-[clamp(1.25rem,2.4vw,1.75rem)] leading-tight text-ash" style="--i:2">
+      mostly counter-strike. the rest is whatever i got stuck in this month.
+    </p>
+  </header>
 
-      <div class="flex items-center gap-3 text-xs font-mono">
-        <a
-          href="/"
-          class="text-zinc-400 hover:text-white transition-colors"
-        >
-          links.huh4k.dev
-        </a>
-        <span class="text-zinc-600">•</span>
-        <a
-          href="/leetify"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="text-[#BF3B68] hover:text-[#d64c7b] transition-colors"
-        >
-          /leetify ↗
-        </a>
+  <section class="border-t border-rule pt-5">
+    <SteamPresence client:idle variant="card" />
+  </section>
+
+  <section class="mt-24 sm:mt-36">
+    <h2 class="eyebrow mb-10 border-t border-rule pt-5">premier</h2>
+    <CS2StatsCard steamId={steamId} />
+  </section>
+
+  <section class="mt-24 sm:mt-36">
+    <header class="mb-10 flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-t border-rule pt-5">
+      <h2 class="display text-[clamp(2rem,4.5vw,3.25rem)]">library</h2>
+      <div class="flex gap-6 pb-1 text-[15px] text-ash">
+        <a href="/leetify" target="_blank" rel="noopener noreferrer" class="u-link hover:text-bone">leetify ↗</a>
+        <a href={steamProfileUrl} target="_blank" rel="noopener noreferrer" class="u-link hover:text-bone">steam ↗</a>
       </div>
-    </div>
-
-    <!-- Page Header Section -->
-    <div class="space-y-4">
-      <div class="inline-flex items-center gap-2 text-xs font-mono text-blue-400 uppercase tracking-wider">
-        <span>02 // Valve Steam & Leetify Integration</span>
-      </div>
-      <h1 class="text-3xl sm:text-4xl font-bold tracking-tight text-white">
-        Gaming Library & Activity
-      </h1>
-      <p class="text-base text-zinc-400 max-w-2xl leading-relaxed">
-        Real-time Steam activity, Counter-Strike 2 competitive metrics, and lifetime playtime statistics.
-      </p>
-    </div>
-
-    <!-- Live Status & CS2 Performance Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
-      <!-- Live Steam Presence Widget -->
-      <div class="space-y-3 flex flex-col justify-between">
-        <h2 class="text-xs font-mono uppercase tracking-wider text-zinc-400">Live Steam Status</h2>
-        <SteamPresence client:idle variant="card" className="h-full flex flex-col justify-between" />
-      </div>
-
-      <!-- Counter-Strike 2 Leetify Performance Card -->
-      <div class="space-y-3">
-        <h2 class="text-xs font-mono uppercase tracking-wider text-[#BF3B68]">CS2 Competitive Rating</h2>
-        <CS2StatsCard />
-      </div>
-    </div>
-
-    <!-- Top Played Games Grid with Search & Filters -->
-    <div class="space-y-6 pt-6 border-t border-[#1E2333]/60">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div class="space-y-1">
-          <h2 class="text-xl font-bold text-white tracking-tight">Top Played & Featured Titles</h2>
-          <p class="text-xs font-mono text-zinc-500">
-            Sorted by total logged playtime. Data cached for 24h to respect Valve rate limits.
-          </p>
-        </div>
-
-        <div class="flex items-center gap-2">
-          <a
-            href="/leetify"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#BF3B68]/35 bg-[#BF3B68]/15 hover:border-[#BF3B68]/60 hover:bg-[#BF3B68]/25 text-xs font-mono text-[#BF3B68] hover:text-[#d64c7b] transition-colors"
-          >
-            <span>Leetify Stats</span>
-            <span>↗</span>
-          </a>
-
-          <a
-            href={steamProfileUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-[#1E2333] bg-[#0F1118] hover:border-zinc-600 hover:bg-[#151824] text-xs font-mono text-zinc-200 hover:text-white transition-colors"
-          >
-            <span>Steam Profile ↗</span>
-          </a>
-        </div>
-      </div>
-
-      <GameFilter client:load games={allGames} />
-    </div>
-  </div>
+    </header>
+    <GameFilter client:load games={allGames} />
+  </section>
 </BaseLayout>

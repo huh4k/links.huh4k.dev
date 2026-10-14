@@ -5,52 +5,50 @@ export default {
   theme: {
     extend: {
       colors: {
-        carbon: {
-          DEFAULT: '#08090D',
-          bg: '#08090D',
-          card: '#0F1118',
-          'card-hover': '#151824',
-          border: '#1E2333',
-          'border-subtle': '#181D2B',
-          muted: '#8e96aa',
+        // warm near-black surfaces
+        ink: {
+          DEFAULT: '#0c0c0a',
+          2: '#141411',
+          3: '#1c1b17',
+          4: '#27261f',
         },
-        dark: {
-          bg: '#08090D',
-          card: '#0F1118',
-          'card-hover': '#151824',
-          border: '#1E2333',
-          'border-subtle': '#181D2B',
-          muted: '#8e96aa',
+        // hairlines
+        rule: {
+          DEFAULT: '#2a2923',
+          strong: '#48463c',
         },
-        telemetry: {
-          green: '#22c55e',
-          blue: '#38bdf8',
-          magenta: '#BF3B68',
-          amber: '#f59e0b',
-          purple: '#c084fc',
+        // text
+        bone: {
+          DEFAULT: '#ece6d6',
+          soft: '#cfc9b8',
         },
-        brand: {
-          blue: '#3b82f6',
-          cyan: '#06b6d4',
-          emerald: '#10b981',
-          violet: '#8b5cf6',
-          leetify: '#BF3B68',
+        ash: {
+          DEFAULT: '#948e7e',
+          dim: '#69655a',
         },
-        leetify: {
-          DEFAULT: '#BF3B68',
-          hover: '#d64c7b',
-          muted: 'rgba(191, 59, 104, 0.15)',
+        // the one accent
+        signal: {
+          DEFAULT: '#ff6a1a',
+          deep: '#d9520a',
+          soft: '#ff9a5c',
         },
+        live: '#72e08a',
       },
       fontFamily: {
-        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
-        mono: ['JetBrains Mono', 'Menlo', 'Monaco', 'Courier New', 'monospace'],
+        sans: ['"Bricolage Grotesque Variable"', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+        mono: ['"IBM Plex Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
       },
-      boxShadow: {
-        'telemetry-magenta': '0 0 20px -3px rgba(191, 59, 104, 0.35)',
-        'telemetry-blue': '0 0 20px -3px rgba(56, 189, 248, 0.35)',
-        'telemetry-green': '0 0 20px -3px rgba(34, 197, 94, 0.35)',
-        'telemetry-amber': '0 0 20px -3px rgba(245, 158, 11, 0.35)',
+      keyframes: {
+        rise: {
+          from: { opacity: '0', transform: 'translateY(14px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
+        ping: {
+          '75%, 100%': { transform: 'scale(2.2)', opacity: '0' },
+        },
+      },
+      animation: {
+        rise: 'rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both',
       },
     },
   },

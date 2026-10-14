@@ -28,66 +28,24 @@ const steamInventoryUrl = `https://steamcommunity.com/profiles/${steamId}/invent
 ---
 
 <BaseLayout
-  title="CS2 Inventory & 3D Weapon Inspect — huh4k"
-  description="Counter-Strike 2 inventory showcase with interactive 3D weapon inspect, native float wear ratings, pattern templates, and in-game preview links."
+  title="Inventory — huh4k"
+  description="Counter-Strike 2 inventory with real floats, pattern seeds and a 3D inspect for every weapon."
   currentPath="/inventory"
 >
-  <div class="space-y-8">
-    <!-- Breadcrumb & Top Navigation Links -->
-    <div class="flex items-center justify-between">
-      <a
-        href="/"
-        class="inline-flex items-center gap-1.5 text-xs font-mono text-zinc-400 hover:text-white transition-colors tactile-btn"
-      >
-        <span>← Back to Links Hub</span>
+  <header class="pb-12 sm:pb-16">
+    <p class="eyebrow rise" style="--i:0">counter-strike 2 · live from steam + csfloat</p>
+    <h1 class="display rise mt-5 text-[clamp(4rem,15vw,11rem)] leading-[0.82]" style="--i:1">
+      inventory<span class="text-signal">.</span>
+    </h1>
+    <div class="rise mt-8 flex flex-wrap items-end justify-between gap-x-10 gap-y-4" style="--i:2">
+      <p class="max-w-xl text-[clamp(1.25rem,2.4vw,1.75rem)] leading-tight text-ash">
+        every skin, real floats and seeds. pick one and spin it around.
+      </p>
+      <a href={steamInventoryUrl} target="_blank" rel="noopener noreferrer" class="u-link pb-1 text-[15px] text-ash hover:text-bone">
+        steam inventory ↗
       </a>
-
-      <div class="flex items-center gap-3 text-xs font-mono">
-        <a
-          href="/"
-          class="text-zinc-400 hover:text-white transition-colors"
-        >
-          links.huh4k.dev
-        </a>
-        <span class="text-zinc-600">•</span>
-        <a
-          href={steamInventoryUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          class="text-telemetry-amber hover:text-yellow-400 transition-colors inline-flex items-center gap-1"
-        >
-          <span>Steam Community Inventory</span>
-          <span class="text-[10px]">↗</span>
-        </a>
-      </div>
     </div>
+  </header>
 
-    <!-- Page Header & Telemetry Summary -->
-    <div class="space-y-3 pb-3 border-b border-[#1E2333]/80">
-      <div class="inline-flex items-center gap-2 text-xs font-mono text-telemetry-blue uppercase tracking-wider">
-        <span class="w-2 h-2 rounded-full bg-telemetry-green animate-pulse"></span>
-        <span>03 // COUNTER-STRIKE 2 INVENTORY & WEAPON ARSENAL</span>
-      </div>
-
-      <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
-        <div>
-          <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-white font-mono">
-            CS2 Inventory & 3D Weapon Inspect
-          </h1>
-          <p class="text-sm text-zinc-400 mt-1 max-w-2xl">
-            Live Counter-Strike 2 weapon arsenal extracted natively from Valve Steam Community telemetry with authentic Wear Rating floats, Pattern Template seeds, and real-time 3D model inspection.
-          </p>
-        </div>
-
-        <!-- Telemetry Header Badge -->
-        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[#1E2333] bg-[#0F1118] text-xs font-mono text-zinc-300 shrink-0">
-          <span class="w-1.5 h-1.5 rounded-full bg-telemetry-blue animate-pulse"></span>
-          <span>Live Steam Inventory • Direct Asset Properties • Cloudflare Edge Cached</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Client-Side Interactive Inventory Island -->
-    <InventoryExplorer client:load initialItems={snapshotItems} snapshotAt={snapshotAt} />
-  </div>
+  <InventoryExplorer client:load initialItems={snapshotItems} snapshotAt={snapshotAt} />
 </BaseLayout>

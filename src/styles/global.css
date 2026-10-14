@@ -4,120 +4,197 @@
 
 @layer base {
   :root {
-    --bg-primary: #08090D;
-    --bg-secondary: #0F1118;
-    --border-color: #1E2333;
-    --text-primary: #f3f4f6;
-    --text-secondary: #8e96aa;
-    --accent-magenta: #BF3B68;
-    --accent-blue: #38bdf8;
-    --accent-green: #22c55e;
-    --accent-amber: #f59e0b;
+    color-scheme: dark;
+    --ink: #0c0c0a;
+    --bone: #ece6d6;
+    --signal: #ff6a1a;
   }
 
   html {
-    color-scheme: dark;
+    background-color: var(--ink);
     scroll-behavior: smooth;
-    background-color: #08090D;
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
-    background-color: #08090D;
-    color: #f3f4f6;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: var(--ink);
+    color: var(--bone);
+    font-family: 'Bricolage Grotesque Variable', ui-sans-serif, system-ui, sans-serif;
+    font-optical-sizing: auto;
     min-height: 100vh;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
   }
 
+  /* film grain: takes the digital flatness off big dark areas */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    pointer-events: none;
+    opacity: 0.07;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+
   ::selection {
-    background-color: #BF3B68;
-    color: #ffffff;
+    background-color: var(--signal);
+    color: var(--ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--signal);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  a,
+  button {
+    -webkit-tap-highlight-color: transparent;
   }
 
   pre,
   code,
   kbd {
-    font-family: 'JetBrains Mono', Menlo, Monaco, Consolas, 'Courier New', monospace;
+    font-family: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  }
+}
+
+@layer components {
+  /* small mono label that sits above things */
+  .eyebrow {
+    @apply font-mono text-[11px] uppercase tracking-[0.16em] text-ash;
+  }
+
+  /* big heavy type */
+  .display {
+    font-weight: 800;
+    letter-spacing: -0.045em;
+    line-height: 0.88;
+  }
+
+  .num {
+    @apply font-mono tabular-nums;
+  }
+
+  .kbd {
+    @apply inline-flex items-center justify-center rounded-[3px] border border-rule-strong px-1.5 py-0.5 font-mono text-[10px] leading-none text-ash;
+  }
+
+  .hairline {
+    @apply border-t border-rule;
+  }
+
+  /* square, no-nonsense buttons */
+  .btn {
+    @apply inline-flex cursor-pointer items-center gap-2 border border-rule-strong px-4 py-2.5 font-mono text-xs uppercase tracking-[0.12em] text-bone transition-colors duration-150 hover:border-bone hover:bg-bone hover:text-ink;
+  }
+  .btn-signal {
+    @apply border-signal bg-signal text-ink hover:border-bone hover:bg-bone;
+  }
+
+  /* big tappable rows: the page's main interaction */
+  .link-row {
+    @apply relative isolate flex w-full items-baseline gap-4 border-b border-rule py-5 text-left transition-colors duration-200 sm:gap-8 sm:py-7;
+  }
+  .link-row::before {
+    content: '';
+    position: absolute;
+    inset: 0 -1.25rem;
+    z-index: -1;
+    background: var(--signal);
+    transform: scaleY(0);
+    transform-origin: bottom;
+    transition: transform 0.28s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  .link-row:hover,
+  .link-row:focus-visible {
+    @apply text-ink;
+  }
+  .link-row:hover::before,
+  .link-row:focus-visible::before {
+    transform: scaleY(1);
+  }
+  .link-row:hover .link-row-meta,
+  .link-row:focus-visible .link-row-meta {
+    @apply text-ink/70;
+  }
+  .link-row .link-row-arrow {
+    transition: transform 0.28s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  .link-row:hover .link-row-arrow {
+    transform: translate(4px, -4px);
+  }
+
+  /* underline that draws in */
+  .u-link {
+    background-image: linear-gradient(currentColor, currentColor);
+    background-repeat: no-repeat;
+    background-position: 0 100%;
+    background-size: 0% 1px;
+    transition: background-size 0.25s ease, color 0.15s ease;
+  }
+  .u-link:hover {
+    background-size: 100% 1px;
+  }
+
+  /* staggered entrance */
+  .rise {
+    animation: rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    animation-delay: calc(var(--i, 0) * 80ms);
+  }
+
+  /* the wordmark gets wider when you poke it */
+  .wordmark {
+    font-stretch: 76%;
+    transition: font-stretch 0.7s cubic-bezier(0.2, 0.7, 0.2, 1), letter-spacing 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  .wordmark:hover {
+    font-stretch: 100%;
+    letter-spacing: -0.06em;
+  }
+
+  /* outlined numerals */
+  .outline-text {
+    -webkit-text-stroke: 1.5px var(--bone);
+    color: transparent;
   }
 }
 
 @layer utilities {
-  /* Micro-dot blueprint matrix */
-  .bg-grid-pattern {
-    background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
-    background-size: 20px 20px;
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
   }
 
-  .bg-dot-matrix {
-    background-image: radial-gradient(rgba(56, 189, 248, 0.12) 1px, transparent 1px);
-    background-size: 16px 16px;
-  }
-
-  /* Metallic top-edge highlight for industrial hardware cards */
-  .border-hardware {
-    border-color: #1E2333;
-    border-top-color: rgba(255, 255, 255, 0.15);
-  }
-
-  /* Tactile mechanical depression for interactive components */
-  .tactile-btn {
-    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  .tactile-btn:active {
-    transform: translateY(1.5px) scale(0.985);
-  }
-
-  /* Hardware Telemetry Card hover lift */
-  .telemetry-card {
-    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease, box-shadow 0.25s ease;
-  }
-  .telemetry-card:hover {
-    transform: translateY(-2px);
-  }
-
-  /* Reactive cursor spotlight: radial glow follows pointer over card */
-  .spotlight-card {
-    --mouse-x: 50%;
-    --mouse-y: 50%;
-    position: relative;
-  }
-  .spotlight-card::before {
-    content: '';
-    position: absolute;
-    inset: -1px;
-    border-radius: inherit;
-    background: radial-gradient(
-      220px circle at var(--mouse-x) var(--mouse-y),
-      rgba(56, 189, 248, 0.12),
-      transparent 70%
-    );
-    opacity: 0;
-    transition: opacity 0.35s ease;
-    pointer-events: none;
-    z-index: 0;
-  }
-  .spotlight-card:hover::before {
-    opacity: 1;
-  }
-
-  /* Custom scrollbar */
   ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 8px;
+    height: 8px;
   }
-
   ::-webkit-scrollbar-track {
-    background: #08090D;
+    background: var(--ink);
   }
-
   ::-webkit-scrollbar-thumb {
-    background: #1E2333;
-    border-radius: 3px;
+    background: #2a2923;
   }
-
   ::-webkit-scrollbar-thumb:hover {
-    background: #2E364F;
+    background: #48463c;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .rise,
+  .link-row::before,
+  .link-row .link-row-arrow,
+  .wordmark {
+    animation: none !important;
+    transition: none !important;
   }
 }

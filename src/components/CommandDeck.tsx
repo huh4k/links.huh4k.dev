@@ -218,27 +218,17 @@ export default function CommandDeck({ steamId }: CommandDeckProps) {
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-start justify-center pt-20 sm:pt-28 px-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-150"
+      className="fixed inset-0 z-[100] flex items-start justify-center bg-ink/90 px-4 pt-20 backdrop-blur-sm sm:pt-28"
       onClick={() => setIsOpen(false)}
     >
       <div
-        className="w-full max-w-xl rounded-xl border border-hardware bg-[#0F1118] text-white shadow-2xl shadow-black/80 overflow-hidden"
+        className="w-full max-w-xl border border-rule-strong bg-ink-2 shadow-[0_30px_80px_rgba(0,0,0,0.7)]"
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-label="Jump to"
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-2.5 bg-[#08090D] border-b border-[#1E2333] text-xs font-mono text-zinc-400">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-telemetry-green" />
-            <span className="text-zinc-200 font-semibold tracking-wide">[COMMAND DECK]</span>
-            <span className="text-zinc-600">•</span>
-            <span className="text-zinc-400">huh4k.dev</span>
-          </div>
-          <span className="px-1.5 py-0.5 rounded bg-[#1E2333] text-zinc-400 text-[10px]">ESC</span>
-        </div>
-
-        {/* Search Bar */}
-        <div className="flex items-center px-4 py-3 border-b border-[#1E2333] bg-[#0c0e14]">
-          <span className="font-mono text-xs text-telemetry-blue mr-2.5 select-none">{'>'}</span>
+        <div className="flex items-center gap-3 border-b border-rule px-5 py-4">
+          <span className="font-mono text-sm text-signal select-none">/</span>
           <input
             ref={inputRef}
             type="text"
@@ -248,17 +238,15 @@ export default function CommandDeck({ steamId }: CommandDeckProps) {
               setSelectedIndex(0);
             }}
             onKeyDown={handleInputKeyDown}
-            placeholder="Search links or commands (e.g. steam, leetify, games)..."
-            className="w-full bg-transparent text-sm font-mono text-white placeholder-zinc-500 focus:outline-none"
+            placeholder="jump to… steam, inventory, games"
+            className="w-full bg-transparent text-xl text-bone placeholder-ash-dim focus:outline-none"
           />
+          <span className="kbd">esc</span>
         </div>
 
-        {/* Command Items */}
-        <div className="max-h-72 overflow-y-auto p-2 space-y-1">
+        <div className="max-h-80 overflow-y-auto">
           {filtered.length === 0 ? (
-            <div className="p-6 text-center text-xs font-mono text-zinc-500">
-              No matching commands found.
-            </div>
+            <p className="p-8 text-center text-ash">nothing here.</p>
           ) : (
             filtered.map((cmd, idx) => {
               const isSelected = idx === selectedIndex;
@@ -267,35 +255,24 @@ export default function CommandDeck({ steamId }: CommandDeckProps) {
                   key={cmd.id}
                   onClick={() => handleSelect(idx)}
                   onMouseEnter={() => setSelectedIndex(idx)}
-                  className={`w-full text-left px-3 py-2.5 rounded-lg font-mono text-xs flex items-center justify-between transition-colors ${
-                    isSelected
-                      ? 'bg-[#1E2333] text-white border border-telemetry-blue/50'
-                      : 'text-zinc-300 hover:bg-[#151824] border border-transparent'
+                  className={`flex w-full items-baseline justify-between gap-4 border-b border-rule px-5 py-3.5 text-left transition-colors last:border-b-0 ${
+                    isSelected ? 'bg-signal text-ink' : 'text-bone'
                   }`}
                 >
-                  <div className="flex items-center gap-2.5 truncate">
-                    <span className="text-telemetry-blue font-semibold text-[11px]">{cmd.tag}</span>
-                    <span className="text-zinc-100 font-medium truncate">{cmd.title}</span>
-                    <span className="text-zinc-500 text-[11px] hidden sm:inline truncate">{cmd.subtitle}</span>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0 ml-3">
-                    {cmd.badge && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-black/60 border border-[#1E2333] text-zinc-300">
-                        {cmd.badge}
-                      </span>
-                    )}
-                  </div>
+                  <span className="truncate text-lg font-semibold tracking-tight">{cmd.title}</span>
+                  <span className={`hidden truncate text-[14px] sm:inline ${isSelected ? 'text-ink/70' : 'text-ash'}`}>{cmd.subtitle}</span>
+                  {cmd.badge && (
+                    <span className={`num shrink-0 text-[11px] uppercase tracking-wider ${isSelected ? 'text-ink/70' : 'text-ash'}`}>{cmd.badge}</span>
+                  )}
                 </button>
               );
             })
           )}
         </div>
 
-        {/* Footer */}
-        <div className="px-4 py-2 bg-[#08090D] border-t border-[#1E2333] flex items-center justify-between text-[11px] font-mono text-zinc-500">
-          <span>Enter to select • ↑↓ to navigate</span>
-          <span>links.huh4k.dev</span>
+        <div className="num flex justify-between border-t border-rule px-5 py-2.5 text-[10px] uppercase tracking-wider text-ash">
+          <span>enter select · ↑↓ move</span>
+          <span>/ toggles</span>
         </div>
       </div>
     </div>

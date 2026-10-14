@@ -8,9 +8,9 @@ interface GameFilterProps {
 type FilterKey = 'all' | '100h' | '500h';
 
 const FILTERS: { key: FilterKey; label: string }[] = [
-  { key: 'all',  label: '[All]'     },
-  { key: '100h', label: '[> 100h]'  },
-  { key: '500h', label: '[> 500h]'  },
+  { key: 'all',  label: 'all'     },
+  { key: '100h', label: '100h+'  },
+  { key: '500h', label: '500h+'  },
 ];
 
 export default function GameFilter({ games }: GameFilterProps) {
@@ -32,32 +32,28 @@ export default function GameFilter({ games }: GameFilterProps) {
   }, [games, query, filter]);
 
   return (
-    <div className="space-y-5">
-      {/* Controls */}
-      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-        {/* Search */}
-        <div className="relative flex-1 max-w-sm">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-telemetry-blue select-none">{'>'}</span>
+    <div>
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+        <label className="block w-full max-w-sm">
+          <span className="eyebrow">search</span>
           <input
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search games..."
-            className="w-full bg-[#0F1118] border border-[#1E2333] hover:border-[#2E364F] focus:border-telemetry-blue/60 rounded-lg pl-8 pr-4 py-2 text-xs font-mono text-white placeholder-zinc-500 focus:outline-none transition-colors"
+            placeholder="type a game"
+            className="mt-2 w-full border-b border-rule-strong bg-transparent pb-2 text-xl text-bone placeholder-ash-dim transition-colors focus:border-signal focus:outline-none"
           />
-        </div>
+        </label>
 
-        {/* Filter Pills */}
-        <div className="flex items-center gap-2 font-mono text-xs">
+        <div className="flex gap-6 text-[15px]">
           {FILTERS.map((f) => (
             <button
               key={f.key}
               type="button"
               onClick={() => setFilter(f.key)}
-              className={`px-3 py-1.5 rounded-lg border transition-all tactile-btn cursor-pointer ${
-                filter === f.key
-                  ? 'border-telemetry-blue bg-telemetry-blue/15 text-telemetry-blue font-bold'
-                  : 'border-[#1E2333] bg-[#0A0C12] text-zinc-400 hover:text-zinc-200 hover:border-[#2E364F]'
+              aria-pressed={filter === f.key}
+              className={`cursor-pointer pb-1 transition-colors ${
+                filter === f.key ? 'text-bone shadow-[0_2px_0_0_#ff6a1a]' : 'text-ash hover:text-bone'
               }`}
             >
               {f.label}
@@ -66,65 +62,51 @@ export default function GameFilter({ games }: GameFilterProps) {
         </div>
       </div>
 
-      {/* Results count */}
-      <div className="text-[11px] font-mono text-zinc-500">
-        {filtered.length === 0
-          ? 'No games match your filters.'
-          : `Showing ${filtered.length} of ${games.length} titles`}
-      </div>
+      <p className="num mt-8 text-[12px] uppercase tracking-wider text-ash">
+        {filtered.length === 0 ? 'nothing matches' : `${filtered.length} of ${games.length} titles`}
+      </p>
 
-      {/* Game grid */}
       {filtered.length === 0 ? (
-        <div className="rounded-xl border border-[#1E2333] bg-[#0F1118] p-8 text-center space-y-2">
-          <p className="text-sm font-mono text-zinc-400">No games match your filters.</p>
+        <div className="py-16">
           <button
             type="button"
             onClick={() => { setQuery(''); setFilter('all'); }}
-            className="text-xs font-mono text-telemetry-blue hover:underline cursor-pointer"
+            className="u-link cursor-pointer text-xl text-bone"
           >
-            Clear filters
+            clear filters
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filtered.map((game) => (
-            <a
-              key={game.appId}
-              href={game.storeUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group rounded-xl border border-[#1E2333] bg-[#0F1118] hover:border-telemetry-blue/50 transition-all overflow-hidden flex flex-col tactile-btn"
-            >
-              <div className="relative aspect-video overflow-hidden">
-                <img
-                  src={game.capsuleUrl || game.headerUrl}
-                  alt={game.name}
-                  loading="lazy"
-                  decoding="async"
-                  width={460}
-                  height={215}
-                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = game.headerUrl;
-                  }}
-                />
-                <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/80 font-mono text-[9px] text-telemetry-green font-bold border border-white/10">
-                  {new Intl.NumberFormat('en-US').format(game.playtimeHours)} hrs
+        <ul className="mt-6 grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((game, i) => (
+            <li key={game.appId}>
+              <a href={game.storeUrl} target="_blank" rel="noopener noreferrer" className="group block">
+                <div className="relative aspect-video overflow-hidden bg-ink-3">
+                  <img
+                    src={game.capsuleUrl || game.headerUrl}
+                    alt={game.name}
+                    loading="lazy"
+                    decoding="async"
+                    width={460}
+                    height={215}
+                    className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = game.headerUrl;
+                    }}
+                  />
                 </div>
-              </div>
-
-              <div className="p-3 space-y-1.5 flex-1">
-                <div className="flex items-center justify-between text-[10px] font-mono text-zinc-500">
-                  <span>App {game.appId}</span>
-                  <span className="text-telemetry-blue group-hover:underline">Store ↗</span>
+                <div className="mt-3 flex items-baseline justify-between gap-4">
+                  <h3 className="truncate text-lg font-semibold tracking-tight transition-colors group-hover:text-signal">
+                    {game.name}
+                  </h3>
+                  <span className="num shrink-0 text-[12px] text-ash">
+                    {new Intl.NumberFormat('en-US').format(game.playtimeHours)}h
+                  </span>
                 </div>
-                <h3 className="text-xs font-mono font-bold text-white group-hover:text-telemetry-blue transition-colors truncate">
-                  {game.name}
-                </h3>
-              </div>
-            </a>
+              </a>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
     </div>
   );
