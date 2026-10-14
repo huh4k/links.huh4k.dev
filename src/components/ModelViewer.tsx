@@ -278,6 +278,22 @@ export function WeaponScene({
   }, [onLoaded, modelUrl]);
 
   const normalizedScene = useMemo(() => {
+    // A knife export that only holds the physics collision hull is a featureless blob: treat it as a
+    // failed load so the viewer shows its built-in knife instead (re-export with the script to fix).
+    if (orientProfile) {
+      let visual = 0;
+      scene.traverse((o) => {
+        let n: THREE.Object3D | null = o;
+        let isPhysics = false;
+        while (n) {
+          if (/physics/i.test(n.name)) isPhysics = true;
+          n = n.parent;
+        }
+        if ((o as THREE.Mesh).isMesh && !isPhysics) visual++;
+      });
+      if (visual === 0) throw new Error(`${modelUrl} only contains a physics hull`);
+    }
+
     const clone = scene.clone(true);
 
     // Knife exports use arbitrary axes. Rotate so the longest dimension runs along X (blade left-right),
@@ -305,19 +321,37 @@ export function WeaponScene({
       clone.scale.setScalar(scaleFactor);
     }
 
-    // Exported knife materials come through as flat white (their colour comes from skin textures we do
-    // not ship), so give them a neutral brushed-steel look instead of a blown-out silhouette.
+    // Knives: keep the exported (stock) textures when they were shipped next to the .glb. Without them the
+    // material is flat white, so fall back to a neutral brushed-steel look instead of a blown-out silhouette.
     if (orientProfile) {
       clone.traverse((child) => {
         const mesh = child as THREE.Mesh;
         if (!mesh.isMesh) return;
         mesh.frustumCulled = false;
-        mesh.material = new THREE.MeshStandardMaterial({ color: '#b9bec6', metalness: 0.85, roughness: 0.38 });
+        const src = mesh.material as THREE.MeshStandardMaterial;
+        const hasColor = !!(src && src.map && src.map.image && (src.map.image as { width?: number }).width);
+        if (hasColor) {
+          const mat = src.clone();
+          mat.transparent = false;
+          mat.alphaMap = null;
+          mat.alphaTest = 0;
+          mat.color.set('#ffffff');
+          const orm = mat.metalnessMap && mat.metalnessMap.image ? mat.metalnessMap : null;
+          mat.roughnessMap = orm;
+          mat.metalnessMap = orm;
+          mat.aoMap = orm;
+          mat.metalness = orm ? 1 : 0.6;
+          mat.roughness = orm ? 1 : 0.5;
+          mat.normalMap = null;
+          mesh.material = mat;
+        } else {
+          mesh.material = new THREE.MeshStandardMaterial({ color: '#b9bec6', metalness: 0.85, roughness: 0.38 });
+        }
       });
     }
 
     return clone;
-  }, [scene, orientProfile]);
+  }, [scene, orientProfile, modelUrl]);
 
   // Clean up cloned geometries, materials, and textures on unmount or URL switch
   useEffect(() => {

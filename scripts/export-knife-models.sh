@@ -21,6 +21,13 @@ for k in $KNIVES; do
   if [ -n "$glb" ]; then
     cp "$glb" "$DEST/knife_${k}.glb"
     echo "  -> $DEST/knife_${k}.glb ($(du -h "$DEST/knife_${k}.glb" | cut -f1))"
+    # The .glb references its textures by file name, so ship the colour + ORM maps next to it (downsized
+    # with macOS sips when available) and the viewer will use them. Normal maps are skipped to save space.
+    for tex in "$(dirname "$glb")"/*_color_*.png "$(dirname "$glb")"/*_orm_*.png; do
+      [ -f "$tex" ] || continue
+      cp "$tex" "$DEST/"
+      command -v sips >/dev/null && sips -Z "${TEX_SIZE:-1024}" "$DEST/$(basename "$tex")" >/dev/null 2>&1 || true
+    done
   else
     echo "  no .glb produced; check $OUT" >&2
   fi
